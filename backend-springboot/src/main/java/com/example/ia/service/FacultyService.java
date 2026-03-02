@@ -199,7 +199,9 @@ public class FacultyService {
         int low = 0;
         int top = 0;
         Set<Long> uniqueStudents = new HashSet<>();
-        List<FacultyClassAnalytics.LowPerformer> lowList = new ArrayList<>();
+        List<FacultyClassAnalytics.PerformanceRecord> excellentList = new ArrayList<>();
+        List<FacultyClassAnalytics.PerformanceRecord> averageList = new ArrayList<>();
+        List<FacultyClassAnalytics.PerformanceRecord> lowList = new ArrayList<>();
 
         for (SubjectWithRoleDto sub : subjects) {
             List<CieMark> marks = cieMarkRepository.findBySubject_Id(sub.getId());
@@ -214,22 +216,24 @@ public class FacultyService {
 
                 uniqueStudents.add(mark.getStudent().getId());
 
-                if (mark.getMarks() != null && mark.getMarks() > 0) {
+                if (mark.getMarks() != null && mark.getMarks() >= 0) {
                     double score = mark.getMarks();
                     totalScore += score;
                     scoredCount++;
 
-                    if (score < 20) {
+                    FacultyClassAnalytics.PerformanceRecord record = new FacultyClassAnalytics.PerformanceRecord(
+                            mark.getStudent().getRegNo(), mark.getStudent().getName(), sub.getName(),
+                            mark.getCieType(), score, mark.getAttendancePercentage(),
+                            mark.getStudent().getParentPhone());
+
+                    if (score <= 20) {
                         low++;
-                        if (lowList.size() < 5) {
-                            lowList.add(new FacultyClassAnalytics.LowPerformer(
-                                    mark.getStudent().getRegNo(), mark.getStudent().getName(), sub.getName(),
-                                    mark.getCieType(), score, mark.getAttendancePercentage(),
-                                    mark.getStudent().getParentPhone()));
-                        }
-                    }
-                    if (score >= 40) {
+                        lowList.add(record);
+                    } else if (score > 20 && score <= 40) {
+                        averageList.add(record);
+                    } else if (score > 40) {
                         top++;
+                        excellentList.add(record);
                     }
                 }
             }
@@ -238,6 +242,7 @@ public class FacultyService {
         int evaluated = uniqueStudents.size();
         int pending = allowedStudents.size() - evaluated;
         double avg = scoredCount > 0 ? Math.round((totalScore / scoredCount / 50.0 * 100) * 10.0) / 10.0 : 0;
-        return new FacultyClassAnalytics(evaluated, pending, avg, low, top, allowedStudents.size(), lowList);
+        return new FacultyClassAnalytics(evaluated, pending, avg, low, top, allowedStudents.size(), excellentList,
+                averageList, lowList);
     }
 }

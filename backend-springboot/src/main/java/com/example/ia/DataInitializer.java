@@ -208,7 +208,8 @@ public class DataInitializer {
                     studentEntity.setSemester(2);
                     studentEntity.setSection("A");
                     studentEntity.setEmail(regNo + "@student.college.edu");
-                    studentEntity.setPhone("9999999999");
+                    studentEntity.setPhone("99999" + (10000 + i));
+                    studentEntity.setParentPhone("88888" + (20000 + i));
                     studentRepository.save(studentEntity);
                     System.out.println("✅ Created Student Entity: " + regNo);
                 }
@@ -247,6 +248,11 @@ public class DataInitializer {
 
             // Only keep real subjects
             createSubjectIfNotFound(subjectRepository, "Engineering Maths-II", "CSE", "Miss Manju Sree", 2);
+            // 3. Subjects & Marks
+            System.out.println("🌱 Seeding Students, Subjects & Marks...");
+            seedStudents(studentRepository);
+
+            createSubjectIfNotFound(subjectRepository, "DBMS", "CSE", "Nasrin Banu", 6);
             createSubjectIfNotFound(subjectRepository, "CAEG", "CSE", "Ramesh Gouda", 2);
             createSubjectIfNotFound(subjectRepository, "Python", "CSE", "Wahida Banu", 2);
             createSubjectIfNotFound(subjectRepository, "Indian Constitution", "CSE", "Wahida Banu", 2);
@@ -370,9 +376,34 @@ public class DataInitializer {
                 if ("PENDING".equalsIgnoreCase(mark.getStatus()) || mark.getMarks() == null) {
                     mark.setMarks(score);
                     mark.setStatus("SUBMITTED");
+                    // Add random attendance if not present
+                    if (mark.getAttendancePercentage() == null) {
+                        mark.setAttendancePercentage(75.0 + (new java.util.Random().nextDouble() * 20.0));
+                    }
                     marksRepo.save(mark);
                     System.out.println("✅ Mark updated to SUBMITTED: " + regNo + " " + subjectName + " " + cieType);
                 }
+            }
+        }
+    }
+
+    private void seedStudents(com.example.ia.repository.StudentRepository repo) {
+        String[] names = { "Rahul Sharma", "Priya Patel", "Anish Kumar", "Sneha Rao", "Vikram Singh", "Deepa Reddy",
+                "Arjun Das", "Kavita Iyer", "Siddharth Jain", "Meera Nair" };
+        String dept = "CSE";
+        for (int i = 0; i < 10; i++) {
+            String regNo = "459CS2500" + (i + 1);
+            if (!repo.existsByRegNo(regNo)) {
+                com.example.ia.entity.Student s = new com.example.ia.entity.Student();
+                s.setRegNo(regNo);
+                s.setName(names[i]);
+                s.setDepartment(dept);
+                s.setSemester(6);
+                s.setSection("A");
+                s.setEmail(names[i].toLowerCase().replace(" ", ".") + "@example.com");
+                s.setPhone("98765" + (10000 + i));
+                s.setParentPhone("87654" + (20000 + i));
+                repo.save(s);
             }
         }
     }

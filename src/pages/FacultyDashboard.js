@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import API_BASE_URL from '../config/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2, Building2, Send, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingUp, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2, Building2, Send, RefreshCw, MessageSquare } from 'lucide-react';
 import { facultyData, facultyProfiles, facultySubjects, studentsList, labSchedule, getMenteesForFaculty } from '../utils/mockData';
 import styles from './FacultyDashboard.module.css';
 
@@ -63,8 +63,11 @@ const FacultyDashboard = () => {
         avgScore: 0,
         lowPerformers: 0,
         topPerformers: 0,
+        excellentPerformersList: [],
+        averagePerformersList: [],
         lowPerformersList: []
     });
+    const [performanceTab, setPerformanceTab] = useState('low'); // 'excellent', 'average', 'low'
 
     // Mentorship State
     const [menteeIds, setMenteeIds] = useState(() => {
@@ -96,6 +99,11 @@ const FacultyDashboard = () => {
     // -- Edit Student State --
     const [editingStudent, setEditingStudent] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
+
+    // -- Messaging/Feedback State --
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedbackStudent, setFeedbackStudent] = useState(null);
 
     // Verify Faculty
     const currentFaculty = facultyProfiles.find(f => f.id === user?.id) || facultyData;
@@ -211,9 +219,9 @@ const FacultyDashboard = () => {
         }
     }, [user, API_BASE_URL]);
 
-    // Refresh analytics when switching to Low Performers tab
+    // Refresh analytics when switching to Student Performance tab
     React.useEffect(() => {
-        if (activeSection === 'Low Performers') {
+        if (activeSection === 'Student Performance') {
             fetchAnalytics();
         }
     }, [activeSection, fetchAnalytics]);
@@ -756,11 +764,11 @@ const FacultyDashboard = () => {
             onClick: () => { setActiveSection('Mentorship'); setSelectedSubject(null); }
         },
         {
-            label: 'Low Performers',
+            label: 'Student Performance',
             path: '/dashboard/faculty',
-            icon: <AlertTriangle size={20} />,
-            isActive: activeSection === 'Low Performers',
-            onClick: () => { setActiveSection('Low Performers'); setSelectedSubject(null); }
+            icon: <TrendingDown size={20} />,
+            isActive: activeSection === 'Student Performance',
+            onClick: () => { setActiveSection('Student Performance'); setSelectedSubject(null); }
         },
         {
             label: 'Dept Assignment',
@@ -1310,6 +1318,42 @@ const FacultyDashboard = () => {
                 </div>
             </div >
         );
+    };
+
+    // --- NEW FEATURE: MESSAGING LOGIC ---
+    const handleSendFeedback = async (e) => {
+        if (e) e.preventDefault();
+        if (!feedbackMessage.trim()) return;
+
+        setSaving(true);
+        try {
+            const token = user?.token;
+            const response = await fetch(`${API_BASE_URL}/notifications/student`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    studentRegNo: feedbackStudent.regNo,
+                    message: feedbackMessage
+                })
+            });
+
+            if (response.ok) {
+                showToast(`Message sent to ${feedbackStudent.name}!`, 'success');
+                setShowFeedbackModal(false);
+                setFeedbackMessage('');
+            } else {
+                const err = await response.text();
+                showToast('Failed to send message: ' + err, 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error sending message', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     // --- CSV BULK UPLOAD FUNCTIONS ---
@@ -3001,6 +3045,74 @@ const FacultyDashboard = () => {
         );
     };
 
+    const renderFeedbackModal = () => {
+        if (!showFeedbackModal || !feedbackStudent) return null;
+
+        return (
+            <div className={styles.modalOverlay} onClick={() => setShowFeedbackModal(false)}>
+                <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <div className={styles.modalHeader}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ padding: '8px', background: '#eff6ff', borderRadius: '8px', color: '#2563eb' }}>
+                                <MessageSquare size={20} />
+                            </div>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Send Feedback</h2>
+                                <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>To: {feedbackStudent.name} ({feedbackStudent.regNo})</p>
+                            </div>
+                        </div>
+                        <button className={styles.closeBtn} onClick={() => setShowFeedbackModal(false)}>
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className={styles.modalBody}>
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                            <p style={{ margin: 0, fontSize: '0.875rem', color: '#475569' }}>
+                                <strong>Context:</strong> {feedbackStudent.subject} - {feedbackStudent.cieType}
+                            </p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: '#475569' }}>
+                                <strong>Current Score:</strong> {feedbackStudent.score} / 50
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSendFeedback}>
+                            <div className={styles.formGroup}>
+                                <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Message to Student</label>
+                                <textarea
+                                    className={styles.input}
+                                    style={{ minHeight: '120px', resize: 'vertical', padding: '12px' }}
+                                    placeholder="Enter your feedback or message here..."
+                                    value={feedbackMessage}
+                                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <button type="button" className={styles.filterBtn} onClick={() => setShowFeedbackModal(false)}>
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className={styles.saveBtn}
+                                    disabled={saving || !feedbackMessage.trim()}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                                >
+                                    {saving ? 'Sending...' : (
+                                        <>
+                                            <Send size={18} />
+                                            Send Message
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // --- NEW FEATURE: CIE SCHEDULE UPDATE (Faculty) ---
     const renderCIESchedule = () => {
         // Use iaConfig directly which is populated by fetchSchedule
@@ -3320,16 +3432,56 @@ const FacultyDashboard = () => {
         );
     };
 
-    const renderLowPerformers = () => {
+    const renderPerformanceSection = () => {
+        const tabs = [
+            {
+                id: 'excellent',
+                label: 'Excellent Performance',
+                color: '#10b981',
+                bg: '#f0fdf4',
+                borderColor: '#bcf0da',
+                icon: <Award size={20} />,
+                list: facultyClassAnalytics.excellentPerformersList || [],
+                description: 'Students who scored more than 40/50 marks.'
+            },
+            {
+                id: 'average',
+                label: 'Average Performance',
+                color: '#f59e0b',
+                bg: '#fffbeb',
+                borderColor: '#fde68a',
+                icon: <ClipboardList size={20} />,
+                list: facultyClassAnalytics.averagePerformersList || [],
+                description: 'Students who scored between 20 and 40 marks.'
+            },
+            {
+                id: 'low',
+                label: 'Low Performance',
+                color: '#ef4444',
+                bg: '#fef2f2',
+                borderColor: '#fecaca',
+                icon: <AlertTriangle size={20} />,
+                list: facultyClassAnalytics.lowPerformersList || [],
+                description: 'Students who scored 20 or fewer marks.'
+            }
+        ];
+
+        const activeTabConfig = tabs.find(t => t.id === performanceTab) || tabs[2];
+        const currentData = activeTabConfig.list;
+
+        const filteredList = currentData
+            .filter(item => filterSubject === 'All' || item.subject === filterSubject)
+            .filter(item => filterCIE === 'All' || item.cieType === filterCIE);
+
         return (
             <div className={styles.sectionContainer}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                     <div>
-                        <h2 className={styles.sectionTitle} style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                            <AlertTriangle size={24} /> Action Required: Low Performers
+                        <h2 className={styles.sectionTitle} style={{ color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                            <BarChart2 size={24} /> Student Performance Analytics
                         </h2>
                         <p style={{ color: '#64748b', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                            Students who scored less than 20/50 in any CIE.
+                            View and manage student performance across different categories.
                         </p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -3340,7 +3492,7 @@ const FacultyDashboard = () => {
                             onChange={(e) => setFilterSubject(e.target.value)}
                         >
                             <option value="All">All Subjects</option>
-                            {mySubjects.map(sub => (
+                            {subjects.map(sub => (
                                 <option key={sub.id} value={sub.name}>{sub.name}</option>
                             ))}
                         </select>
@@ -3358,7 +3510,54 @@ const FacultyDashboard = () => {
                     </div>
                 </div>
 
-                <div className={styles.card}>
+                {/* TAB NAVIGATION */}
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem', background: '#f8fafc', padding: '6px', borderRadius: '12px', width: 'fit-content' }}>
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setPerformanceTab(tab.id)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 20px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s ease',
+                                backgroundColor: performanceTab === tab.id ? 'white' : 'transparent',
+                                color: performanceTab === tab.id ? tab.color : '#64748b',
+                                boxShadow: performanceTab === tab.id ? '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' : 'none'
+                            }}
+                        >
+                            {tab.icon}
+                            {tab.label}
+                            {tab.list.length > 0 && (
+                                <span style={{
+                                    backgroundColor: performanceTab === tab.id ? tab.bg : '#e2e8f0',
+                                    color: performanceTab === tab.id ? tab.color : '#64748b',
+                                    borderRadius: '20px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {tab.list.length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                <div className={styles.card} style={{ borderTop: `4px solid ${activeTabConfig.color}` }}>
+                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', background: activeTabConfig.bg }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ color: activeTabConfig.color }}>{activeTabConfig.icon}</div>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{activeTabConfig.label}</h3>
+                        </div>
+                        <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>{activeTabConfig.description}</p>
+                    </div>
+
                     <div className={styles.tableContainer}>
                         <table className={styles.table}>
                             <thead>
@@ -3368,50 +3567,60 @@ const FacultyDashboard = () => {
                                     <th>Student Name</th>
                                     <th>Marks</th>
                                     <th>Attendance</th>
-                                    <th>Action</th>
+                                    <th>{performanceTab === 'low' ? 'Action' : 'Phone'}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {facultyClassAnalytics.lowPerformersList && facultyClassAnalytics.lowPerformersList
-                                    .filter(item => filterSubject === 'All' || item.subject === filterSubject)
-                                    .filter(item => filterCIE === 'All' || item.cieType === filterCIE)
-                                    .length > 0 ? (
-                                    facultyClassAnalytics.lowPerformersList
-                                        .filter(item => filterSubject === 'All' || item.subject === filterSubject)
-                                        .filter(item => filterCIE === 'All' || item.cieType === filterCIE)
-                                        .map((item, i) => (
-                                            <tr key={i}>
-                                                <td style={{ color: '#64748b' }}>{i + 1}</td>
-                                                <td className={styles.codeText}>{item.regNo}</td>
-                                                <td>
-                                                    <div style={{ fontWeight: 600 }}>{item.name}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.subject} ({item.cieType})</div>
-                                                </td>
-                                                <td style={{ color: '#ef4444', fontWeight: 'bold' }}>{item.score}/50</td>
-                                                <td style={{ fontWeight: '500' }}>{item.attendance != null ? `${item.attendance}%` : 'N/A'}</td>
-                                                <td>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                        <span style={{ fontSize: '0.85rem', fontWeight: '500', color: '#475569' }}>
+                                {filteredList.length > 0 ? (
+                                    filteredList.map((item, i) => (
+                                        <tr key={i}>
+                                            <td style={{ color: '#64748b' }}>{i + 1}</td>
+                                            <td className={styles.codeText}>{item.regNo}</td>
+                                            <td>
+                                                <div style={{ fontWeight: 600 }}>{item.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.subject} ({item.cieType})</div>
+                                            </td>
+                                            <td style={{ color: activeTabConfig.color, fontWeight: 'bold' }}>{item.score}/50</td>
+                                            <td style={{ fontWeight: '500' }}>{item.attendance != null ? `${item.attendance}%` : 'N/A'}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>
                                                             {item.parentPhone || 'No Contact'}
                                                         </span>
                                                         <button
                                                             className={styles.iconBtn}
-                                                            onClick={() => showToast(`Alert sent for ${item.name}`)}
-                                                            title="Notify Parent"
-                                                            style={{ color: '#dc2626', background: '#fee2e2', padding: '4px 8px', borderRadius: '6px', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: '600' }}
+                                                            onClick={() => {
+                                                                setFeedbackStudent(item);
+                                                                setShowFeedbackModal(true);
+                                                            }}
+                                                            title="Send Message to Student"
+                                                            style={{ color: '#2563eb', background: '#eff6ff', border: '1px solid #dbeafe', padding: '6px', borderRadius: '8px' }}
                                                         >
-                                                            <Phone size={14} /> Notify
+                                                            <MessageSquare size={16} />
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        ))
+
+                                                    {performanceTab === 'low' && (
+                                                        <button
+                                                            className={styles.iconBtn}
+                                                            onClick={() => showToast(`Alert sent to parent of ${item.name}`)}
+                                                            title="Notify Parent"
+                                                            style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fee2e2', padding: '5px 10px', borderRadius: '8px', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: '600' }}
+                                                        >
+                                                            <Phone size={14} /> Notify Parent
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                                <CheckCircle size={32} color="#10b981" />
-                                                <p>No low performers found matching filters!</p>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                                {performanceTab === 'excellent' ? <TrendingUp size={48} color="#cbd5e1" /> : <CheckCircle size={48} color="#cbd5e1" />}
+                                                <p style={{ fontSize: '1rem' }}>No students found in this category matching your filters!</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -3839,7 +4048,7 @@ const FacultyDashboard = () => {
             {activeSection === 'Lesson Plan' && renderLessonPlan()}
             {activeSection === 'CIE Schedule' && renderCIESchedule()}
             {activeSection === 'Mentorship' && renderMentorship()}
-            {activeSection === 'Low Performers' && renderLowPerformers()}
+            {activeSection === 'Student Performance' && renderPerformanceSection()}
             {activeSection === 'Notifications' && renderNotifications()}
             {activeSection === 'Dept Assignment' && renderDeptAssignment()}
 
@@ -4048,6 +4257,7 @@ const FacultyDashboard = () => {
             )}
 
 
+            {renderFeedbackModal()}
             {renderEditStudentModal()}
 
             {

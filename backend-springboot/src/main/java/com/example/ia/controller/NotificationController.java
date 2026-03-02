@@ -149,4 +149,32 @@ public class NotificationController {
         notificationRepository.save(notification);
         return ResponseEntity.ok(Map.of("message", "Marked as read"));
     }
+
+    @PostMapping("/student")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<?> sendStudentNotification(@RequestBody Map<String, String> data) {
+        String studentRegNo = data.get("studentRegNo");
+        String message = data.get("message");
+        String facultyUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        if (studentRegNo == null || message == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Student regNo and message are required"));
+        }
+
+        User faculty = userRepository.findByUsernameIgnoreCase(facultyUsername).orElse(null);
+        User student = userRepository.findByUsernameIgnoreCase(studentRegNo).orElse(null);
+
+        if (student == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Student user not found"));
+        }
+
+        Notification notif = new Notification();
+        notif.setUser(student);
+        notif.setMessage(message);
+        notif.setType("ALERT");
+        notif.setCategory("Faculty Feedback: " + (faculty != null ? faculty.getFullName() : "Faculty"));
+        notificationRepository.save(notif);
+
+        return ResponseEntity.ok(Map.of("message", "Notification sent to student " + studentRegNo));
+    }
 }

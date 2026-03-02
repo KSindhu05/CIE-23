@@ -9,19 +9,24 @@ public class FacultyClassAnalytics {
     private int lowPerformers;
     private int topPerformers;
     private int totalStudents;
-    private List<LowPerformer> lowPerformersList;
+    private List<PerformanceRecord> excellentPerformersList;
+    private List<PerformanceRecord> averagePerformersList;
+    private List<PerformanceRecord> lowPerformersList;
 
     public FacultyClassAnalytics() {
     }
 
     public FacultyClassAnalytics(int evaluated, int pending, double avgScore, int lowPerformers, int topPerformers,
-            int totalStudents, List<LowPerformer> lowPerformersList) {
+            int totalStudents, List<PerformanceRecord> excellentPerformersList,
+            List<PerformanceRecord> averagePerformersList, List<PerformanceRecord> lowPerformersList) {
         this.evaluated = evaluated;
         this.pending = pending;
         this.avgScore = avgScore;
         this.lowPerformers = lowPerformers;
         this.topPerformers = topPerformers;
         this.totalStudents = totalStudents;
+        this.excellentPerformersList = excellentPerformersList;
+        this.averagePerformersList = averagePerformersList;
         this.lowPerformersList = lowPerformersList;
     }
 
@@ -65,11 +70,27 @@ public class FacultyClassAnalytics {
         this.topPerformers = topPerformers;
     }
 
-    public List<LowPerformer> getLowPerformersList() {
+    public List<PerformanceRecord> getExcellentPerformersList() {
+        return excellentPerformersList;
+    }
+
+    public void setExcellentPerformersList(List<PerformanceRecord> excellentPerformersList) {
+        this.excellentPerformersList = excellentPerformersList;
+    }
+
+    public List<PerformanceRecord> getAveragePerformersList() {
+        return averagePerformersList;
+    }
+
+    public void setAveragePerformersList(List<PerformanceRecord> averagePerformersList) {
+        this.averagePerformersList = averagePerformersList;
+    }
+
+    public List<PerformanceRecord> getLowPerformersList() {
         return lowPerformersList;
     }
 
-    public void setLowPerformersList(List<LowPerformer> lowPerformersList) {
+    public void setLowPerformersList(List<PerformanceRecord> lowPerformersList) {
         this.lowPerformersList = lowPerformersList;
     }
 
@@ -81,7 +102,7 @@ public class FacultyClassAnalytics {
         this.totalStudents = totalStudents;
     }
 
-    public static class LowPerformer {
+    public static class PerformanceRecord {
         private String regNo;
         private String name;
         private String subject;
@@ -90,10 +111,11 @@ public class FacultyClassAnalytics {
         private Double attendance;
         private String parentPhone;
 
-        public LowPerformer() {
+        public PerformanceRecord() {
         }
 
-        public LowPerformer(String regNo, String name, String subject, String cieType, double score, Double attendance,
+        public PerformanceRecord(String regNo, String name, String subject, String cieType, double score,
+                Double attendance,
                 String parentPhone) {
             this.regNo = regNo;
             this.name = name;
