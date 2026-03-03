@@ -118,9 +118,8 @@ public class PrincipalController {
             if (s.getSemester() != null) {
                 if (s.getSemester() < 6) {
                     s.setSemester(s.getSemester() + 1);
-                } else {
-                    // 6th semester students stay at 6 or could be moved to alumni?
-                    // For now, keeping them at 6 to avoid deletion.
+                } else if (s.getSemester() == 6) {
+                    s.setSemester(1);
                 }
                 studentRepository.save(s);
             }
