@@ -12,6 +12,20 @@
     font-family: var(--font-body);
 }
 
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 1200px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 .dashboardContainer::-webkit-scrollbar {
     width: 6px;
 }

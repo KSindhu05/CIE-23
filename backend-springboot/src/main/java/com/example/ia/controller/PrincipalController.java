@@ -16,6 +16,7 @@ import com.example.ia.repository.SubjectRepository;
 import com.example.ia.repository.UserRepository;
 import com.example.ia.entity.Notification;
 import com.example.ia.repository.NotificationRepository;
+import com.example.ia.repository.FacultyAssignmentRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,6 +57,9 @@ public class PrincipalController {
     @Autowired
     PasswordEncoder passwordEncoder;
 
+    @Autowired
+    FacultyAssignmentRequestRepository assignmentRequestRepository;
+
     private static String semesterStatus = "ACTIVE";
 
     @GetMapping("/semester/status")
@@ -88,6 +92,7 @@ public class PrincipalController {
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
     public ResponseEntity<?> resetFaculty() {
+        // 1. Clear faculty user fields (subjects, semester, section)
         List<User> faculty = userRepository.findByRole("FACULTY");
         for (User f : faculty) {
             f.setSubjects(null);
@@ -95,7 +100,19 @@ public class PrincipalController {
             f.setSection(null);
             userRepository.save(f);
         }
-        return ResponseEntity.ok(Map.of("message", "Faculty workloads and assignments have been reset."));
+
+        // 2. Clear instructorName from all subjects
+        List<Subject> allSubjects = subjectRepository.findAll();
+        for (Subject s : allSubjects) {
+            s.setInstructorName(null);
+            subjectRepository.save(s);
+        }
+
+        // 3. Delete all faculty assignment requests
+        assignmentRequestRepository.deleteAll();
+
+        return ResponseEntity.ok(
+                Map.of("message", "Faculty workloads, subject assignments, and assignment requests have been reset."));
     }
 
     @PostMapping("/semester/cleanup-data")

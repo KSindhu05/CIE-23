@@ -36,4 +36,12 @@ public class StudentController {
                 .map(student -> org.springframework.http.ResponseEntity.ok((Object) student))
                 .orElse(org.springframework.http.ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/subjects")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('STUDENT')")
+    public List<com.example.ia.entity.Subject> getSubjects() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return studentService.getSubjectsForStudent(username);
+    }
 }

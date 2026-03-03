@@ -89,8 +89,10 @@ public class FacultyService {
         List<Student> result = new ArrayList<>();
         Set<Long> addedIds = new HashSet<>();
 
-        // 1. Home department students — use faculty's own department + sections
-        if (homeDept != null && !homeDept.isBlank()) {
+        // 1. Home department students — only if faculty has subjects assigned
+        String facultySubjects = user.getSubjects();
+        boolean hasAssignments = facultySubjects != null && !facultySubjects.isBlank();
+        if (homeDept != null && !homeDept.isBlank() && hasAssignments) {
             List<Student> homeStudents;
             if (!homeSections.isEmpty()) {
                 homeStudents = studentRepository.findByDepartmentInAndSectionIn(

@@ -63,13 +63,13 @@ const AcademicInsights = ({ realMarks }) => {
                     <div className={styles.insightIndicator} style={{ background: 'var(--success)' }}></div>
                     <div className={styles.insightContent}>
                         <h4>Strongest Subject</h4>
-                        <p>You are excelling in <strong>{bestSubject?.subject?.name}</strong> with a score of {bestSubject?.totalScore}/50.</p>
+                        <p>You are excelling in <strong>{bestSubject?.name}</strong> with a score of {bestSubject?.totalScore}/250.</p>
                     </div>
                     <ArrowUpRight size={18} color="var(--success)" />
                 </motion.div>
 
                 {/* Weakness */}
-                {worstSubject && worstSubject.totalScore < 35 && (
+                {worstSubject && worstSubject.totalScore < 175 && (
                     <motion.div
                         className={styles.insightItem}
                         variants={itemVariants}
@@ -78,7 +78,7 @@ const AcademicInsights = ({ realMarks }) => {
                         <div className={styles.insightIndicator} style={{ background: 'var(--danger)' }}></div>
                         <div className={styles.insightContent}>
                             <h4>Focus Area</h4>
-                            <p>Consider reviewing <strong>{worstSubject?.subject?.name}</strong> to improve your score ({worstSubject?.totalScore}/50).</p>
+                            <p>Consider reviewing <strong>{worstSubject?.name}</strong> to improve your score ({worstSubject?.totalScore}/250).</p>
                         </div>
                         <ArrowDownRight size={18} color="var(--danger)" />
                     </motion.div>

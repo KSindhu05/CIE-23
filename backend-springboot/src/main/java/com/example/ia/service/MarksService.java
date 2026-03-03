@@ -73,11 +73,8 @@ public class MarksService {
                     }
                 }
 
-                // Reset status to PENDING so faculty can re-submit
-                // But only if there is still at least one mark/att explicitly saved
-                if (mark.getMarks() != null || mark.getAttendancePercentage() != null) {
-                    mark.setStatus("PENDING");
-                }
+                // Preserve existing status — do NOT reset to PENDING
+                // HOD edits should keep APPROVED, faculty drafts should keep their status
                 cieMarkRepository.save(mark);
             } else {
                 // For new records, convert explicit clears (< 0) to null
