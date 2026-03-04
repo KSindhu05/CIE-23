@@ -177,12 +177,6 @@ const Login = () => {
                 </h1>
             </div>
 
-            {/* Team Member Ticker */}
-            <div className={styles.tickerContainer}>
-                <div className={styles.tickerContent}>
-                    This project CIA MANAGEMENT SYSTEM has been done by K Sindhu, M Priyanka, V Akshaya, Amrutha, Gouthami, Chandana, Arshiya, Tasmiya
-                </div>
-            </div>
 
             <div className={styles.contentWrapper}>
                 {/* Left Side - Animated Text */}
@@ -263,6 +257,15 @@ const Login = () => {
                                         >
                                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
+                                    </div>
+                                    <div style={{ textAlign: 'right', marginTop: '0.5rem' }}>
+                                        <a
+                                            href="/forgot-password"
+                                            onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }}
+                                            style={{ fontSize: '0.8rem', color: 'var(--accent-color)', textDecoration: 'none', fontWeight: 600 }}
+                                        >
+                                            Forgot Password?
+                                        </a>
                                     </div>
                                 </div>
 

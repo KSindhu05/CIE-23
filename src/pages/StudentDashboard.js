@@ -195,7 +195,7 @@ const StudentDashboard = () => {
         { label: 'Subjects', path: '/dashboard/student', icon: <Book size={20} />, isActive: activeSection === 'Subjects', onClick: () => setActiveSection('Subjects') },
         { label: 'Faculty', path: '/dashboard/student', icon: <User size={20} />, isActive: activeSection === 'Faculty', onClick: () => setActiveSection('Faculty') },
         { label: 'Syllabus Topics', path: '/dashboard/student', icon: <BookOpen size={20} />, isActive: activeSection === 'Syllabus Topics', onClick: () => setActiveSection('Syllabus Topics') },
-        { label: 'Notifications', path: '/dashboard/student', icon: <Bell size={20} />, isActive: activeSection === 'Notifications', onClick: () => setActiveSection('Notifications') },
+        { label: 'Notifications', path: '/dashboard/student', icon: <Bell size={20} />, isActive: activeSection === 'Notifications', onClick: () => setActiveSection('Notifications'), badge: unreadCount || null },
     ];
 
     const showToast = (message) => { setToast({ show: true, message }); setTimeout(() => setToast({ show: false, message: '' }), 3000); };

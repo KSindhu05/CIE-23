@@ -36,7 +36,18 @@ public class FacultyAssignmentRequest {
 
     private LocalDateTime responseDate;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isHidden = false;
+
     // Getters and Setters
+
+    public boolean isHidden() {
+        return isHidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        isHidden = hidden;
+    }
 
     public Long getId() {
         return id;

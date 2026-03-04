@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
+import { useDialog } from '../components/GlobalDialogProvider';
 import styles from './PrincipalDashboard.module.css';
 import {
     LayoutDashboard, Users, ShieldCheck, Calendar, BarChart2,
@@ -32,6 +33,7 @@ const API_BASE_URL = 'http://127.0.0.1:8084/api';
 
 const PrincipalDashboard = () => {
     const { user, logout } = useAuth();
+    const { showConfirm } = useDialog();
     const [activeTab, setActiveTab] = useState('overview');
 
     // Data States
@@ -160,7 +162,7 @@ const PrincipalDashboard = () => {
         { label: 'CIE Schedule', path: '#timetables', icon: <Calendar size={20} />, isActive: activeTab === 'timetables', onClick: () => setActiveTab('timetables') },
         { label: 'CIE Compliance', path: '#compliance', icon: <ShieldCheck size={20} />, isActive: activeTab === 'compliance', onClick: () => setActiveTab('compliance') },
         { label: 'Reports & Analytics', path: '#reports', icon: <FileText size={20} />, isActive: activeTab === 'reports', onClick: () => setActiveTab('reports') },
-        { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications') },
+        { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications'), badge: notifications.filter(n => !n.isRead).length || null },
         { label: 'Semester Reset', path: '#semester', icon: <Settings size={20} />, isActive: activeTab === 'semester-management', onClick: () => setActiveTab('semester-management') }
     ];
 
@@ -420,7 +422,7 @@ const PrincipalDashboard = () => {
                     onClear={handleClearNotifications}
                     onDelete={handleDeleteNotification}
                 />}
-                {activeTab === 'reports' && <ReportsSection reports={reports} onDownload={handleDownload} />}
+                {activeTab === 'reports' && <ReportsSection reports={reports} onDownload={handleDownload} departments={departments} />}
 
                 {activeTab === 'semester-management' && (
                     <div style={{ animation: 'fadeIn 0.6s ease' }}>
@@ -569,8 +571,14 @@ const PrincipalDashboard = () => {
                                     Permanently wipe all CIE marks for every student across all departments. <strong style={{ color: '#dc2626' }}>Irreversible.</strong>
                                 </p>
                                 <button
-                                    onClick={() => {
-                                        if (window.confirm("CRITICAL: Are you sure you want to WIPE ALL MARKS? This cannot be undone.")) {
+                                    onClick={async () => {
+                                        const confirmed = await showConfirm({
+                                            title: 'Wipe All Marks',
+                                            message: 'CRITICAL: Are you sure you want to WIPE ALL MARKS? This cannot be undone.',
+                                            variant: 'danger',
+                                            confirmText: 'Wipe All Marks'
+                                        });
+                                        if (confirmed) {
                                             setResetLoading(true);
                                             resetMarks(user?.token)
                                                 .then(() => showToast('All Marks Cleared', 'success'))
@@ -634,8 +642,14 @@ const PrincipalDashboard = () => {
                                     Advance all students forward by one semester (e.g., <strong style={{ color: '#16a34a' }}>Sem 2 → 3</strong>). Students in 6th sem remain unchanged.
                                 </p>
                                 <button
-                                    onClick={() => {
-                                        if (window.confirm("Shift all students to the next academic semester?")) {
+                                    onClick={async () => {
+                                        const confirmed = await showConfirm({
+                                            title: 'Semester Shift',
+                                            message: 'Shift all students to the next academic semester?',
+                                            variant: 'warning',
+                                            confirmText: 'Shift Semesters'
+                                        });
+                                        if (confirmed) {
                                             setResetLoading(true);
                                             shiftSemesters(user?.token)
                                                 .then(() => showToast('Students Shifted Successfully', 'success'))
@@ -700,8 +714,14 @@ const PrincipalDashboard = () => {
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                                     <button
-                                        onClick={() => {
-                                            if (window.confirm("Reset all faculty assignments?")) {
+                                        onClick={async () => {
+                                            const confirmed = await showConfirm({
+                                                title: 'Reset Faculty',
+                                                message: 'Reset all faculty assignments?',
+                                                variant: 'warning',
+                                                confirmText: 'Reset'
+                                            });
+                                            if (confirmed) {
                                                 resetFaculty(user?.token)
                                                     .then(() => showToast('Faculty Workloads Reset', 'success'))
                                                     .catch(() => showToast('Failed to reset faculty', 'error'));
@@ -728,8 +748,14 @@ const PrincipalDashboard = () => {
                                         👤 Reset Faculty
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            if (window.confirm("Cleanup all notifications and schedules?")) {
+                                        onClick={async () => {
+                                            const confirmed = await showConfirm({
+                                                title: 'System Cleanup',
+                                                message: 'Cleanup all notifications and schedules?',
+                                                variant: 'warning',
+                                                confirmText: 'Cleanup'
+                                            });
+                                            if (confirmed) {
                                                 cleanupData(user?.token)
                                                     .then(() => showToast('System Cleanup Done', 'success'))
                                                     .catch(() => showToast('Cleanup failed', 'error'));

@@ -321,8 +321,118 @@ public class PrincipalController {
     }
 
     @GetMapping("/faculty/all")
-    public List<User> getAllFaculty() {
-        return userRepository.findByRole("FACULTY");
+    public List<Map<String, Object>> getAllFaculty() {
+        List<User> allFaculty = userRepository.findByRole("FACULTY");
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (User fac : allFaculty) {
+            Map<String, Object> facMap = new HashMap<>();
+            facMap.put("id", fac.getId());
+            facMap.put("username", fac.getUsername());
+            facMap.put("fullName", fac.getFullName());
+            facMap.put("email", fac.getEmail());
+            facMap.put("department", fac.getDepartment());
+            facMap.put("designation", fac.getDesignation());
+            facMap.put("semester", fac.getSemester());
+            facMap.put("section", fac.getSection());
+            facMap.put("role", fac.getRole());
+            facMap.put("cieRole", fac.getCieRole());
+
+            // Collect ALL subjects across all departments
+            Set<String> allSubjects = new java.util.LinkedHashSet<>();
+
+            // Use a map to merge assignments per department
+            // Key = department name, Value = {subjects set, sections set, semester}
+            Map<String, Map<String, Object>> deptMap = new java.util.LinkedHashMap<>();
+
+            // 1. Home department from User fields
+            if (fac.getDepartment() != null) {
+                Map<String, Object> home = deptMap.computeIfAbsent(fac.getDepartment(), k -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("subjects", new java.util.LinkedHashSet<String>());
+                    m.put("sections", new java.util.LinkedHashSet<String>());
+                    m.put("semester", null);
+                    return m;
+                });
+                if (fac.getSubjects() != null && !fac.getSubjects().isBlank()) {
+                    Arrays.stream(fac.getSubjects().split(",")).map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(s -> ((Set<String>) home.get("subjects")).add(s));
+                }
+                if (fac.getSection() != null && !fac.getSection().isBlank()) {
+                    Arrays.stream(fac.getSection().split(",")).map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(s -> ((Set<String>) home.get("sections")).add(s));
+                }
+                if (fac.getSemester() != null)
+                    home.put("semester", fac.getSemester());
+            }
+
+            // 2. Subjects where this faculty is the instructor (from Subject table)
+            List<Subject> instructedSubjects = subjectRepository.findAll().stream()
+                    .filter(s -> s.getInstructorName() != null &&
+                            (fac.getUsername().equalsIgnoreCase(s.getInstructorName())
+                                    || fac.getFullName().equalsIgnoreCase(s.getInstructorName())))
+                    .collect(Collectors.toList());
+            for (Subject s : instructedSubjects) {
+                String dept = s.getDepartment() != null ? s.getDepartment() : fac.getDepartment();
+                Map<String, Object> entry = deptMap.computeIfAbsent(dept, k -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("subjects", new java.util.LinkedHashSet<String>());
+                    m.put("sections", new java.util.LinkedHashSet<String>());
+                    m.put("semester", null);
+                    return m;
+                });
+                ((Set<String>) entry.get("subjects")).add(s.getName());
+            }
+
+            // 3. Cross-department assignment requests
+            List<com.example.ia.entity.FacultyAssignmentRequest> approvedRequests = assignmentRequestRepository
+                    .findByFacultyIdAndStatus(fac.getId(), "APPROVED");
+            for (com.example.ia.entity.FacultyAssignmentRequest req : approvedRequests) {
+                String dept = req.getTargetDepartment();
+                Map<String, Object> entry = deptMap.computeIfAbsent(dept, k -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("subjects", new java.util.LinkedHashSet<String>());
+                    m.put("sections", new java.util.LinkedHashSet<String>());
+                    m.put("semester", null);
+                    return m;
+                });
+                if (req.getSubjects() != null && !req.getSubjects().isBlank()) {
+                    Arrays.stream(req.getSubjects().split(",")).map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(s -> ((Set<String>) entry.get("subjects")).add(s));
+                }
+                if (req.getSections() != null && !req.getSections().isBlank()) {
+                    Arrays.stream(req.getSections().split(",")).map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(s -> ((Set<String>) entry.get("sections")).add(s));
+                }
+                if (req.getSemester() != null)
+                    entry.put("semester", req.getSemester());
+            }
+
+            // Build the final departmentAssignments list from the merged map
+            List<Map<String, Object>> deptAssignments = new ArrayList<>();
+            for (Map.Entry<String, Map<String, Object>> e : deptMap.entrySet()) {
+                Set<String> subjects = (Set<String>) e.getValue().get("subjects");
+                Set<String> sections = (Set<String>) e.getValue().get("sections");
+                allSubjects.addAll(subjects);
+
+                Map<String, Object> assignment = new HashMap<>();
+                assignment.put("department", e.getKey());
+                assignment.put("subjects", subjects.isEmpty() ? null : String.join(", ", subjects));
+                assignment.put("section", sections.isEmpty() ? null : String.join(", ", sections));
+                assignment.put("semester", e.getValue().get("semester"));
+                deptAssignments.add(assignment);
+            }
+
+            facMap.put("subjects", allSubjects.isEmpty() ? null : String.join(", ", allSubjects));
+            facMap.put("departmentAssignments", deptAssignments);
+            result.add(facMap);
+        }
+
+        return result;
     }
 
     @GetMapping("/timetables")
@@ -450,6 +560,93 @@ public class PrincipalController {
                         s.getRegNo(), s.getName().replace(",", " "), s.getDepartment(), s.getSemester(),
                         s.getSection()));
             }
+        }
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=" + filename)
+                .header("Content-Type", "text/csv")
+                .body(csv.toString());
+    }
+
+    @GetMapping("/reports/download/{department}/{reportType}")
+    @PreAuthorize("hasRole('PRINCIPAL')")
+    public ResponseEntity<String> downloadDeptReport(
+            @PathVariable String department, @PathVariable String reportType) {
+
+        StringBuilder csv = new StringBuilder();
+        String filename = department + "_" + reportType + ".csv";
+
+        switch (reportType) {
+            case "students":
+                csv.append("Reg No,Name,Semester,Section\n");
+                List<Student> students = studentRepository.findByDepartment(department);
+                for (Student s : students) {
+                    csv.append(String.format("%s,%s,%s,%s\n",
+                            s.getRegNo(), s.getName().replace(",", " "),
+                            s.getSemester(), s.getSection()));
+                }
+                break;
+
+            case "marks":
+                csv.append("Reg No,Name,Subject,CIE Number,Marks\n");
+                List<Subject> deptSubjects = subjectRepository.findByDepartment(department);
+                for (Subject sub : deptSubjects) {
+                    List<CieMark> marks = cieMarkRepository.findBySubject_Id(sub.getId());
+                    for (CieMark m : marks) {
+                        if (m.getStudent() == null)
+                            continue;
+                        csv.append(String.format("%s,%s,%s,%s,%s\n",
+                                m.getStudent().getRegNo(),
+                                m.getStudent().getName().replace(",", " "),
+                                sub.getName().replace(",", " "),
+                                m.getCieType() != null ? m.getCieType() : "",
+                                m.getMarks() != null ? m.getMarks().toString() : ""));
+                    }
+                }
+                break;
+
+            case "attendance":
+                csv.append("Reg No,Name,Total Classes,Present,Absent,Percentage\n");
+                List<Student> deptStudents = studentRepository.findByDepartment(department);
+                for (Student s : deptStudents) {
+                    List<Attendance> atts = attendanceRepository.findByStudentId(s.getId());
+                    long present = atts.stream()
+                            .filter(a -> "PRESENT".equalsIgnoreCase(a.getStatus())).count();
+                    long absent = atts.size() - present;
+                    double pct = atts.isEmpty() ? 0 : (double) present / atts.size() * 100;
+                    csv.append(String.format("%s,%s,%d,%d,%d,%.1f%%\n",
+                            s.getRegNo(), s.getName().replace(",", " "),
+                            atts.size(), present, absent, pct));
+                }
+                break;
+
+            case "faculty":
+                csv.append("Name,Designation,Email,Subjects,Section\n");
+                List<User> faculty = userRepository.findByRoleAndDepartment("FACULTY", department);
+                for (User f : faculty) {
+                    csv.append(String.format("%s,%s,%s,%s,%s\n",
+                            f.getFullName().replace(",", " "),
+                            f.getDesignation() != null ? f.getDesignation() : "",
+                            f.getEmail() != null ? f.getEmail() : "",
+                            f.getSubjects() != null ? f.getSubjects().replace(",", ";") : "",
+                            f.getSection() != null ? f.getSection() : ""));
+                }
+                break;
+
+            case "subjects":
+                csv.append("Code,Name,Semester,Instructor\n");
+                List<Subject> subjects = subjectRepository.findByDepartment(department);
+                for (Subject s : subjects) {
+                    csv.append(String.format("%s,%s,%s,%s\n",
+                            s.getCode() != null ? s.getCode() : "",
+                            s.getName().replace(",", " "),
+                            s.getSemester() != null ? s.getSemester().toString() : "",
+                            s.getInstructorName() != null ? s.getInstructorName().replace(",", " ") : ""));
+                }
+                break;
+
+            default:
+                return ResponseEntity.badRequest().body("Invalid report type");
         }
 
         return ResponseEntity.ok()

@@ -53,7 +53,7 @@ const UnlockMarksPanel = () => {
                         className={styles.dangerBtn}
                         onClick={() => {
                             if (!selectedSubject) {
-                                alert('Please select a subject');
+                                return; // Subject not selected
                                 return;
                             }
                             const subject = subjects.find(s => s.id === parseInt(selectedSubject));

@@ -1,4 +1,5 @@
 import React, { memo, useState, useMemo } from 'react';
+import { useDialog } from '../../GlobalDialogProvider';
 
 import { Calendar, Download, Bell, FileText, Search, UserMinus, Briefcase, Clock, Mail, Phone, MapPin, Building, UserCheck, AlertTriangle, X, Trash2, Send, ShieldCheck, RefreshCw, Edit2, Edit3, Eye, EyeOff } from 'lucide-react';
 import { SimpleModal } from './Shared';
@@ -47,16 +48,9 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove }) 
                         <h1 style={{ margin: 0, fontSize: '2.2rem', fontWeight: 800 }}>Staff Directory</h1>
                         <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>Manage faculty profiles, workload, and performance.</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '2rem', textAlign: 'right' }}>
-                        <div>
-                            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Total Faculty</p>
-                            <p style={{ margin: '0', fontSize: '1.8rem', fontWeight: '700' }}>{facultyMembers.length}</p>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'rgba(255,255,255,0.3)' }}></div>
-                        <div>
-                            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Avg Workload</p>
-                            <p style={{ margin: '0', fontSize: '1.8rem', fontWeight: '700' }}>18h/wk</p>
-                        </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Total Faculty</p>
+                        <p style={{ margin: '0', fontSize: '1.8rem', fontWeight: '700' }}>{facultyMembers.length}</p>
                     </div>
                 </div>
             </div>
@@ -131,7 +125,11 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove }) 
                                 <td>
                                     <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{f.department || f.dept || f.Department}</span>
                                 </td>
-                                <td>{f.designation || f.Designation}</td>
+                                <td>
+                                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#f0fdf4', color: '#166534', fontWeight: 600, fontSize: '0.85rem' }}>
+                                        {f.designation || f.Designation || f.role || 'Faculty'}
+                                    </span>
+                                </td>
 
                                 <td>
                                     <button
@@ -158,49 +156,84 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove }) 
             {/* --- PROFILE MODAL --- */}
             <SimpleModal isOpen={!!viewProfile} onClose={() => setViewProfile(null)} title="Faculty Profile">
                 {viewProfile && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', textAlign: 'center' }}>
-                        <div style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: '#f8fafc',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem',
-                            fontWeight: 800, color: '#334155', border: '4px solid #e2e8f0'
-                        }}>
-                            {(viewProfile.fullName || viewProfile.name || '?').charAt(0)}
-                        </div>
-                        <div>
-                            <h2 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>{viewProfile.fullName || viewProfile.name}</h2>
-                            <p style={{ margin: 0, color: '#64748b', fontWeight: 500 }}>{viewProfile.designation || viewProfile.Designation} - {viewProfile.department || viewProfile.dept || viewProfile.Department}</p>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%' }}>
-                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left' }}>
-                                <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>Employee ID</p>
-                                <p style={{ margin: 0, fontWeight: 600 }}>{viewProfile.id || viewProfile.EmployeeID}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {/* Header - horizontal layout */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{
+                                width: '60px', height: '60px', borderRadius: '50%', background: '#f8fafc',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem',
+                                fontWeight: 800, color: '#334155', border: '3px solid #e2e8f0', flexShrink: 0
+                            }}>
+                                {(viewProfile.fullName || viewProfile.name || '?').charAt(0)}
                             </div>
-                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left' }}>
-                                <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>Qualification</p>
-                                <p style={{ margin: 0, fontWeight: 600 }}>{viewProfile.qualifications || viewProfile.Qualification}</p>
-                            </div>
-                            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', textAlign: 'left', gridColumn: 'span 2' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                                    <Mail size={16} color="#64748b" />
-                                    <span style={{ fontSize: '0.9rem', color: '#475569' }}>{viewProfile.email || 'Email not provided'}</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Phone size={16} color="#64748b" />
-                                    <span style={{ fontSize: '0.9rem', color: '#475569' }}>{viewProfile.phone || 'Phone not provided'}</span>
+                            <div>
+                                <h2 style={{ margin: '0 0 0.25rem 0', color: '#0f172a', fontSize: '1.2rem' }}>{viewProfile.fullName || viewProfile.name}</h2>
+                                <p style={{ margin: 0, color: '#64748b', fontWeight: 500, fontSize: '0.85rem' }}>{viewProfile.designation || viewProfile.role || 'Faculty'} • {viewProfile.department || viewProfile.dept}</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '0.25rem' }}>
+                                    <Mail size={13} color="#64748b" />
+                                    <span style={{ fontSize: '0.8rem', color: '#475569' }}>{viewProfile.email || 'Email not provided'}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ width: '100%', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
-                            <h4 style={{ margin: '0 0 1rem', textAlign: 'left' }}>Assigned Subjects</h4>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                {(viewProfile.subjects || 'No subjects assigned').split(',').map((sub, idx) => (
-                                    <span key={idx} style={{ padding: '4px 10px', background: '#dbeafe', color: '#1e40af', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                        {sub.trim()}
-                                    </span>
-                                ))}
+                        {/* Info grid - 3 columns */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                            <div style={{ background: '#f8fafc', padding: '0.6rem 0.8rem', borderRadius: '8px', textAlign: 'left' }}>
+                                <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', color: '#94a3b8' }}>Employee ID</p>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>{viewProfile.id || viewProfile.EmployeeID}</p>
                             </div>
+                            <div style={{ background: '#f8fafc', padding: '0.6rem 0.8rem', borderRadius: '8px', textAlign: 'left' }}>
+                                <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', color: '#94a3b8' }}>Username</p>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>{viewProfile.username || '—'}</p>
+                            </div>
+                            <div style={{ background: '#f8fafc', padding: '0.6rem 0.8rem', borderRadius: '8px', textAlign: 'left' }}>
+                                <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', color: '#94a3b8' }}>Home Dept</p>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>{viewProfile.department || '—'}</p>
+                            </div>
+                        </div>
+
+                        {/* Teaching Assignments */}
+                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+                            <h4 style={{ margin: '0 0 0.6rem', textAlign: 'left', fontSize: '0.95rem' }}>Teaching Assignments</h4>
+                            {viewProfile.departmentAssignments && viewProfile.departmentAssignments.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {viewProfile.departmentAssignments.map((assignment, idx) => (
+                                        <div key={idx} style={{ background: '#f8fafc', padding: '0.7rem 0.9rem', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                                                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.88rem' }}>
+                                                    📚 {assignment.department}
+                                                </span>
+                                                {assignment.section && (
+                                                    <span style={{ padding: '2px 7px', background: '#f0fdf4', color: '#166534', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 600 }}>
+                                                        {assignment.semester ? `Sem ${assignment.semester} / ` : ''}Sec {assignment.section}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                                {assignment.subjects ? (
+                                                    assignment.subjects.split(',').map((sub, sIdx) => (
+                                                        <span key={sIdx} style={{ padding: '2px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                            {sub.trim()}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>No subjects</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : viewProfile.subjects && viewProfile.subjects.trim() ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                    {viewProfile.subjects.split(',').map((sub, idx) => (
+                                        <span key={idx} style={{ padding: '3px 9px', background: '#dbeafe', color: '#1e40af', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600 }}>
+                                            {sub.trim()}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>No subjects assigned</span>
+                            )}
                         </div>
                     </div>
                 )}
@@ -263,11 +296,8 @@ export const CIEScheduleSection = memo(({ schedules = [], onDownload }) => {
                 <h2 className={styles.chartTitle} style={{ margin: 0 }}>{selectedDept} - CIE Examination Schedules</h2>
             </div>
 
-            {/* DEBUG INFO - Remove after fixing */}
-            <div style={{ padding: '10px', background: '#fff0f0', color: '#dc2626', marginBottom: '1rem', borderRadius: '8px', fontSize: '0.8rem' }}>
-                <strong>Debug Info:</strong> Total Schedules Fetched: {schedules.length} <br />
-                Available Departments in Data: {[...new Set(schedules.map(s => s.subject ? s.subject.department : 'No Subject'))].join(', ')}
-            </div>
+
+
 
             {/* Empty State */}
             {filteredSchedules.length === 0 && (
@@ -475,41 +505,132 @@ export const NotificationsSection = memo(({
     </div>
 ));
 
-export const ReportsSection = memo(({ reports = [], onDownload }) => (
-    <div className={styles.sectionVisible}>
-        <h2 className={styles.chartTitle} style={{ marginBottom: '1.5rem' }}>Reports Center</h2>
-        <div className={styles.glassCard}>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>Report Name</th>
-                        <th>Type</th>
-                        <th>Size</th>
-                        <th>Generated Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {reports.map(r => (
-                        <tr key={r.id}>
-                            <td style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
-                                <FileText size={16} color="#64748b" /> {r.name}
-                            </td>
-                            <td>{r.type}</td>
-                            <td>{r.size}</td>
-                            <td>{r.date}</td>
-                            <td>
-                                <button className={styles.actionBtn} onClick={() => onDownload(r)}>Download</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+export const ReportsSection = memo(({ reports = [], onDownload, departments = [] }) => {
+    const [selectedDept, setSelectedDept] = useState(departments[0] || '');
+    const [downloading, setDownloading] = useState(null);
+
+    const reportTypes = [
+        { id: 'students', name: 'Student List', icon: '🎓', description: 'Complete list of students with semester and section details', color: '#3b82f6' },
+        { id: 'marks', name: 'CIE Marks', icon: '📝', description: 'All CIE marks with subject-wise breakdown', color: '#8b5cf6' },
+        { id: 'attendance', name: 'Attendance Report', icon: '📊', description: 'Student attendance with present/absent count and percentage', color: '#10b981' },
+        { id: 'faculty', name: 'Faculty List', icon: '👨‍🏫', description: 'Faculty details with designation, subjects, and sections', color: '#f59e0b' },
+        { id: 'subjects', name: 'Subject List', icon: '📚', description: 'All subjects with code, semester, and assigned instructor', color: '#ef4444' }
+    ];
+
+    const handleDeptDownload = async (reportType) => {
+        if (!selectedDept) return;
+        setDownloading(reportType);
+        try {
+            await onDownload({ apiType: `${selectedDept}/${reportType}`, name: `${selectedDept}_${reportType}` });
+        } catch (e) { console.error(e); }
+        setDownloading(null);
+    };
+
+    const handleDownloadAll = async () => {
+        if (!selectedDept) return;
+        for (const rt of reportTypes) {
+            await handleDeptDownload(rt.id);
+        }
+    };
+
+    return (
+        <div className={styles.sectionVisible} style={{ animation: 'fadeIn 0.6s ease' }}>
+            {/* Header */}
+            <div style={{
+                background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)',
+                borderRadius: '16px', padding: '2rem 2.5rem', marginBottom: '1.5rem',
+                color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.5rem' }}>
+                        <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}>
+                            <FileText size={24} color="white" />
+                        </div>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', opacity: 0.9 }}>Reports Center</span>
+                    </div>
+                    <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 800 }}>Department Reports</h1>
+                    <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '0.9rem' }}>Download department-wise data as CSV files.</p>
+                </div>
+            </div>
+
+            {/* Department Selector + Download All */}
+            <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem',
+                background: 'white', padding: '1rem 1.5rem', borderRadius: '12px',
+                border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <label style={{ fontWeight: 600, color: '#334155', fontSize: '0.95rem' }}>Select Department:</label>
+                    <select
+                        value={selectedDept}
+                        onChange={e => setSelectedDept(e.target.value)}
+                        style={{
+                            padding: '0.5rem 1rem', borderRadius: '8px', border: '2px solid #e2e8f0',
+                            fontSize: '0.95rem', fontWeight: 600, color: '#1e293b', background: '#f8fafc',
+                            cursor: 'pointer', outline: 'none', minWidth: '180px'
+                        }}
+                    >
+                        {departments.map(d => (
+                            <option key={d.id || d} value={d.id || d}>
+                                {d.name || d}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <button
+                    onClick={handleDownloadAll}
+                    disabled={!selectedDept}
+                    style={{
+                        padding: '0.6rem 1.5rem', borderRadius: '10px', border: 'none',
+                        background: selectedDept ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#cbd5e1',
+                        color: 'white', fontWeight: 700, fontSize: '0.9rem', cursor: selectedDept ? 'pointer' : 'not-allowed',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        boxShadow: selectedDept ? '0 4px 12px rgba(37,99,235,0.3)' : 'none'
+                    }}
+                >
+                    ⬇ Download All Reports
+                </button>
+            </div>
+
+            {/* Report Cards Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                {reportTypes.map(rt => (
+                    <div key={rt.id} style={{
+                        background: 'white', borderRadius: '14px', padding: '1.5rem',
+                        border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                        transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'default',
+                        borderTop: `3px solid ${rt.color}`
+                    }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.8rem' }}>
+                            <span style={{ fontSize: '1.8rem' }}>{rt.icon}</span>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#1e293b' }}>{rt.name}</h3>
+                        </div>
+                        <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>{rt.description}</p>
+                        <button
+                            onClick={() => handleDeptDownload(rt.id)}
+                            disabled={!selectedDept || downloading === rt.id}
+                            style={{
+                                width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none',
+                                background: downloading === rt.id ? '#94a3b8' : rt.color,
+                                color: 'white', fontWeight: 600, fontSize: '0.85rem',
+                                cursor: selectedDept ? 'pointer' : 'not-allowed',
+                                opacity: !selectedDept ? 0.5 : 1
+                            }}
+                        >
+                            {downloading === rt.id ? 'Downloading...' : `Download ${selectedDept || '...'} CSV`}
+                        </button>
+                    </div>
+                ))}
+            </div>
         </div>
-    </div>
-));
+    );
+});
 
 export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments = [], onRefresh, onUpdate, onDelete }) => {
+    const { showConfirm } = useDialog();
     const [name, setName] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -518,6 +639,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [editingHod, setEditingHod] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [formError, setFormError] = useState('');
 
     // Fixed 5 departments + ability to add more
     const FIXED_DEPTS = [
@@ -537,8 +659,8 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
     const handleAddDept = () => {
         const id = newDeptId.trim().toUpperCase();
         const nm = newDeptName.trim();
-        if (!id || !nm) { alert('Please enter both department code and name.'); return; }
-        if (allDepts.some(d => d.id === id)) { alert('Department code already exists.'); return; }
+        if (!id || !nm) { setFormError('Please enter both department code and name.'); setTimeout(() => setFormError(''), 3000); return; }
+        if (allDepts.some(d => d.id === id)) { setFormError('Department code already exists.'); setTimeout(() => setFormError(''), 3000); return; }
         setCustomDepts(prev => [...prev, { id, name: nm }]);
         setNewDeptId('');
         setNewDeptName('');
@@ -575,11 +697,11 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!name || (!editingHod && !username) || !department) {
-            alert('Name and Department are required.');
+            setFormError('Name and Department are required.'); setTimeout(() => setFormError(''), 3000);
             return;
         }
         if (!editingHod && !password) {
-            alert('Password is required.');
+            setFormError('Password is required.'); setTimeout(() => setFormError(''), 3000);
             return;
         }
 
@@ -748,6 +870,15 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                         </div>
                     </div>
 
+                    {formError && (
+                        <div style={{
+                            marginTop: '1rem', padding: '0.75rem 1rem', borderRadius: '10px',
+                            background: '#fee2e2', color: '#991b1b', fontWeight: 600, fontSize: '0.88rem',
+                            display: 'flex', alignItems: 'center', gap: '8px', animation: 'dialogIn 0.25s ease-out'
+                        }}>
+                            <AlertTriangle size={16} /> {formError}
+                        </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.85rem', background: '#f1f5f9', padding: '0.5rem 1rem', borderRadius: '8px' }}>
                             <AlertTriangle size={16} />
@@ -807,7 +938,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                             <Edit3 size={16} />
                                         </button>
                                         <button
-                                            onClick={() => { if (window.confirm(`Are you sure you want to remove ${h.fullName}?`)) onDelete(h.id); }}
+                                            onClick={async () => { const confirmed = await showConfirm({ title: 'Remove HOD', message: `Are you sure you want to remove ${h.fullName}?`, variant: 'danger', confirmText: 'Remove' }); if (confirmed) onDelete(h.id); }}
                                             style={{ padding: '6px', borderRadius: '8px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}
                                             title="Delete HOD"
                                         >

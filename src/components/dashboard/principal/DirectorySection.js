@@ -5,6 +5,8 @@ import { useAuth } from '../../../context/AuthContext';
 import API_BASE_URL from '../../../config/api';
 
 const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudentProfile, selectedDept }) => {
+    const [localToast, setLocalToast] = React.useState('');
+    const showLocalToast = (msg) => { setLocalToast(msg); setTimeout(() => setLocalToast(''), 2500); };
     if (!selectedStudentProfile) return null;
     const s = selectedStudentProfile;
     return (
@@ -62,10 +64,11 @@ const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudentProfile
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className={styles.primaryBtn} onClick={() => alert('Report Generated')}>Download Report Card</button>
-                    <button className={styles.secondaryBtn} onClick={() => alert('Contacting Parents...')}>Contact Parent</button>
+                    <button className={styles.primaryBtn} onClick={() => showLocalToast('Report Generated')}>Download Report Card</button>
+                    <button className={styles.secondaryBtn} onClick={() => showLocalToast('Contacting Parents...')}>Contact Parent</button>
                 </div>
             </div>
+            {localToast && <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10001, padding: '0.85rem 1.5rem', borderRadius: '12px', background: '#dcfce7', color: '#166534', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontWeight: 600, fontSize: '0.9rem', maxWidth: '400px' }}>{localToast}</div>}
         </div>
     );
 };
@@ -78,6 +81,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
     const [searchQuery, setSearchQuery] = useState('');
     const [showAtRisk, setShowAtRisk] = useState(false);
     const [selectedStudents, setSelectedStudents] = useState([]);
+    const [bulkToast, setBulkToast] = useState('');
+    const showBulkToast = (msg) => { setBulkToast(msg); setTimeout(() => setBulkToast(''), 2500); };
     const itemsPerPage = 10000; // Show all students
 
     const [internalSelectedStudent, setInternalSelectedStudent] = useState(null);
@@ -360,8 +365,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                         <span style={{ fontWeight: 600 }}>{selectedStudents.length} students selected</span>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => alert("Sending SMS to selected parents...")}>Send SMS</button>
-                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => alert("Printing Reports...")}>Print Reports</button>
+                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => showBulkToast('Sending SMS to selected parents...')}>Send SMS</button>
+                        <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 500, cursor: 'pointer' }} onClick={() => showBulkToast('Printing Reports...')}>Print Reports</button>
                         <button style={{ background: 'white', border: 'none', color: '#0f172a', padding: '6px 12px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }} onClick={() => setSelectedStudents([])}>Clear</button>
                     </div>
                 </div>
@@ -458,6 +463,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                 setSelectedStudentProfile={setInternalSelectedStudent}
                 selectedDept={selectedDept}
             />
+            {bulkToast && <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10001, padding: '0.85rem 1.5rem', borderRadius: '12px', background: '#dcfce7', color: '#166534', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontWeight: 600, fontSize: '0.9rem', maxWidth: '400px' }}>{bulkToast}</div>}
         </div>
     );
 });

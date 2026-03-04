@@ -1,10 +1,14 @@
 package com.example.ia.controller;
 
 import com.example.ia.entity.Subject;
+import com.example.ia.entity.User;
+import com.example.ia.entity.FacultyAssignmentRequest;
 import com.example.ia.repository.AnnouncementRepository;
 import com.example.ia.repository.AttendanceRepository;
 import com.example.ia.repository.CieMarkRepository;
 import com.example.ia.repository.SubjectRepository;
+import com.example.ia.repository.UserRepository;
+import com.example.ia.repository.FacultyAssignmentRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +31,12 @@ public class SubjectController {
 
     @Autowired
     AttendanceRepository attendanceRepository;
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    FacultyAssignmentRequestRepository assignmentRequestRepository;
 
     @Autowired
     AnnouncementRepository announcementRepository;
@@ -98,6 +108,7 @@ public class SubjectController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('HOD')")
+    @Transactional
     public ResponseEntity<?> updateSubject(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         return subjectRepository.findById(id).map(subject -> {
             String name = data.getOrDefault("name", "").toString().trim();
@@ -117,6 +128,9 @@ public class SubjectController {
                                 + subject.getDepartment() + " department."));
             }
 
+            String oldName = subject.getName();
+            boolean nameChanged = !oldName.equals(name);
+
             subject.setName(name);
             subject.setCode(code);
 
@@ -128,7 +142,46 @@ public class SubjectController {
             }
 
             subjectRepository.save(subject);
+
+            // Sync the updated subject name across User and FacultyAssignmentRequest
+            // assignments
+            if (nameChanged) {
+                List<User> users = userRepository.findAll();
+                for (User u : users) {
+                    if (u.getSubjects() != null && !u.getSubjects().isBlank()) {
+                        String updatedSubjects = updateSubjectList(u.getSubjects(), oldName, name);
+                        if (!updatedSubjects.equals(u.getSubjects())) {
+                            u.setSubjects(updatedSubjects);
+                            userRepository.save(u);
+                        }
+                    }
+                }
+
+                List<FacultyAssignmentRequest> requests = assignmentRequestRepository.findAll();
+                for (FacultyAssignmentRequest r : requests) {
+                    if (r.getSubjects() != null && !r.getSubjects().isBlank()) {
+                        String updatedSubjects = updateSubjectList(r.getSubjects(), oldName, name);
+                        if (!updatedSubjects.equals(r.getSubjects())) {
+                            r.setSubjects(updatedSubjects);
+                            assignmentRequestRepository.save(r);
+                        }
+                    }
+                }
+            }
+
             return ResponseEntity.ok(subject);
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private String updateSubjectList(String subjectsStr, String oldName, String newName) {
+        String[] parts = subjectsStr.split(",");
+        for (int i = 0; i < parts.length; i++) {
+            if (parts[i].trim().equalsIgnoreCase(oldName)) {
+                parts[i] = newName;
+            } else {
+                parts[i] = parts[i].trim();
+            }
+        }
+        return String.join(", ", parts);
     }
 }

@@ -367,9 +367,15 @@ public class HodController {
             @RequestParam(required = false, defaultValue = "PENDING") String status) {
         List<FacultyAssignmentRequest> requests;
         if ("ALL".equalsIgnoreCase(status)) {
-            requests = assignmentRequestRepository.findByTargetDepartment(department);
+            requests = assignmentRequestRepository.findByTargetDepartment(department)
+                    .stream()
+                    .filter(r -> "PENDING".equals(r.getStatus()) || !r.isHidden())
+                    .collect(Collectors.toList());
         } else {
-            requests = assignmentRequestRepository.findByTargetDepartmentAndStatus(department, status);
+            requests = assignmentRequestRepository.findByTargetDepartmentAndStatus(department, status)
+                    .stream()
+                    .filter(r -> "PENDING".equals(r.getStatus()) || !r.isHidden())
+                    .collect(Collectors.toList());
         }
         return ResponseEntity.ok(requests);
     }
@@ -438,6 +444,33 @@ public class HodController {
             }).orElse(ResponseEntity.status(404).<Object>body(Map.of("message", "Assignment request not found")));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", "Error rejecting request: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * HOD clears the processed (Approved or Rejected) assignment requests history.
+     */
+    @DeleteMapping("/assignment-requests/clear")
+    @CrossOrigin
+    @PreAuthorize("hasRole('HOD')")
+    @Transactional
+    public ResponseEntity<?> clearAssignmentRequestHistory(@RequestParam String department) {
+        try {
+            List<String> statuses = Arrays.asList("APPROVED", "REJECTED");
+            List<FacultyAssignmentRequest> requests = assignmentRequestRepository
+                    .findByTargetDepartmentAndStatusIn(department, statuses);
+
+            int hiddenCount = 0;
+            for (FacultyAssignmentRequest req : requests) {
+                if (!req.isHidden()) {
+                    req.setHidden(true);
+                    assignmentRequestRepository.save(req);
+                    hiddenCount++;
+                }
+            }
+            return ResponseEntity.ok(Map.of("message", "Cleared " + hiddenCount + " processed requests from history"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Error clearing history: " + e.getMessage()));
         }
     }
 

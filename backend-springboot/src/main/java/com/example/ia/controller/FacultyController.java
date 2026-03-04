@@ -221,4 +221,59 @@ public class FacultyController {
         List<FacultyAssignmentRequest> requests = assignmentRequestRepository.findByFacultyId(faculty.getId());
         return ResponseEntity.ok(requests);
     }
+
+    /**
+     * Faculty deletes one of their assignment requests.
+     */
+    @DeleteMapping("/assignment-request/{id}")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<?> deleteAssignmentRequest(@PathVariable Long id) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User faculty = userRepository.findByUsername(username).orElse(null);
+        if (faculty == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Faculty not found"));
+        }
+        FacultyAssignmentRequest req = assignmentRequestRepository.findById(id).orElse(null);
+        if (req == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Request not found"));
+        }
+        if (!req.getFacultyId().equals(faculty.getId())) {
+            return ResponseEntity.status(403).body(Map.of("message", "Not authorized"));
+        }
+        assignmentRequestRepository.delete(req);
+        return ResponseEntity.ok(Map.of("message", "Request deleted successfully"));
+    }
+
+    /**
+     * Faculty edits one of their PENDING assignment requests.
+     */
+    @PutMapping("/assignment-request/{id}")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<?> editAssignmentRequest(@PathVariable Long id, @RequestBody Map<String, String> data) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User faculty = userRepository.findByUsername(username).orElse(null);
+        if (faculty == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Faculty not found"));
+        }
+        FacultyAssignmentRequest req = assignmentRequestRepository.findById(id).orElse(null);
+        if (req == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "Request not found"));
+        }
+        if (!req.getFacultyId().equals(faculty.getId())) {
+            return ResponseEntity.status(403).body(Map.of("message", "Not authorized"));
+        }
+        if (!"PENDING".equals(req.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Only PENDING requests can be edited"));
+        }
+        if (data.containsKey("targetDepartment"))
+            req.setTargetDepartment(data.get("targetDepartment"));
+        if (data.containsKey("subjects"))
+            req.setSubjects(data.get("subjects"));
+        if (data.containsKey("sections"))
+            req.setSections(data.get("sections"));
+        if (data.containsKey("semester"))
+            req.setSemester(data.get("semester"));
+        assignmentRequestRepository.save(req);
+        return ResponseEntity.ok(Map.of("message", "Request updated successfully"));
+    }
 }

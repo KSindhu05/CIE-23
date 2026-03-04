@@ -28,8 +28,9 @@ export const SimpleModal = memo(({ isOpen, onClose, title, children }) => {
             background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000
         }}>
             <div style={{
-                background: 'white', borderRadius: '16px', width: '90%', maxWidth: '500px',
-                padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', animation: 'fadeIn 0.2s'
+                background: 'white', borderRadius: '16px', width: '90%', maxWidth: '640px',
+                padding: '1.5rem 2rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', animation: 'fadeIn 0.2s',
+                maxHeight: '85vh', overflowY: 'auto'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{title}</h3>

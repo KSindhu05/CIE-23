@@ -31,7 +31,6 @@
 | `SOMESHEKAR@EEE` | Mr.Somshekar T |
 | `ABHIPSHA@EEE` | Mr.Abhipsha D |
 | `ABIDA@EEE` | Ms.Abida Begum M A |
-| `FAC001` | Miss Manju Sree |
 
 ## MECH Department (8 Faculty)
 

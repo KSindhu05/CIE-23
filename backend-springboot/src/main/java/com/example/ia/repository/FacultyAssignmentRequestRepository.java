@@ -18,4 +18,10 @@ public interface FacultyAssignmentRequestRepository extends JpaRepository<Facult
             String status);
 
     List<FacultyAssignmentRequest> findByFacultyIdAndTargetDepartment(Long facultyId, String targetDepartment);
+
+    List<FacultyAssignmentRequest> findByFacultyIdAndStatus(Long facultyId, String status);
+
+    Long deleteByTargetDepartmentAndStatusIn(String targetDepartment, List<String> statuses);
+
+    List<FacultyAssignmentRequest> findByTargetDepartmentAndStatusIn(String targetDepartment, List<String> statuses);
 }

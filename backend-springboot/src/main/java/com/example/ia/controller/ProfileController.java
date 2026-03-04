@@ -44,6 +44,41 @@ public class ProfileController {
         return ResponseEntity.ok(profile);
     }
 
+    // PUT /api/profile — update profile details
+    @PutMapping
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> body) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "User not found"));
+        }
+
+        if (body.containsKey("username") && body.get("username") != null && !body.get("username").trim().isEmpty()) {
+            String newUsername = body.get("username").trim();
+            if (!newUsername.equals(user.getUsername()) && userRepository.existsByUsernameIgnoreCase(newUsername)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Username already taken"));
+            }
+            user.setUsername(newUsername);
+        }
+        if (body.containsKey("fullName") && body.get("fullName") != null) {
+            user.setFullName(body.get("fullName").trim());
+        }
+        if (body.containsKey("email") && body.get("email") != null) {
+            user.setEmail(body.get("email").trim());
+        }
+        // Only PRINCIPAL and HOD can change department
+        if (("PRINCIPAL".equalsIgnoreCase(user.getRole()) || "HOD".equalsIgnoreCase(user.getRole()))
+                && body.containsKey("department") && body.get("department") != null) {
+            user.setDepartment(body.get("department").trim());
+        }
+        if (body.containsKey("designation") && body.get("designation") != null) {
+            user.setDesignation(body.get("designation").trim());
+        }
+
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
+    }
+
     // PUT /api/profile/credentials — change username and/or password
     @PutMapping("/credentials")
     public ResponseEntity<?> updateCredentials(@RequestBody Map<String, String> body) {

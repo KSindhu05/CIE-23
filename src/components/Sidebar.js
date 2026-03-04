@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Sidebar.module.css';
 import { LogOut } from 'lucide-react';
-import collegeLogo from '../assets/college_logo.png';
+import collegeLogo from '../assets/header_logo.png';
 import ProfileModal from './ProfileModal';
 
 const Sidebar = ({ menuItems }) => {

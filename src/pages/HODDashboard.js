@@ -2,10 +2,11 @@
 import { useAuth } from '../context/AuthContext';
 import API_BASE_URL from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
+import { useDialog } from '../components/GlobalDialogProvider';
 import {
     LayoutDashboard, Users, FileText, CheckCircle, TrendingUp, BarChart2,
-    AlertTriangle, Briefcase, Bell, Activity, Clock, Award,
-    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest, Eye, Send
+    AlertTriangle, Briefcase, Bell, Activity, Clock, Award, ClipboardList, Phone,
+    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest, Eye, Send, Unlock, LockOpen
 } from 'lucide-react';
 import {
     departments, subjectsByDept, getStudentsByDept, englishMarks, mathsMarks,
@@ -17,7 +18,7 @@ import {
     ArcElement, PointElement, LineElement, Filler
 } from 'chart.js';
 import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
-import logo from '../assets/college_logo.png';
+import logo from '../assets/header_logo.png';
 
 ChartJS.register(
     CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
@@ -45,7 +46,15 @@ const parseSubjects = (subjects) => {
 
 const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const { user } = useAuth();
+    const { showConfirm, showPrompt } = useDialog();
     const [activeTab, setActiveTab] = useState('overview');
+
+    // Toast state & helper
+    const [hodToast, setHodToast] = useState({ show: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+        setHodToast({ show: true, message, type });
+        setTimeout(() => setHodToast({ show: false, message: '', type: 'success' }), 3500);
+    };
     const [selectedDept, setSelectedDept] = useState(user?.department || 'CSE');
     const [deptStudents, setDeptStudents] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -83,6 +92,14 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const [performanceSubjectId, setPerformanceSubjectId] = useState('all');
     const [cieTrendData, setCieTrendData] = useState([0, 0, 0, 0, 0]);
     const [allSubjectPerformance, setAllSubjectPerformance] = useState([]);
+
+    // HOD Performance Tab State (Faculty-style)
+    const [hodPerformanceTab, setHodPerformanceTab] = useState('low');
+    const [hodFilterSubject, setHodFilterSubject] = useState('All');
+    const [hodFilterCIE, setHodFilterCIE] = useState('All');
+    const [hodExcellentList, setHodExcellentList] = useState([]);
+    const [hodAverageList, setHodAverageList] = useState([]);
+    const [hodLowList, setHodLowList] = useState([]);
 
     // Syllabus Form State
     const [syllabusForm, setSyllabusForm] = useState({ subjectId: '', cieNumber: '1', syllabus: '' });
@@ -122,6 +139,10 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     // Notification State
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Faculty Assignment Requests State
+    const [pendingAssignments, setPendingAssignments] = useState([]);
+    const [assignReqLoading, setAssignReqLoading] = useState(false);
 
     // Student Management State
     const [studentForm, setStudentForm] = useState({
@@ -193,16 +214,16 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert(`Message sent to ${messagingFaculty.fullName || messagingFaculty.username}`);
+                showToast(`Message sent to ${messagingFaculty.fullName || messagingFaculty.username}`);
                 setMessagingFaculty(null);
                 setMessageText('');
             } else {
                 const err = await response.text();
-                alert('Failed to send message: ' + err);
+                showToast('Failed to send message: ' + err, 'error');
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Error sending message');
+            showToast('Error sending message', 'error');
         }
     };
 
@@ -211,7 +232,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     const handleSendNewMessage = async () => {
         if (!newMessageText.trim()) {
-            alert('Please enter a message.');
+            showToast('Please enter a message.', 'error');
             return;
         }
 
@@ -254,7 +275,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
             if (allOk) {
                 const groupName = messageRecipientType === 'BOTH' ? 'Students and Faculty' : `${messageRecipientType.toLowerCase()}s`;
-                alert(`Message sent to all ${groupName}!`);
+                showToast(`Message sent to all ${groupName}!`);
 
                 const sentNotif = {
                     id: `local-${Date.now()}`,
@@ -269,21 +290,21 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 setNewMessageText('');
             } else {
                 console.error('Some messages failed');
-                // Log details of failed requests
                 responses.forEach(async (r, idx) => {
                     if (!r.ok) {
                         const err = await r.text();
                         console.error(`Request ${idx + 1} failed: ${r.status} ${r.statusText}`, err);
                     }
                 });
-                alert('Error sending message to some groups. Please check console for details.');
+                showToast('Error sending message to some groups. Check console for details.', 'error');
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Error sending message');
+            showToast('Error sending message', 'error');
         }
     };
 
+    const pendingFacultyRequestsCount = pendingAssignments.filter(r => r.status === 'PENDING').length;
     const menuItems = [
         { label: 'Overview', path: '#overview', icon: <LayoutDashboard size={20} />, isActive: activeTab === 'overview', onClick: () => setActiveTab('overview') },
         { label: 'CIE Schedule', path: '#cie-schedule', icon: <Calendar size={20} />, isActive: activeTab === 'cie-schedule', onClick: () => setActiveTab('cie-schedule') },
@@ -291,12 +312,12 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'IA Monitoring', path: '#monitoring', icon: <Activity size={20} />, isActive: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
         { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, isActive: activeTab === 'performance', onClick: () => setActiveTab('performance') },
         { label: 'Faculty Management', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
-        { label: 'Faculty Requests', path: '#faculty-requests', icon: <GitPullRequest size={20} />, isActive: activeTab === 'faculty-requests', onClick: () => setActiveTab('faculty-requests') },
+        { label: 'Faculty Requests', path: '#faculty-requests', icon: <GitPullRequest size={20} />, isActive: activeTab === 'faculty-requests', onClick: () => setActiveTab('faculty-requests'), badge: pendingFacultyRequestsCount || null },
         { label: 'All Students', path: '#all-students', icon: <Users size={20} />, isActive: activeTab === 'all-students', onClick: () => setActiveTab('all-students') },
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
-        { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals') },
+        { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
         { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, isActive: activeTab === 'update-marks', onClick: () => setActiveTab('update-marks') },
-        { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications') },
+        { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications'), badge: unreadCount || null },
     ];
 
 
@@ -335,7 +356,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert(editingFaculty ? 'Faculty updated successfully!' : 'Faculty added successfully!');
+                showToast(editingFaculty ? 'Faculty updated successfully!' : 'Faculty added successfully!');
                 setShowAddFacultyModal(false);
                 setEditingFaculty(null);
                 setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', semester: '', section: '', subjects: '', cieRole: '' });
@@ -343,11 +364,11 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             } else {
                 const errData = await response.json().catch(() => ({ message: 'Error processing faculty' }));
                 const detailMsg = errData.details ? `\n- ${errData.details.join('\n- ')}` : '';
-                alert(`Failed to process faculty: ${errData.message}${detailMsg}`);
+                showToast(`Failed to process faculty: ${errData.message}${detailMsg}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error processing faculty');
+            showToast('Error processing faculty', 'error');
         }
     };
 
@@ -368,7 +389,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     };
 
     const handleDeleteFaculty = async (facId) => {
-        if (!window.confirm(`Are you sure you want to remove this faculty from ${selectedDept} department? They will keep their assignments in other departments.`)) return;
+        const confirmed = await showConfirm({
+            title: 'Remove Faculty',
+            message: `Are you sure you want to remove this faculty from ${selectedDept} department? They will keep their assignments in other departments.`,
+            variant: 'warning',
+            confirmText: 'Remove'
+        });
+        if (!confirmed) return;
 
         try {
             const token = user?.token;
@@ -379,17 +406,17 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert(`Faculty removed from ${selectedDept} successfully`);
-                fetchFaculty(); // Refresh the list
+                showToast(`Faculty removed from ${selectedDept} successfully`);
+                fetchFaculty();
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error removing faculty' }));
-                const detailMsg = err.details ? `\nDetails: ${err.details}` : '';
-                const tableMsg = err.table ? `\nTable: ${err.table}` : '';
-                alert(`Failed to remove faculty: ${err.message}${detailMsg}${tableMsg}`);
+                const detailMsg = err.details ? ` Details: ${err.details}` : '';
+                const tableMsg = err.table ? ` Table: ${err.table}` : '';
+                showToast(`Failed to remove faculty: ${err.message}${detailMsg}${tableMsg}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error removing faculty');
+            showToast('Error removing faculty', 'error');
         }
     };
 
@@ -450,7 +477,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     // Fetch Subject Marks Data for IA Monitoring
     useEffect(() => {
-        if ((activeTab === 'monitoring' || activeTab === 'faculty') && isMyDept && subjects.length > 0 && deptStudents.length > 0) {
+        if ((activeTab === 'monitoring' || activeTab === 'faculty' || activeTab === 'performance') && isMyDept && subjects.length > 0 && deptStudents.length > 0) {
             const fetchSubjectMarks = async () => {
                 try {
                     const token = user?.token;
@@ -499,7 +526,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     }, [user]);
 
     const handleClearNotifications = async () => {
-        if (!window.confirm('Are you sure you want to clear all notifications?')) return;
+        const confirmed = await showConfirm({
+            title: 'Clear Notifications',
+            message: 'Are you sure you want to clear all notifications?',
+            variant: 'warning',
+            confirmText: 'Clear All'
+        });
+        if (!confirmed) return;
         try {
             const token = user?.token;
             if (!token) return;
@@ -508,13 +541,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             if (response.ok) {
                 setNotifications([]);
                 setUnreadCount(0);
-                alert('Notifications cleared successfully');
+                showToast('Notifications cleared successfully');
             } else {
-                alert('Failed to clear notifications');
+                showToast('Failed to clear notifications', 'error');
             }
         } catch (e) {
             console.error("Failed to clear notifications", e);
-            alert('Error clearing notifications');
+            showToast('Error clearing notifications', 'error');
         }
     };
 
@@ -534,14 +567,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         }
     };
 
-    // Fetch pending approvals when tab is active
+    // Fetch pending approvals globally to display badge
     useEffect(() => {
-        if (activeTab === 'approvals' && isMyDept) {
+        if (isMyDept && user?.token && selectedDept) {
             const fetchPendingApprovals = async () => {
                 setApprovalLoading(true);
                 try {
-                    const token = user?.token;
-                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const headers = { 'Authorization': `Bearer ${user.token}` };
                     const response = await fetch(`${API_BASE_URL}/marks/pending?department=${selectedDept}`, { headers });
                     if (response.ok) {
                         const rawMarks = await response.json();
@@ -580,7 +612,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             };
             fetchPendingApprovals();
         }
-    }, [activeTab, isMyDept, selectedDept]);
+    }, [isMyDept, selectedDept, user?.token]);
 
     // Fetch Subject Trend Data for Performance Tab
     // Unified Performance data fetching
@@ -632,6 +664,45 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             fetchPerformanceData();
         }
     }, [activeTab, performanceSubjectId, isMyDept, selectedDept, user]);
+
+    // Compute Excellent/Average/Low performers from subjectMarksData for HOD performance tab
+    useEffect(() => {
+        if (activeTab !== 'performance' || Object.keys(subjectMarksData).length === 0) return;
+        const excellent = [];
+        const average = [];
+        const low = [];
+        Object.entries(subjectMarksData).forEach(([subjectName, marks]) => {
+            if (!Array.isArray(marks)) return;
+            marks.forEach(m => {
+                const cieEntries = [
+                    { type: 'CIE1', score: m.cie1Score, att: m.attendancePercentage },
+                    { type: 'CIE2', score: m.cie2Score, att: m.attendancePercentage },
+                    { type: 'CIE3', score: m.cie3Score, att: m.attendancePercentage },
+                    { type: 'CIE4', score: m.cie4Score, att: m.attendancePercentage },
+                    { type: 'CIE5', score: m.cie5Score, att: m.attendancePercentage }
+                ];
+                cieEntries.forEach(cie => {
+                    if (cie.score == null) return;
+                    const record = {
+                        studentId: m.student?.id || m.studentId,
+                        regNo: m.student?.regNo || '-',
+                        name: m.student?.name || '-',
+                        subject: subjectName,
+                        cieType: cie.type,
+                        score: cie.score,
+                        attendance: cie.att,
+                        parentPhone: m.student?.parentPhone || m.student?.phone || ''
+                    };
+                    if (cie.score > 40) excellent.push(record);
+                    else if (cie.score >= 20) average.push(record);
+                    else low.push(record);
+                });
+            });
+        });
+        setHodExcellentList(excellent);
+        setHodAverageList(average);
+        setHodLowList(low);
+    }, [activeTab, subjectMarksData]);
 
     useEffect(() => {
         const userDept = user?.department || 'CSE'; // Get from user profile
@@ -763,12 +834,12 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             }
 
             if (response.ok) {
-                alert(editingScheduleId ? 'CIE Schedule Updated Successfully!' : 'CIE Schedule Published Successfully!');
+                showToast(editingScheduleId ? 'CIE Schedule Updated Successfully!' : 'CIE Schedule Published Successfully!');
                 setActiveTab('cie-schedule');
-                setEditingScheduleId(null); // Reset edit mode
+                setEditingScheduleId(null);
                 window.location.reload();
-            } else { alert('Failed to publish schedule'); }
-        } catch (error) { console.error(error); alert('Error publishing schedule'); }
+            } else { showToast('Failed to publish schedule', 'error'); }
+        } catch (error) { console.error(error); showToast('Error publishing schedule', 'error'); }
     };
 
     const handleEditSchedule = (schedule) => {
@@ -801,7 +872,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     };
 
     const handleDeleteSchedule = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this schedule? This cannot be undone.')) return;
+        const confirmed = await showConfirm({
+            title: 'Delete Schedule',
+            message: 'Are you sure you want to delete this schedule? This cannot be undone.',
+            variant: 'danger',
+            confirmText: 'Delete'
+        });
+        if (!confirmed) return;
         try {
             const token = user?.token;
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -811,14 +888,14 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert('Schedule deleted successfully');
+                showToast('Schedule deleted successfully');
                 setDepartmentAnnouncements(prev => prev.filter(a => a.id !== id));
             } else {
-                alert('Failed to delete schedule');
+                showToast('Failed to delete schedule', 'error');
             }
         } catch (e) {
             console.error("Failed to delete schedule", e);
-            alert('Error deleting schedule');
+            showToast('Error deleting schedule', 'error');
         }
     };
 
@@ -912,7 +989,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         });
 
         if (payload.length === 0) {
-            alert("No changes to save.");
+            showToast('No changes to save.', 'info');
             return;
         }
 
@@ -926,19 +1003,25 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert('Marks updated successfully!');
+                showToast('Marks updated successfully!');
             } else {
                 const err = await response.text();
-                alert('Failed to update marks: ' + err);
+                showToast('Failed to update marks: ' + err, 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error updating marks');
+            showToast('Error updating marks', 'error');
         }
     };
 
     const handleApproveMarks = async (subjectId, iaType) => {
-        if (!window.confirm(`Are you sure you want to APPROVE marks for ${iaType}? This will lock these marks.`)) return;
+        const confirmed = await showConfirm({
+            title: 'Approve Marks',
+            message: `Are you sure you want to APPROVE marks for ${iaType}? This will lock these marks.`,
+            variant: 'info',
+            confirmText: 'Approve'
+        });
+        if (!confirmed) return;
         try {
             const token = user?.token;
             const headers = { 'Authorization': `Bearer ${token}` };
@@ -947,20 +1030,26 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 headers
             });
             if (response.ok) {
-                alert('Marks approved successfully!');
+                showToast('Marks approved successfully!');
                 setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
             } else {
                 const err = await response.text();
-                alert('Failed to approve: ' + err);
+                showToast('Failed to approve: ' + err, 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error approving marks');
+            showToast('Error approving marks', 'error');
         }
     };
 
     const handleRejectMarks = async (subjectId, iaType) => {
-        if (!window.confirm(`Are you sure you want to REJECT marks for ${iaType}? Faculty will need to resubmit.`)) return;
+        const confirmed = await showConfirm({
+            title: 'Reject Marks',
+            message: `Are you sure you want to REJECT marks for ${iaType}? Faculty will need to resubmit.`,
+            variant: 'danger',
+            confirmText: 'Reject'
+        });
+        if (!confirmed) return;
         try {
             const token = user?.token;
             const headers = { 'Authorization': `Bearer ${token}` };
@@ -969,26 +1058,36 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 headers
             });
             if (response.ok) {
-                alert('Marks rejected. Faculty has been notified.');
+                showToast('Marks rejected. Faculty has been notified.');
                 setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
             } else {
                 const err = await response.text();
-                alert('Failed to reject: ' + err);
+                showToast('Failed to reject: ' + err, 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error rejecting marks');
+            showToast('Error rejecting marks', 'error');
         }
     };
 
     const handleUnlockMarks = async (subjectId, iaType, subjectName) => {
-        const reason = prompt(`Why are you unlocking ${subjectName} ${iaType} marks?\n(Optional - press OK to skip)`);
+        const reason = await showPrompt({
+            title: 'Unlock Marks',
+            message: `Why are you unlocking ${subjectName} ${iaType} marks?`,
+            inputLabel: 'Reason (optional)',
+            placeholder: 'Enter reason...',
+            confirmText: 'Continue'
+        });
 
         if (reason === null) return; // User clicked Cancel
 
-        if (!window.confirm(`Are you sure you want to UNLOCK ${subjectName} ${iaType} marks?\n\nThis will change the status from APPROVED to PENDING, allowing faculty to edit them again.`)) {
-            return;
-        }
+        const confirmed = await showConfirm({
+            title: 'Confirm Unlock',
+            message: `Are you sure you want to UNLOCK ${subjectName} ${iaType} marks?\n\nThis will change the status from APPROVED to PENDING, allowing faculty to edit them again.`,
+            variant: 'warning',
+            confirmText: 'Unlock'
+        });
+        if (!confirmed) return;
 
         try {
             const token = user?.token;
@@ -1009,17 +1108,16 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
             if (response.ok) {
                 const result = await response.json();
-                alert(`Success: ${result.message || 'Marks unlocked successfully!'}\n\nFaculty can now edit these marks.`);
-                // Reload page to show updated status
+                showToast(result.message || 'Marks unlocked successfully! Faculty can now edit these marks.');
                 window.location.reload();
             } else {
                 const err = await response.json();
                 console.error('Unlock failed response:', err);
-                alert(`Failed to unlock: ${err.message || 'Unknown error'} (Status: ${response.status})`);
+                showToast(`Failed to unlock: ${err.message || 'Unknown error'} (Status: ${response.status})`, 'error');
             }
         } catch (e) {
             console.error('Unlock error:', e);
-            alert(`Error unlocking marks: ${e.message}. Check console for details.`);
+            showToast(`Error unlocking marks: ${e.message}. Check console for details.`, 'error');
         }
     };
 
@@ -1071,36 +1169,41 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert('Student created successfully! They can now login with their Reg No.');
+                showToast('Student created successfully! They can now login with their Reg No.');
                 setShowAddStudentModal(false);
                 setStudentForm({ regNo: '', name: '', email: '', phone: '', parentPhone: '', semester: '1', section: 'A', password: 'password123' });
-                // Refresh student list
                 window.location.reload();
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error creating student' }));
-                alert(`Failed: ${err.message}`);
+                showToast(`Failed: ${err.message}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error creating student');
+            showToast('Error creating student', 'error');
         }
     };
 
     const handleDeleteStudent = async (regNo) => {
-        if (!window.confirm(`Are you sure you want to delete student ${regNo}? This will remove their login account and all data.`)) return;
+        const confirmed = await showConfirm({
+            title: 'Delete Student',
+            message: `Are you sure you want to delete student ${regNo}? This will remove their login account and all data.`,
+            variant: 'danger',
+            confirmText: 'Delete'
+        });
+        if (!confirmed) return;
         try {
             const token = user?.token;
             const headers = { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
             const response = await fetch(`${API_BASE_URL}/hod/students/${regNo}`, { method: 'DELETE', headers });
             if (response.ok) {
-                alert('Student deleted successfully');
+                showToast('Student deleted successfully');
                 window.location.reload();
             } else {
-                alert('Failed to delete student');
+                showToast('Failed to delete student', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error deleting student');
+            showToast('Error deleting student', 'error');
         }
     };
 
@@ -1131,18 +1234,18 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             });
 
             if (response.ok) {
-                alert('Student updated successfully!');
+                showToast('Student updated successfully!');
                 setShowEditStudentModal(false);
                 setEditingStudent(null);
                 setStudentForm({ regNo: '', name: '', email: '', phone: '', parentPhone: '', semester: '1', section: 'A', password: 'password123' });
                 window.location.reload();
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error updating student' }));
-                alert(`Failed: ${err.message}`);
+                showToast(`Failed: ${err.message}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error updating student');
+            showToast('Error updating student', 'error');
         }
     };
 
@@ -1154,7 +1257,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     const handleResetPassword = async () => {
         if (!resetTarget || !newPassword || newPassword.length < 4) {
-            alert('Please enter a password with at least 4 characters.');
+            showToast('Please enter a password with at least 4 characters.', 'error');
             return;
         }
         try {
@@ -1165,15 +1268,15 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 body: JSON.stringify({ username: resetTarget.username, newPassword })
             });
             if (response.ok) {
-                alert(`Password reset successfully for ${resetTarget.fullName || resetTarget.username}`);
+                showToast(`Password reset successfully for ${resetTarget.fullName || resetTarget.username}`);
                 setShowResetPasswordModal(false);
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error resetting password' }));
-                alert(`Failed: ${err.message}`);
+                showToast(`Failed: ${err.message}`, 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Error resetting password');
+            showToast('Error resetting password', 'error');
         }
     };
 
@@ -1181,8 +1284,14 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (!window.confirm(`Are you sure you want to upload "${file.name}"? This will add students to the ${selectedDept} department.`)) {
-            e.target.value = null; // Reset input
+        const confirmed = await showConfirm({
+            title: 'Upload Students',
+            message: `Are you sure you want to upload "${file.name}"? This will add students to the ${selectedDept} department.`,
+            variant: 'info',
+            confirmText: 'Upload'
+        });
+        if (!confirmed) {
+            e.target.value = null;
             return;
         }
 
@@ -1192,7 +1301,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
         try {
             const token = user?.token;
-            const headers = token ? { 'Authorization': `Bearer ${token}` } : {}; // No Content-Type for FormData, browser sets it
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
             // Show loading state if desired (optional)
             // setClientLoading(true); 
@@ -1207,22 +1316,21 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
             if (response.ok) {
                 let msg = result.message;
-                if (result.added !== undefined) msg += `\n\n✅ Added: ${result.added}`;
-                if (result.skipped !== undefined) msg += `\n⚠️ Skipped: ${result.skipped}`;
+                if (result.added !== undefined) msg += ` \u2705 Added: ${result.added}`;
+                if (result.skipped !== undefined) msg += ` \u26a0\ufe0f Skipped: ${result.skipped}`;
                 if (result.errors && result.errors.length > 0) {
-                    msg += `\n\n❌ Errors:\n${result.errors.slice(0, 5).join('\n')}`;
-                    if (result.errors.length > 5) msg += `\n...and ${result.errors.length - 5} more errors.`;
+                    msg += ` \u274c Errors: ${result.errors.length}`;
                 }
-                alert(msg);
+                showToast(msg);
                 window.location.reload();
             } else {
-                alert(`Upload Failed: ${result.message}`);
+                showToast(`Upload Failed: ${result.message}`, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error uploading file');
+            showToast('Error uploading file', 'error');
         } finally {
-            e.target.value = null; // Reset input
+            e.target.value = null;
         }
     };
 
@@ -1249,7 +1357,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     };
 
     const handleBulkDelete = async () => {
-        if (!window.confirm(`Are you sure you want to delete ${selectedStudents.length} students? This action cannot be undone.`)) return;
+        const confirmed = await showConfirm({
+            title: 'Delete Students',
+            message: `Are you sure you want to delete ${selectedStudents.length} students? This action cannot be undone.`,
+            variant: 'danger',
+            confirmText: 'Delete All'
+        });
+        if (!confirmed) return;
 
         const headers = {
             'Authorization': `Bearer ${user.token}`,
@@ -1265,16 +1379,15 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
             const result = await response.json();
             if (response.ok) {
-                alert(result.message);
+                showToast(result.message);
                 setSelectedStudents([]);
-                // Reload data
                 window.location.reload();
             } else {
-                alert("Failed to delete students: " + result.message);
+                showToast('Failed to delete students: ' + result.message, 'error');
             }
         } catch (error) {
             console.error(error);
-            alert("Error deleting students");
+            showToast('Error deleting students', 'error');
         }
     };
 
@@ -1632,7 +1745,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                         </select>
                         <button className={styles.primaryBtn} onClick={() => {
                             if (filteredStudents.length === 0) {
-                                alert('No students to export.');
+                                showToast('No students to export.', 'error');
                                 return;
                             }
                             const headers = ['Sl.No', 'Reg No', 'Student Name', 'Semester', 'Section', 'Parent Phone'];
@@ -2119,7 +2232,176 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                     <p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>
                                         Status: <span className={`${styles.statusBadge} ${viewingSubject.status === 'Approved' ? styles.approved : viewingSubject.status === 'Submitted' ? styles.submitted : styles.pending}`} style={{ marginLeft: '10px' }}>{viewingSubject.status}</span>
                                     </p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1</th><th>Att %</th><th>CIE-2</th><th>CIE-3</th><th>CIE-4</th><th>CIE-5</th><th>Total</th></tr></thead><tbody>{(() => { const subjectMarks = subjectMarksData[viewingSubject.name] || []; const studentsToShow = viewingSubject.status === 'Pending' ? deptStudents.filter(student => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); return !studentMark || (studentMark.cie1Score === null && studentMark.cie2Score === null && studentMark.cie3Score === null); }) : deptStudents; return studentsToShow.map((student, index) => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); const cie1 = studentMark?.cie1Score ?? '-'; const cie2 = studentMark?.cie2Score ?? '-'; const cie3 = studentMark?.cie3Score ?? '-'; const cie4 = studentMark?.cie4Score ?? '-'; const cie5 = studentMark?.cie5Score ?? '-'; const att = studentMark?.attendancePercentage ?? '-'; const total = (studentMark?.cie1Score || 0) + (studentMark?.cie2Score || 0) + (studentMark?.cie3Score || 0) + (studentMark?.cie4Score || 0) + (studentMark?.cie5Score || 0); return (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{cie1}</td><td>{att !== '-' ? `${att}%` : '-'}</td><td>{cie2}</td><td>{cie3}</td><td>{cie4}</td><td>{cie5}</td><td style={{ fontWeight: 'bold' }}>{studentMark ? total : '-'}</td></tr>); }); })()}</tbody></table></div></div></div></div>)}</div>)}
-            {activeTab === 'performance' && (<div className={styles.performanceContainer}><div className={styles.statsRow}><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.blue}`}><Users size={24} /></div><div className={styles.statInfo}><p>Total Students</p><h3>{deptStudents.length || 0}</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.green}`}><TrendingUp size={24} /></div><div className={styles.statInfo}><p>Class Average</p><h3>{analytics?.average || 0}/50</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.purple}`}><Award size={24} /></div><div className={styles.statInfo}><p>Pass Rate</p><h3>{analytics?.passPercentage || 0}%</h3></div></div><div className={styles.statCard}><div className={`${styles.iconBox} ${styles.orange}`}><AlertTriangle size={24} /></div><div className={styles.statInfo}><p>At Risk</p><h3>{analytics?.atRiskCount || 0}</h3></div></div></div><div className={styles.gridTwo}><div className={styles.card}><div className={styles.cardHeader}><h3>CIE Performance Trend</h3><select className={styles.deptSelect} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} value={performanceSubjectId} onChange={(e) => setPerformanceSubjectId(e.target.value)}><option value="all">All Subjects</option>{subjects.filter(s => s.name !== 'IC').map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}</select></div><div className={styles.chartContainer}><Bar data={{ labels: ['CIE-1', 'CIE-2', 'CIE-3', 'CIE-4', 'CIE-5'], datasets: [{ label: 'Class Average', data: cieTrendData, backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'], borderRadius: 8 }] }} options={{ ...commonOptions, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 50 } } }} /></div></div><div className={styles.card}><div className={styles.cardHeader}><h3>Grade Distribution</h3></div><div className={styles.doughnutContainer}><Doughnut data={hodGradeDistribution} options={doughnutOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><div className={styles.cardHeader}><h3>Subject-wise Performance</h3></div><table className={styles.table}><thead><tr><th>Subject</th><th>CIE-1 Avg</th><th>CIE-2 Avg</th><th>CIE-3 Avg</th><th>CIE-4 Avg</th><th>CIE-5 Avg</th><th>Overall</th><th>Pass %</th></tr></thead><tbody>{allSubjectPerformance.map((item) => (<tr key={item.id}><td style={{ fontWeight: 600 }}>{item.name}</td>{['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map((cieType) => { const avg = item.averages[cieType] || 0; return (<td key={cieType}><span style={{ color: avg >= 40 ? '#16a34a' : avg >= 30 ? '#ca8a04' : '#dc2626', fontWeight: 500 }}>{avg}/50</span></td>); })}<td style={{ fontWeight: 700 }}>{item.overall}/50</td><td><span className={`${styles.statusBadge} ${item.passRate >= 80 ? styles.approved : item.passRate >= 60 ? styles.submitted : styles.pending}`}>{item.passRate}%</span></td></tr>))}</tbody></table></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><div className={styles.cardHeader}><h3 style={{ color: '#dc2626' }}>⚠️ At-Risk Students (Action Required)</h3><button className={styles.secondaryBtn} style={{ fontSize: '0.85rem' }}><Download size={14} /> Export List</button></div><table className={styles.table}><thead><tr><th>Reg No</th><th>Student Name</th><th>CIE Average</th><th>Issue</th><th>Action</th></tr></thead><tbody>{atRiskStudents.map((student) => (<tr key={student.id}><td>{student.rollNo}</td><td style={{ fontWeight: 500 }}>{student.name}</td><td><span style={{ color: student.avgMarks < 20 ? '#dc2626' : '#ca8a04', fontWeight: 600 }}>{student.avgMarks}/50</span></td><td><span className={styles.issueTag}>{student.issue}</span></td><td><div style={{ display: 'flex', gap: '0.5rem' }}><button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => alert(`Sending notification to ${student.name}`)}>Notify</button><button className={styles.secondaryBtn} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }} onClick={() => alert(`Scheduling meeting with ${student.name}`)}>Meet</button></div></td></tr>))}</tbody></table></div></div>)}
+            {activeTab === 'performance' && (() => {
+                const perfTabs = [
+                    { id: 'excellent', label: 'Excellent Performance', color: '#10b981', bg: '#f0fdf4', borderColor: '#bcf0da', icon: <Award size={20} />, list: hodExcellentList, description: 'Students who scored more than 40/50 marks.' },
+                    { id: 'average', label: 'Average Performance', color: '#f59e0b', bg: '#fffbeb', borderColor: '#fde68a', icon: <ClipboardList size={20} />, list: hodAverageList, description: 'Students who scored between 20 and 40 marks.' },
+                    { id: 'low', label: 'Low Performance', color: '#ef4444', bg: '#fef2f2', borderColor: '#fecaca', icon: <AlertTriangle size={20} />, list: hodLowList, description: 'Students who scored 20 or fewer marks.' }
+                ];
+                const activeConfig = perfTabs.find(t => t.id === hodPerformanceTab) || perfTabs[2];
+                const currentData = activeConfig.list;
+                const filteredList = currentData
+                    .filter(item => hodFilterSubject === 'All' || item.subject === hodFilterSubject)
+                    .filter(item => hodFilterCIE === 'All' || item.cieType === hodFilterCIE);
+
+                return (
+                    <div className={styles.performanceContainer}>
+                        {/* Header with filters */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                            <div>
+                                <h2 style={{ color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1.3rem', fontWeight: 700 }}>
+                                    <BarChart2 size={24} /> Student Performance Analytics
+                                </h2>
+                                <p style={{ color: '#64748b', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                                    View and manage student performance across different categories.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <select className={styles.deptSelect} style={{ padding: '0.5rem 0.8rem', fontSize: '0.85rem', borderRadius: '8px' }} value={hodFilterSubject} onChange={(e) => setHodFilterSubject(e.target.value)}>
+                                    <option value="All">All Subjects</option>
+                                    {subjects.filter(s => s.name !== 'IC').map(sub => (<option key={sub.id} value={sub.name}>{sub.name}</option>))}
+                                </select>
+                                <select className={styles.deptSelect} style={{ padding: '0.5rem 0.8rem', fontSize: '0.85rem', borderRadius: '8px' }} value={hodFilterCIE} onChange={(e) => setHodFilterCIE(e.target.value)}>
+                                    <option value="All">All CIE</option>
+                                    {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => (<option key={cie} value={cie}>{cie}</option>))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Tab Navigation */}
+                        <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem', background: '#f8fafc', padding: '6px', borderRadius: '12px', width: 'fit-content' }}>
+                            {perfTabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setHodPerformanceTab(tab.id)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                                        fontWeight: '600', fontSize: '0.9rem', transition: 'all 0.2s ease',
+                                        backgroundColor: hodPerformanceTab === tab.id ? 'white' : 'transparent',
+                                        color: hodPerformanceTab === tab.id ? tab.color : '#64748b',
+                                        boxShadow: hodPerformanceTab === tab.id ? '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' : 'none'
+                                    }}
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                    {tab.list.length > 0 && (
+                                        <span style={{
+                                            backgroundColor: hodPerformanceTab === tab.id ? tab.bg : '#e2e8f0',
+                                            color: hodPerformanceTab === tab.id ? tab.color : '#64748b',
+                                            borderRadius: '20px', padding: '2px 8px', fontSize: '0.75rem'
+                                        }}>
+                                            {tab.list.length}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Table Card */}
+                        <div className={styles.card} style={{ borderTop: `4px solid ${activeConfig.color}` }}>
+                            <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', background: activeConfig.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ color: activeConfig.color }}>{activeConfig.icon}</div>
+                                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{activeConfig.label}</h3>
+                                    </div>
+                                    <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>{activeConfig.description}</p>
+                                </div>
+                                {(hodPerformanceTab === 'low' || hodPerformanceTab === 'average') && filteredList.length > 0 && (
+                                    <button
+                                        onClick={async () => {
+                                            const category = hodPerformanceTab === 'low' ? 'Low' : 'Average';
+                                            const defaultMsg = `Dear Student, your CIE performance is in the ${category} category. Please improve your preparation and consult your faculty for guidance. - HOD`;
+                                            const msg = await showPrompt({
+                                                title: `Message ${category} Performers`,
+                                                message: `Send message to all ${filteredList.length} ${category} performers:`,
+                                                defaultValue: defaultMsg,
+                                                multiline: true,
+                                                confirmText: 'Send'
+                                            });
+                                            if (!msg) return;
+                                            const uniqueStudentIds = [...new Set(filteredList.filter(s => s.studentId).map(s => s.studentId))];
+                                            if (uniqueStudentIds.length === 0) { showToast('No student IDs found', 'error'); return; }
+                                            let sent = 0;
+                                            try {
+                                                const token = user?.token;
+                                                const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+                                                for (const sid of uniqueStudentIds) {
+                                                    const res = await fetch(`${API_BASE_URL}/notifications/direct`, {
+                                                        method: 'POST', headers,
+                                                        body: JSON.stringify({ userId: sid, message: msg, type: 'INFO', category: 'HOD' })
+                                                    });
+                                                    if (res.ok) sent++;
+                                                }
+                                                showToast(`Message sent to ${sent}/${uniqueStudentIds.length} students successfully!`);
+                                            } catch (e) { showToast(`Sent to ${sent} students. Error occurred.`, 'error'); }
+                                        }}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #dbeafe', background: '#eff6ff', color: '#2563eb', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    >
+                                        <Mail size={16} /> Send Message to All ({[...new Set(filteredList.filter(s => s.studentId).map(s => s.studentId))].length})
+                                    </button>
+                                )}
+                            </div>
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Sl No</th>
+                                            <th>Reg No</th>
+                                            <th>Student Name</th>
+                                            <th>Marks</th>
+                                            <th>Attendance</th>
+                                            <th>{hodPerformanceTab === 'low' ? 'Action' : 'Phone'}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredList.length > 0 ? (
+                                            filteredList.map((item, i) => (
+                                                <tr key={i}>
+                                                    <td style={{ color: '#64748b' }}>{i + 1}</td>
+                                                    <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{item.regNo}</td>
+                                                    <td>
+                                                        <div style={{ fontWeight: 600 }}>{item.name}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.subject} ({item.cieType})</div>
+                                                    </td>
+                                                    <td style={{ color: activeConfig.color, fontWeight: 'bold' }}>{item.score}/50</td>
+                                                    <td style={{ fontWeight: '500' }}>{item.attendance != null ? `${item.attendance}%` : 'N/A'}</td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>
+                                                                {item.parentPhone || 'No Contact'}
+                                                            </span>
+                                                            {hodPerformanceTab === 'low' && (
+                                                                <button
+                                                                    onClick={() => showToast(`Alert sent to parent of ${item.name}`)}
+                                                                    title="Notify Parent"
+                                                                    style={{ color: '#dc2626', background: '#fef2f2', border: '1px solid #fee2e2', padding: '5px 10px', borderRadius: '8px', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                                                                >
+                                                                    <Phone size={14} /> Notify Parent
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                                        {hodPerformanceTab === 'excellent' ? <TrendingUp size={48} color="#cbd5e1" /> : <CheckCircle size={48} color="#cbd5e1" />}
+                                                        <p style={{ fontSize: '1rem' }}>No students found in this category matching your filters!</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
             {activeTab === 'faculty' && (<div className={styles.facultyContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Faculty ({facultyList.length})</h3><div style={{ display: 'flex', gap: '1rem', position: 'relative' }}><button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password', designation: 'Faculty', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button><div style={{ position: 'relative' }}><button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}><Edit size={16} /> Edit Faculty</button>{showEditSelection && (<div style={{ position: 'absolute', top: '110%', right: 0, width: '250px', background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', zIndex: 100, padding: '0.5rem' }}><p style={{ padding: '0.5rem', fontSize: '0.85rem', color: '#64748b', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>Select Faculty to Edit:</p><div style={{ maxHeight: '300px', overflowY: 'auto' }}>{facultyList.map(fac => (<button key={fac.id} onClick={() => { handleEditFaculty(fac); setShowEditSelection(false); }} style={{ width: '100%', textAlign: 'left', padding: '0.75rem', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'none'}><span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{fac.fullName || fac.username}</span><small style={{ color: '#64748b' }}>{fac.designation || 'Faculty'}</small></button>))}</div></div>)}</div></div></div><div className={styles.facultyList} style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.5rem' }}>{facultyList.length > 0 ? facultyList.map(fac => (<div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}><div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}><div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div><div style={{ flex: 1 }}><p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p><small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation || 'Faculty Member'}</small>{(fac.semester || fac.section) && (<small style={{ color: '#2563eb', fontWeight: 500, fontSize: '0.8rem', marginTop: '2px', display: 'block' }}>Class Teacher: {fac.semester ? `${fac.semester} Sem` : ''} {fac.section ? `- Sec ${fac.section}` : ''}</small>)}</div></div><div style={{ marginBottom: '1rem', flex: 1 }}><span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects ({parseSubjects(fac.subjects).length})</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>{parseSubjects(fac.subjects).length > 0 ? parseSubjects(fac.subjects).map((sub, i) => (<span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>)) : (<span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects assigned</span>)}</div></div><div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}><button className={styles.viewBtn} style={{ gridColumn: 'span 2' }} onClick={() => handleViewDashboard(fac)}><LayoutDashboard size={16} /> View Dashboard</button><button className={styles.msgBtn} onClick={() => handleMessage(fac)}><Mail size={16} /> Message</button><button className={styles.secondaryBtn} onClick={() => handleEditFaculty(fac)} style={{ border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}><Edit size={16} /> Edit</button><button className={styles.secondaryBtn} onClick={() => openResetPasswordModal(fac.username, fac.fullName || fac.username, 'FACULTY')} style={{ border: '1px solid #fde68a', background: '#fef3c7', color: '#d97706' }}><Key size={14} /> Reset</button><button className={styles.secondaryBtn} onClick={() => handleDeleteFaculty(fac.id)} style={{ border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626' }}><Trash2 size={16} /> Remove</button></div></div>)) : (<div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}><Users size={48} style={{ marginBottom: '1rem', color: '#cbd5e1' }} /><p>No faculty members found for this department.</p></div>)}</div></div>{showAddFacultyModal && (<div className={styles.modalOverlay}><div className={styles.modalContent} style={{ maxWidth: '500px' }}><div className={styles.modalHeader}><h3>{editingFaculty ? 'Edit Faculty' : 'Add New Faculty'}</h3><button className={styles.closeBtn} onClick={() => setShowAddFacultyModal(false)}><X size={24} /></button></div><div className={styles.modalBody}><form onSubmit={handleAddFaculty} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className={styles.formGroup}><label>Full Name</label><input value={facultyForm.fullName} onChange={e => setFacultyForm({ ...facultyForm, fullName: e.target.value })} required placeholder="e.g. Dr. John Doe" className={styles.input} /></div><div className={styles.formGroup}><label>Username</label><input value={facultyForm.username} onChange={e => setFacultyForm({ ...facultyForm, username: e.target.value })} required placeholder="jdoe" className={styles.input} />{editingFaculty && <small style={{ color: '#64748b', fontSize: '0.75rem' }}>⚠️ Changing the username will update the faculty's login ID.</small>}</div><div className={styles.formGroup}><label>Email</label><input value={facultyForm.email} onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })} type="email" required placeholder="john@college.edu" className={styles.input} /></div>{!editingFaculty && (<div className={styles.formGroup}><label>Password</label><input value={facultyForm.password} onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })} required placeholder="password" className={styles.input} /></div>)}<div className={styles.formGroup}><label>Designation</label><select value={facultyForm.designation} onChange={e => setFacultyForm({ ...facultyForm, designation: e.target.value })} className={styles.input}><option>Faculty</option><option>Guest Faculty</option></select></div><div className={styles.formGroup}><label>CIE Role</label><select value={facultyForm.cieRole || ''} onChange={e => setFacultyForm({ ...facultyForm, cieRole: e.target.value })} className={styles.input}><option value=''>All CIEs (Default)</option><option value='THEORY'>Theory Only (CIE-1, 2, 5)</option><option value='LAB'>Lab Only (CIE-3, 4)</option></select><small style={{ color: '#64748b', fontSize: '0.75rem' }}>Set for subjects shared between Theory and Lab faculty.</small></div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}><button type="button" className={styles.secondaryBtn} onClick={() => setShowAddFacultyModal(false)}>Cancel</button><button type="submit" className={styles.primaryBtn} style={{ background: '#2563eb', color: 'white' }}>{editingFaculty ? 'Update Faculty' : 'Create Account'}</button></div></form></div></div></div>)}
                 {viewingFaculty && (<div className={styles.modalOverlay} onClick={() => setViewingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><div><h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2><span className={styles.badge} style={{ position: 'static', padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb', fontWeight: 500, fontSize: '0.85rem' }}>Dashboard Overview</span></div><button className={styles.closeBtn} onClick={() => setViewingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}>{(() => {
                     let totalAvg = 0;
@@ -2141,7 +2423,69 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
                     return (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.blue}`}><TrendingUp size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Avg Class Score</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{overall > 0 ? overall : '-'}/50</h3></div></div><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.green}`}><CheckCircle size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Students Evaluated</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{evaluatedCount}</h3></div></div></div><div><h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Assigned Subjects Performance</h4><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>Avg Score</th><th>Status</th></tr></thead><tbody>{subStats.length > 0 ? subStats.map((s, i) => (<tr key={i}><td style={{ fontWeight: 500 }}>{s.name}</td><td>{s.avg || '-'}</td><td><span style={{ color: s.avg >= 35 ? '#16a34a' : s.avg >= 20 ? '#ca8a04' : '#dc2626', fontWeight: 600 }}>{s.avg >= 35 ? 'Good' : s.avg >= 20 ? 'Average' : 'Need Improvement'}</span></td></tr>)) : (<tr><td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8' }}>No subjects found</td></tr>)}</tbody></table></div></div></>);
                 })()}</div></div></div>)}{messagingFaculty && (<div className={styles.modalOverlay} onClick={() => setMessagingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={20} /> Message {messagingFaculty.username}</h3><button className={styles.closeBtn} onClick={() => setMessagingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}><div className={styles.formGroup}><label>Message Content</label><textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message here..." className={styles.input} style={{ minHeight: '120px', resize: 'vertical' }} autoFocus></textarea></div><div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}><button className={styles.secondaryBtn} onClick={() => setMessagingFaculty(null)}>Cancel</button><button className={styles.primaryBtn} onClick={sendMessage} disabled={!messageText.trim()} style={{ opacity: !messageText.trim() ? 0.6 : 1 }}>Send Message</button></div></div></div></div>)}</div>)}
-            {activeTab === 'approvals' && (<div className={styles.approvalsContainer}><div className={styles.infoBanner}><CheckCircle size={20} /><p>You have <strong>{pendingApprovals.length}</strong> IA Bundles pending for final approval.</p></div>{approvalLoading ? (<div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>Loading pending submissions...</div>) : pendingApprovals.length === 0 ? (<div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}><CheckCircle size={48} style={{ marginBottom: '1rem', color: '#10b981' }} /><p>No pending submissions. All marks have been reviewed!</p></div>) : (pendingApprovals.map((approval, idx) => (<div key={idx} className={styles.approvalCard}><div className={styles.approvalHeader}><div><h4>{approval.subjectName}</h4><span>{approval.iaType} Marks | Faculty: {approval.facultyName} | {approval.studentCount} students</span></div><div className={styles.approvlActions}><button className={styles.rejectBtn} onClick={() => handleRejectMarks(approval.subjectId, approval.iaType)}>Reject</button><button className={styles.approveBtn} onClick={() => handleApproveMarks(approval.subjectId, approval.iaType)}>Approve & Lock</button></div></div><table className={styles.miniTable}><thead><tr><th>Reg No</th><th>Student</th><th>Marks</th><th>Att (%)</th></tr></thead><tbody>{(Array.isArray(approval.marks) ? (expandedApprovals[idx] ? approval.marks : approval.marks.slice(0, 3)) : []).map(st => (<tr key={st.studentId}><td>{st.regNo}</td><td>{st.studentName}</td><td>{st.totalScore}/50</td><td style={{ color: st.attendancePercentage != null ? '#15803d' : '#94a3b8', fontWeight: 500 }}>{st.attendancePercentage != null ? `${st.attendancePercentage}%` : '-'}</td></tr>))}{Array.isArray(approval.marks) && approval.marks.length > 3 && (<tr onClick={() => toggleExpansion(idx)} style={{ cursor: 'pointer', background: '#f8fafc' }}><td colSpan="3" style={{ textAlign: 'center', color: '#2563eb', fontWeight: 500 }}>{expandedApprovals[idx] ? 'Show Less' : `+ ${approval.marks.length - 3} more records (Click to expand)`}</td></tr>)}</tbody></table></div>)))}<div className={styles.card} style={{ marginTop: '1.5rem' }}><div className={styles.cardHeader}><h3>🔓 Unlock Approved Marks</h3><p style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '0.5rem' }}>Unlock approved marks to allow faculty to make corrections</p></div><div style={{ padding: '1.5rem' }}><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'end' }}><div><label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Subject</label><select className={styles.select} id="unlockSubject" style={{ width: '100%', padding: '0.6rem' }}><option value="">Select Subject</option>{subjects.filter(s => s.name !== 'IC').map(subject => (<option key={subject.id} value={subject.id}>{subject.name}</option>))}</select></div><div><label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>CIE Type</label><select className={styles.select} id="unlockCIE" style={{ width: '100%', padding: '0.6rem' }}><option value="CIE1">CIE-1</option><option value="CIE2">CIE-2</option><option value="CIE3">CIE-3</option><option value="CIE4">CIE-4</option><option value="CIE5">CIE-5</option></select></div><button className={styles.dangerBtn} onClick={() => { const subjectId = document.getElementById('unlockSubject').value; const cieType = document.getElementById('unlockCIE').value; if (!subjectId) { alert('Please select a subject'); return; } const subject = subjects.find(s => s.id === parseInt(subjectId)); handleUnlockMarks(subjectId, cieType, subject?.name || 'Selected Subject'); }} style={{ padding: '0.6rem 1.5rem' }}>Unlock Marks</button></div><div style={{ marginTop: '1rem', padding: '1rem', background: '#fef3c7', borderRadius: '0.5rem', fontSize: '0.85rem' }}><strong>⚠️ Warning:</strong> Unlocking marks will change their status from APPROVED to PENDING, allowing faculty to edit them again.</div></div></div></div>)}
+            {activeTab === 'approvals' && (<div className={styles.approvalsContainer}><div className={styles.infoBanner}><CheckCircle size={20} /><p>You have <strong>{pendingApprovals.length}</strong> IA Bundles pending for final approval.</p></div>{approvalLoading ? (<div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>Loading pending submissions...</div>) : pendingApprovals.length === 0 ? (<div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}><CheckCircle size={48} style={{ marginBottom: '1rem', color: '#10b981' }} /><p>No pending submissions. All marks have been reviewed!</p></div>) : (pendingApprovals.map((approval, idx) => (<div key={idx} className={styles.approvalCard}><div className={styles.approvalHeader}><div><h4>{approval.subjectName}</h4><span>{approval.iaType} Marks | Faculty: {approval.facultyName} | {approval.studentCount} students</span></div><div className={styles.approvlActions}><button className={styles.rejectBtn} onClick={() => handleRejectMarks(approval.subjectId, approval.iaType)}>Reject</button><button className={styles.approveBtn} onClick={() => handleApproveMarks(approval.subjectId, approval.iaType)}>Approve & Lock</button></div></div><table className={styles.miniTable}><thead><tr><th>Reg No</th><th>Student</th><th>Marks</th><th>Att (%)</th></tr></thead><tbody>{(Array.isArray(approval.marks) ? (expandedApprovals[idx] ? approval.marks : approval.marks.slice(0, 3)) : []).map(st => (<tr key={st.studentId}><td>{st.regNo}</td><td>{st.studentName}</td><td>{st.totalScore}/50</td><td style={{ color: st.attendancePercentage != null ? '#15803d' : '#94a3b8', fontWeight: 500 }}>{st.attendancePercentage != null ? `${st.attendancePercentage}%` : '-'}</td></tr>))}{Array.isArray(approval.marks) && approval.marks.length > 3 && (<tr onClick={() => toggleExpansion(idx)} style={{ cursor: 'pointer', background: '#f8fafc' }}><td colSpan="3" style={{ textAlign: 'center', color: '#2563eb', fontWeight: 500 }}>{expandedApprovals[idx] ? 'Show Less' : `+ ${approval.marks.length - 3} more records (Click to expand)`}</td></tr>)}</tbody></table></div>)))}
+                <div className={styles.card} style={{ marginTop: '2.5rem', border: '1px solid #fee2e2', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.05)', overflow: 'visible' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#b91c1c', margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                                <div style={{ padding: '8px', background: '#fef2f2', borderRadius: '8px', display: 'flex', border: '1px solid #fecaca' }}>
+                                    <LockOpen size={18} color="#b91c1c" />
+                                </div>
+                                Unlock Approved Marks
+                            </h3>
+                            <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+                                Revert approved marks to pending status to allow faculty modifications
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(150px, 1fr) auto', gap: '1.5rem', alignItems: 'flex-end' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Select Subject</label>
+                                <select className={styles.select} id="unlockSubject" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
+                                    <option value="">-- Choose Subject --</option>
+                                    {subjects.filter(s => s.name !== 'IC').map(subject => (
+                                        <option key={subject.id} value={subject.id}>{subject.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>CIE Type</label>
+                                <select className={styles.select} id="unlockCIE" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
+                                    <option value="CIE1">CIE-1</option>
+                                    <option value="CIE2">CIE-2</option>
+                                    <option value="CIE3">CIE-3</option>
+                                    <option value="CIE4">CIE-4</option>
+                                    <option value="CIE5">CIE-5</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={() => { const subjectId = document.getElementById('unlockSubject').value; const cieType = document.getElementById('unlockCIE').value; if (!subjectId) { showToast('Please select a subject', 'error'); return; } const subject = subjects.find(s => s.id === parseInt(subjectId)); handleUnlockMarks(subjectId, cieType, subject?.name || 'Selected Subject'); }}
+                                style={{
+                                    padding: '0.75rem 1.5rem', background: '#ef4444', color: 'white', border: 'none',
+                                    borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                    transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                <Unlock size={16} />
+                                Unlock Marks
+                            </button>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                                <p style={{ margin: 0, color: '#92400e', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                                    <strong style={{ color: '#b45309' }}>Warning:</strong> Unlocking marks will immediately change their status from <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>APPROVED</span> to <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>PENDING</span>, allowing the assigned faculty to edit them.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>)}
             {activeTab === 'analytics' && (<div className={styles.analyticsContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>IA Submission Status</h3><div className={styles.doughnutContainer}><Pie data={iaSubmissionStatus} options={doughnutOptions} /></div></div><div className={styles.card}><h3>Year-on-Year Improvement</h3><div className={styles.chartContainer}><Line data={hodTrendData} options={commonOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><h3>Download Reports</h3><div className={styles.downloadOptions}><button className={styles.downloadBtn}><FileText size={16} /> Department IA Report (PDF)</button><button className={styles.downloadBtn}><FileText size={16} /> Consolidated Marks Sheet (Excel)</button><button className={styles.downloadBtn}><FileText size={16} /> Low Performers List (CSV)</button></div></div></div>)}
             {activeTab === 'lesson-plans' && (<div className={styles.lessonPlansContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Syllabus Progress</h3></div><div className={styles.gridContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(350px,1fr))', gap: '1.5rem', marginTop: '1rem' }}>{subjectsByDept[selectedDept]?.map((subName, idx) => { const subId = idx + 1; const realSub = subjects.find(s => s.name === subName); const idToUse = realSub ? realSub.id : subId; const savedTracker = localStorage.getItem('syllabusTracker'); const progress = savedTracker ? (JSON.parse(savedTracker)[idToUse] || {}) : {}; const savedStructure = localStorage.getItem('syllabusStructure'); const structure = savedStructure ? (JSON.parse(savedStructure)[idToUse] || []) : []; const savedCie = localStorage.getItem('cieSelector'); const cieSelector = savedCie ? (JSON.parse(savedCie)[idToUse] || {}) : {}; const units = structure.length > 0 ? structure : [{ id: 'u1', name: 'Unit 1: Introduction' }, { id: 'u2', name: 'Unit 2: Core Concepts' }, { id: 'u3', name: 'Unit 3: Advanced Topics' }, { id: 'u4', name: 'Unit 4: Application' }, { id: 'u5', name: 'Unit 5: Case Studies' }]; const completedCount = units.filter(u => progress[u.id]).length; const totalUnits = units.length; const percent = totalUnits > 0 ? Math.round((completedCount / totalUnits) * 100) : 0; return (<div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><div><h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', color: '#111827' }}>{subName}</h4><span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Faculty: {facultyWorkload[idx % facultyWorkload.length]?.name || 'Unknown'}</span></div><div style={{ textAlign: 'right' }}><span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: percent === 100 ? '#10b981' : '#3b82f6' }}>{percent}%</span></div></div><div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '1rem' }}><div style={{ width: `${percent}%`, height: '100%', background: percent === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }}></div></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{units.slice(0, 3).map(u => (<div key={u.id} style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', color: progress[u.id] ? '#374151' : '#9ca3af' }}><div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: progress[u.id] ? '#10b981' : '#d1d5db', background: progress[u.id] ? '#10b981' : 'transparent', marginRight: '8px', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{progress[u.id] && <CheckCircle size={10} color="white" />}</div><span style={{ textDecoration: progress[u.id] ? 'line-through' : 'none', marginRight: '8px' }}>{u.name}</span>{cieSelector[u.id] && (<span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #7c3aed', marginLeft: 'auto' }}>CIE</span>)}</div>))}{units.length > 3 && (<div style={{ fontSize: '0.8rem', color: '#6b7280', paddingLeft: '24px' }}>+ {units.length - 3} more topics</div>)}</div></div>); })}</div></div></div>)}
             {activeTab === 'syllabus' && (<div className={styles.sectionContainer}>
@@ -2173,7 +2517,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 const name = document.getElementById('newSubjectName').value.trim();
                                 const code = document.getElementById('newSubjectCode').value.trim();
                                 const semester = document.getElementById('newSubjectSemester').value;
-                                if (!name || !code) { alert('Subject name and code are required.'); return; }
+                                if (!name || !code) { showToast('Subject name and code are required.', 'error'); return; }
                                 try {
                                     const token = user?.token;
                                     const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
@@ -2188,7 +2532,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                     });
 
                                     if (res.ok) {
-                                        alert(editingSubject ? 'Subject updated successfully!' : 'Subject added successfully!');
+                                        showToast(editingSubject ? 'Subject updated successfully!' : 'Subject added successfully!');
                                         if (!editingSubject) {
                                             document.getElementById('newSubjectName').value = '';
                                             document.getElementById('newSubjectCode').value = '';
@@ -2199,9 +2543,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                         if (subRes.ok) setSubjects(await subRes.json());
                                     } else {
                                         const err = await res.json();
-                                        alert(err.message || `Failed to ${editingSubject ? 'update' : 'add'} subject.`);
+                                        showToast(err.message || `Failed to ${editingSubject ? 'update' : 'add'} subject.`, 'error');
                                     }
-                                } catch (e) { console.error(e); alert(`Error ${editingSubject ? 'updating' : 'adding'} subject.`); }
+                                } catch (e) { console.error(e); showToast(`Error ${editingSubject ? 'updating' : 'adding'} subject.`, 'error'); }
                             }}><Layers size={16} /> {editingSubject ? 'Update Subject' : 'Add Subject'}</button>
                         </div>
                     </div>
@@ -2225,16 +2569,22 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}><Edit size={14} /></button>
                                                 <button className={styles.iconBtn} style={{ color: '#dc2626', background: '#fee2e2' }} title="Delete" onClick={async () => {
-                                                    if (!window.confirm(`Delete subject "${sub.name}"? This cannot be undone.`)) return;
+                                                    const confirmed = await showConfirm({
+                                                        title: 'Delete Subject',
+                                                        message: `Delete subject "${sub.name}"? This cannot be undone.`,
+                                                        variant: 'danger',
+                                                        confirmText: 'Delete'
+                                                    });
+                                                    if (!confirmed) return;
                                                     try {
                                                         const token = user?.token;
                                                         const res = await fetch(`${API_BASE_URL}/subjects/${sub.id}`, { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
                                                         if (res.ok) {
                                                             setSubjects(prev => prev.filter(s => s.id !== sub.id));
                                                             if (editingSubject?.id === sub.id) setEditingSubject(null);
-                                                            alert('Subject deleted.');
-                                                        } else { alert('Failed to delete subject.'); }
-                                                    } catch (e) { alert('Error deleting subject.'); }
+                                                            showToast('Subject deleted.');
+                                                        } else { showToast('Failed to delete subject.', 'error'); }
+                                                    } catch (e) { showToast('Error deleting subject.', 'error'); }
                                                 }}><Trash2 size={14} /></button>
                                             </div>
                                         </td>
@@ -2479,9 +2829,6 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
 
     // ========== FACULTY ASSIGNMENT REQUESTS ==========
-    const [pendingAssignments, setPendingAssignments] = useState([]);
-    const [assignReqLoading, setAssignReqLoading] = useState(false);
-
     const fetchPendingAssignments = async () => {
         if (!selectedDept || !user?.token) return;
         setAssignReqLoading(true);
@@ -2496,8 +2843,20 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         setAssignReqLoading(false);
     };
 
+    useEffect(() => {
+        if (selectedDept && user?.token) {
+            fetchPendingAssignments();
+        }
+    }, [selectedDept, user?.token]);
+
     const handleApproveRequest = async (requestId) => {
-        if (!window.confirm('Are you sure you want to approve this assignment request?')) return;
+        const confirmed = await showConfirm({
+            title: 'Approve Assignment',
+            message: 'Are you sure you want to approve this assignment request?',
+            variant: 'info',
+            confirmText: 'Approve'
+        });
+        if (!confirmed) return;
         try {
             const headers = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
             const res = await fetch(`${API_BASE_URL}/hod/assignment-requests/${requestId}/approve`, { method: 'PUT', headers });
@@ -2510,20 +2869,25 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 data = { message: text || `Server returned status ${res.status}` };
             }
             if (res.ok) {
-                alert(data.message || 'Request approved!');
+                showToast(data.message || 'Request approved!');
                 fetchPendingAssignments();
-                // Refresh faculty list too
                 const facRes = await fetch(`${API_BASE_URL}/hod/faculty?department=${selectedDept}`, { headers });
                 if (facRes.ok) setFacultyList(await facRes.json());
             } else {
                 console.error('Approve request failed:', res.status, data);
-                alert(data.message || `Failed to approve (${res.status})`);
+                showToast(data.message || `Failed to approve (${res.status})`, 'error');
             }
-        } catch (e) { console.error('Error approving request:', e); alert('Error approving request: ' + e.message); }
+        } catch (e) { console.error('Error approving request:', e); showToast('Error approving request: ' + e.message, 'error'); }
     };
 
     const handleRejectRequest = async (requestId) => {
-        if (!window.confirm('Are you sure you want to reject this assignment request?')) return;
+        const confirmed = await showConfirm({
+            title: 'Reject Assignment',
+            message: 'Are you sure you want to reject this assignment request?',
+            variant: 'danger',
+            confirmText: 'Reject'
+        });
+        if (!confirmed) return;
         try {
             const headers = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
             const res = await fetch(`${API_BASE_URL}/hod/assignment-requests/${requestId}/reject`, { method: 'PUT', headers });
@@ -2536,23 +2900,66 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 data = { message: text || `Server returned status ${res.status}` };
             }
             if (res.ok) {
-                alert(data.message || 'Request rejected');
+                showToast(data.message || 'Request rejected');
                 fetchPendingAssignments();
             } else {
                 console.error('Reject request failed:', res.status, data);
-                alert(data.message || `Failed to reject (${res.status})`);
+                showToast(data.message || `Failed to reject (${res.status})`, 'error');
             }
-        } catch (e) { console.error('Error rejecting request:', e); alert('Error rejecting request: ' + e.message); }
+        } catch (e) { console.error('Error rejecting request:', e); showToast('Error rejecting request: ' + e.message, 'error'); }
+    };
+
+    const handleClearHistory = async () => {
+        const confirmed = await showConfirm({
+            title: 'Clear Request History',
+            message: 'Are you sure you want to clear all approved and rejected requests from the history?',
+            variant: 'danger',
+            confirmText: 'Clear History'
+        });
+        if (!confirmed) return;
+        try {
+            const headers = { 'Authorization': `Bearer ${user.token}` };
+            const res = await fetch(`${API_BASE_URL}/hod/assignment-requests/clear?department=${encodeURIComponent(selectedDept)}`, {
+                method: 'DELETE',
+                headers
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(data.message || 'History cleared limit successfully');
+                fetchPendingAssignments();
+            } else {
+                showToast(data.message || 'Failed to clear history', 'error');
+            }
+        } catch (e) {
+            console.error('Error clearing history:', e);
+            showToast('Network error while clearing history', 'error');
+        }
     };
 
     const renderFacultyRequests = () => {
-        if (pendingAssignments.length === 0 && !assignReqLoading) fetchPendingAssignments();
-
         const statusColors = { PENDING: '#f59e0b', APPROVED: '#10b981', REJECTED: '#ef4444' };
         const statusBg = { PENDING: '#fef3c7', APPROVED: '#d1fae5', REJECTED: '#fef2f2' };
 
         const pending = pendingAssignments.filter(r => r.status === 'PENDING');
         const processed = pendingAssignments.filter(r => r.status !== 'PENDING');
+
+        // Helper to get up-to-date subject names
+        const getLatestSubjectNames = (subjectString) => {
+            if (!subjectString) return '-';
+            return subjectString.split(',').map(sub => {
+                const subName = sub.trim();
+                // Try to find if there's an exact match in the subjects array first
+                const currentSub = subjects.find(s => s.name.toLowerCase() === subName.toLowerCase());
+                if (currentSub) return currentSub.name;
+
+                // If the stored subject string holds an ID instead of a name, try mapping it
+                const byId = subjects.find(s => s.id.toString() === subName);
+                if (byId) return byId.name;
+
+                // Fallback to the original string if no match found
+                return subName;
+            }).join(', ');
+        };
 
         return (
             <div className={styles.facultyContainer}>
@@ -2586,7 +2993,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                     <div style={{ marginBottom: '0.75rem' }}>
                                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Requested Subjects</span>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
-                                            {req.subjects.split(',').map((sub, i) => (
+                                            {getLatestSubjectNames(req.subjects).split(',').map((sub, i) => (
                                                 <span key={i} style={{ fontSize: '0.8rem', background: '#fff', padding: '3px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#475569' }}>
                                                     {sub.trim()}
                                                 </span>
@@ -2631,8 +3038,16 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 {/* Processed Requests History */}
                 {processed.length > 0 && (
                     <div className={styles.card} style={{ marginTop: '1.5rem' }}>
-                        <div className={styles.cardHeader}>
-                            <h3>Request History</h3>
+                        <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>Request History</h3>
+                            <button
+                                className={styles.secondaryBtn}
+                                onClick={handleClearHistory}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                                title="Clear all processed requests"
+                            >
+                                <Trash2 size={14} /> Clear History
+                            </button>
                         </div>
                         <table className={styles.table} style={{ width: '100%' }}>
                             <thead>
@@ -2648,7 +3063,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 {processed.map(req => (
                                     <tr key={req.id}>
                                         <td style={{ fontWeight: 500 }}>{req.facultyName}</td>
-                                        <td style={{ fontSize: '0.9rem' }}>{req.subjects}</td>
+                                        <td style={{ fontSize: '0.9rem' }}>{getLatestSubjectNames(req.subjects)}</td>
                                         <td>{req.sections || '-'}</td>
                                         <td>
                                             <span style={{
@@ -2701,6 +3116,18 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 {renderStudentProfileModal()}
                 {renderResetPasswordModal()}
                 {renderEditStudentModal()}
+                {hodToast.show && (
+                    <div style={{
+                        position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10001,
+                        padding: '0.85rem 1.5rem', borderRadius: '12px',
+                        background: hodToast.type === 'error' ? '#fee2e2' : hodToast.type === 'info' ? '#dbeafe' : '#dcfce7',
+                        color: hodToast.type === 'error' ? '#991b1b' : hodToast.type === 'info' ? '#1e40af' : '#166534',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontWeight: 600, fontSize: '0.9rem',
+                        animation: 'dialogIn 0.25s ease-out', maxWidth: '400px'
+                    }}>
+                        {hodToast.message}
+                    </div>
+                )}
             </div>
         );
     }
@@ -2722,6 +3149,18 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             {renderStudentProfileModal()}
             {renderResetPasswordModal()}
             {renderEditStudentModal()}
+            {hodToast.show && (
+                <div style={{
+                    position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10001,
+                    padding: '0.85rem 1.5rem', borderRadius: '12px',
+                    background: hodToast.type === 'error' ? '#fee2e2' : hodToast.type === 'info' ? '#dbeafe' : '#dcfce7',
+                    color: hodToast.type === 'error' ? '#991b1b' : hodToast.type === 'info' ? '#1e40af' : '#166534',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontWeight: 600, fontSize: '0.9rem',
+                    animation: 'dialogIn 0.25s ease-out', maxWidth: '400px'
+                }}>
+                    {hodToast.message}
+                </div>
+            )}
         </DashboardLayout>
     );
 };

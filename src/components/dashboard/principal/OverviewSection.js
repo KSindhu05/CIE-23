@@ -124,7 +124,7 @@ const OverviewSection = memo(({
                             <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#1e293b', fontWeight: 700 }}>Department Performance</h3>
                             <p style={{ margin: '0.5rem 0 0 0', color: '#64748b' }}>Average CIE Scores Comparison</p>
                         </div>
-                        <button className={styles.secondaryBtn} onClick={() => alert('Viewing Full Analysis')}>
+                        <button className={styles.secondaryBtn} onClick={() => onNavigate && onNavigate('compliance')}>
                             View Details <ArrowUpRight size={16} />
                         </button>
                     </div>
