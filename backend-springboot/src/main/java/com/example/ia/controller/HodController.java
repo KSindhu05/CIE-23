@@ -12,6 +12,7 @@ import com.example.ia.repository.CieMarkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.example.ia.service.FacultyService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.ia.security.UserDetailsImpl;
@@ -34,6 +35,9 @@ import java.util.stream.Collectors;
 public class HodController {
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    FacultyService facultyService;
 
     @Autowired
     StudentRepository studentRepository;
@@ -505,6 +509,13 @@ public class HodController {
         if (userRepository.existsByUsername(facultyData.getUsername())) {
             return ResponseEntity.badRequest().body(Map.of("message", "Username already exists"));
         }
+
+        String conflictMsg = facultyService.validateSubjectSectionAvailability(
+                facultyData.getDepartment(), facultyData.getSubjects(), facultyData.getSection(), null);
+        if (conflictMsg != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", conflictMsg));
+        }
+
         User faculty = new User();
         faculty.setUsername(facultyData.getUsername());
         faculty.setFullName(facultyData.getFullName());
@@ -566,6 +577,13 @@ public class HodController {
                 String role = facultyData.getCieRole().isBlank() ? null : facultyData.getCieRole();
                 faculty.setCieRole(role);
             }
+
+            String conflictMsg = facultyService.validateSubjectSectionAvailability(
+                    faculty.getDepartment(), faculty.getSubjects(), faculty.getSection(), faculty.getId());
+            if (conflictMsg != null) {
+                return ResponseEntity.badRequest().body(Map.of("message", conflictMsg));
+            }
+
             userRepository.save(faculty);
             return ResponseEntity.ok(faculty);
         }).orElse(ResponseEntity.notFound().build());

@@ -432,6 +432,7 @@ const PrincipalDashboard = () => {
                     onClear={handleClearNotifications}
                     onDelete={handleDeleteNotification}
                     loading={loading}
+                    departments={departments}
                 />}
                 {activeTab === 'reports' && <ReportsSection reports={reports} onDownload={handleDownload} departments={departments} loading={loading} />}
 

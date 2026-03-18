@@ -179,8 +179,8 @@ public class FacultyController {
         String sections = data.getOrDefault("sections", "");
         String semester = data.getOrDefault("semester", "");
 
-        if (targetDept == null || targetDept.isBlank() || subjects == null || subjects.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Department and subjects are required"));
+        if (targetDept == null || targetDept.isBlank() || subjects == null || subjects.isBlank() || sections == null || sections.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Department, subjects, and sections are required"));
         }
 
         // Check for duplicate pending request for same dept
@@ -190,6 +190,11 @@ public class FacultyController {
             return ResponseEntity.badRequest().body(Map.of("message",
                     "You already have a pending request for " + targetDept
                             + " department. Please wait for HOD approval."));
+        }
+
+        String conflictMsg = facultyService.validateSubjectSectionAvailability(targetDept, subjects, sections, null);
+        if (conflictMsg != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", conflictMsg));
         }
 
         FacultyAssignmentRequest request = new FacultyAssignmentRequest();
@@ -274,6 +279,16 @@ public class FacultyController {
             req.setSections(data.get("sections"));
         if (data.containsKey("semester"))
             req.setSemester(data.get("semester"));
+
+        if (req.getSubjects() == null || req.getSubjects().isBlank() || req.getSections() == null || req.getSections().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Subjects and sections cannot be empty"));
+        }
+
+        String conflictMsg = facultyService.validateSubjectSectionAvailability(req.getTargetDepartment(), req.getSubjects(), req.getSections(), null);
+        if (conflictMsg != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", conflictMsg));
+        }
+
         assignmentRequestRepository.save(req);
         return ResponseEntity.ok(Map.of("message", "Request updated successfully"));
     }

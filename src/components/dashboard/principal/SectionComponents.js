@@ -413,8 +413,21 @@ export const NotificationsSection = memo(({
     onSend,
     onClear,
     onDelete,
-    loading
-}) => (
+    loading,
+    departments = []
+}) => {
+    const [filterDept, setFilterDept] = useState("ALL");
+
+    const displayedNotifs = useMemo(() => {
+        if (filterDept === "ALL") return notifications;
+        return notifications.filter(n => {
+            if (!n.category) return false;
+            // Matches "HOD Update - CSE" or "HOD - CSE" or "CSE HODs"
+            return n.category.toUpperCase().includes(filterDept.toUpperCase());
+        });
+    }, [notifications, filterDept]);
+
+    return (
     <div className={styles.sectionVisible}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 className={styles.chartTitle}>Notifications</h2>
@@ -446,11 +459,10 @@ export const NotificationsSection = memo(({
                             onChange={(e) => setTargetDept && setTargetDept(e.target.value)}
                         >
                             <option value="ALL">All Departments</option>
-                            <option value="CSE">CSE</option>
-                            <option value="ECE">ECE</option>
-                            <option value="ME">ME</option>
-                            <option value="CV">CV</option>
-                            <option value="ISE">ISE</option>
+                            {departments.map(dept => {
+                                const deptName = dept.name || dept;
+                                return <option key={dept.id || deptName} value={deptName}>{deptName}</option>;
+                            })}
                         </select>
                     </div>
                     <div>
@@ -483,14 +495,28 @@ export const NotificationsSection = memo(({
             <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Inbox &amp; Sent</h3>
-                    {notifications.length > 0 && onClear && (
-                        <button
-                            onClick={onClear}
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', padding: '0.4rem 0.8rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <select 
+                            value={filterDept} 
+                            onChange={e => setFilterDept(e.target.value)}
+                            style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none' }}
                         >
-                            <Trash2 size={14} /> Clear All
-                        </button>
-                    )}
+                            <option value="ALL">All Depts</option>
+                            {departments.map(dept => {
+                                const deptName = dept.name || dept;
+                                return <option key={dept.id || deptName} value={deptName}>{deptName}</option>;
+                            })}
+                        </select>
+                        {displayedNotifs.length > 0 && onClear && (
+                            <button
+                                onClick={onClear}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', padding: '0.4rem 0.8rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                            >
+                                <Trash2 size={14} /> Clear {filterDept !== "ALL" ? filterDept : "All"}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     {loading ? (
@@ -503,7 +529,7 @@ export const NotificationsSection = memo(({
                                 </div>
                             </div>
                         ))
-                    ) : notifications.length > 0 ? notifications.map(notif => (
+                    ) : displayedNotifs.length > 0 ? displayedNotifs.map(notif => (
                         <div key={notif.id} style={{
                             position: 'relative', display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
                             padding: '0.85rem',
@@ -553,7 +579,8 @@ export const NotificationsSection = memo(({
             </div>
         </div>
     </div>
-));
+    );
+});
 
 export const ReportsSection = memo(({ reports = [], onDownload, departments = [], loading }) => {
     const [selectedDept, setSelectedDept] = useState(departments[0] || '');

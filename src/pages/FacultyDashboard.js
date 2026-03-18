@@ -3842,8 +3842,8 @@ const FacultyDashboard = () => {
     };
 
     const handleSubmitAssignmentRequest = async () => {
-        if (!selectedTargetDept || selectedAssignSubjects.length === 0) {
-            showToast('Please select a department and at least one subject', 'error');
+        if (!selectedTargetDept || selectedAssignSubjects.length === 0 || assignSections.length === 0) {
+            showToast('Please select a department, at least one subject, and at least one section', 'error');
             return;
         }
         setAssignLoading(true);
@@ -3940,7 +3940,19 @@ const FacultyDashboard = () => {
 
         const handleSaveEditRequest = async () => {
             if (!editingAssignReq) return;
+
+            if (!editingAssignReq.subjects || editingAssignReq.subjects.length === 0 || !editingAssignReq.sections || editingAssignReq.sections.length === 0) {
+                showToast('Please select at least one subject and at least one section', 'error');
+                return;
+            }
+
             try {
+                const body = JSON.stringify({
+                    targetDepartment: editingAssignReq.department,
+                    subjects: editingAssignReq.subjects.join(', '),
+                    sections: editingAssignReq.sections.join(', '),
+                    semester: editingAssignReq.semester
+                });
                 const res = await authenticatedFetch(`${API_BASE_URL}/faculty/assignment-request/${editingAssignReq.id}`, {
                     method: 'PUT',
                     body
@@ -4108,7 +4120,7 @@ const FacultyDashboard = () => {
                     <button
                         className={styles.saveBtn}
                         onClick={handleSubmitAssignmentRequest}
-                        disabled={assignLoading || !selectedTargetDept || selectedAssignSubjects.length === 0}
+                        disabled={assignLoading || !selectedTargetDept || selectedAssignSubjects.length === 0 || assignSections.length === 0}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}
                     >
                         <Send size={16} />

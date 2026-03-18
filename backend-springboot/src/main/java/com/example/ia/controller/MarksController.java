@@ -118,7 +118,7 @@ public class MarksController {
             }
         }
 
-        marksService.updateBatchMarks(marksToSave);
+        marksService.updateBatchMarks(marksToSave, isHod, username);
         return ResponseEntity.ok(new MessageResponse("Marks updated successfully"));
     }
 

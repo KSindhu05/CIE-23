@@ -65,7 +65,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     };
     const [selectedDept, setSelectedDept] = useState(user?.department || 'CSE');
     const [deptStudents, setDeptStudents] = useState([]);
-    const [selectedSubject, setSelectedSubject] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState(null);
     const [isMyDept, setIsMyDept] = useState(true);
 
     // Filter State for "All Students"
@@ -101,6 +101,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const [cieTrendData, setCieTrendData] = useState([0, 0, 0, 0, 0]);
     const [allSubjectPerformance, setAllSubjectPerformance] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isTableLoading, setIsTableLoading] = useState(false);
 
     // HOD Performance Tab State (Faculty-style)
     const [hodPerformanceTab, setHodPerformanceTab] = useState('low');
@@ -317,7 +318,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'All Students', path: '#all-students', icon: <Users size={20} />, isActive: activeTab === 'all-students', onClick: () => setActiveTab('all-students') },
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
         { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
-        { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, isActive: activeTab === 'update-marks', onClick: () => setActiveTab('update-marks') },
+        { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, isActive: activeTab === 'update-marks', onClick: () => { setSelectedSubject(null); setSelectedSemester('all'); setActiveTab('update-marks'); } },
         { label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: () => setActiveTab('notifications'), badge: unreadCount || null },
     ];
 
@@ -877,10 +878,6 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     if (response.ok) {
                         const data = await response.json();
                         setSubjects(data);
-                        // Auto-select first subject for update-marks tab
-                        if (activeTab === 'update-marks' && data.length > 0 && !selectedSubject) {
-                            setSelectedSubject(data[0]);
-                        }
                     }
                 } catch (e) { console.error("Failed to fetch subjects", e); }
             };
@@ -888,25 +885,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         }
     }, [activeTab, isMyDept, selectedDept]);
 
-    // Handle subject auto-selection when semester or subjects change in update-marks tab
-    useEffect(() => {
-        if (activeTab === 'update-marks' && subjects.length > 0) {
-            const filtered = subjects.filter(sub => {
-                if (sub.name === 'IC') return false;
-                if (selectedSemester !== 'all' && sub.semester != selectedSemester) return false;
-                return true;
-            });
 
-            if (filtered.length > 0) {
-                // If current selectedSubject is not in filtered list, pick the first one
-                if (!selectedSubject || !filtered.find(s => s.id === selectedSubject.id)) {
-                    setSelectedSubject(filtered[0]);
-                }
-            } else {
-                setSelectedSubject(null);
-            }
-        }
-    }, [activeTab, subjects, selectedSemester]);
 
     const commonOptions = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, maintainAspectRatio: false };
     const doughnutOptions = { responsive: true, plugins: { legend: { position: 'right' } }, maintainAspectRatio: false };
@@ -2232,8 +2211,21 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     </div>
                 </div>
             )}
-            {activeTab === 'update-marks' && (<div className={styles.updateMarksContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Modify Student Marks</h3><div className={styles.filterGroup}>
-                <select className={styles.deptSelect} value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)} style={{ marginRight: '10px' }}>
+            {activeTab === 'update-marks' && (<div className={styles.updateMarksContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Modify Student Marks</h3>
+                {loading ? (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <Skeleton width="150px" height="38px" />
+                        <Skeleton width="150px" height="38px" />
+                        <Skeleton width="180px" height="38px" />
+                    </div>
+                ) : (
+                <div className={styles.filterGroup}>
+                <select className={styles.deptSelect} value={selectedSemester} onChange={(e) => { 
+                    setIsTableLoading(true);
+                    setSelectedSemester(e.target.value); 
+                    setSelectedSubject(null); 
+                    setTimeout(() => setIsTableLoading(false), 30);
+                }} style={{ marginRight: '10px' }}>
                     <option value="all">All Semesters</option>
                     {[1, 2, 3, 4, 5, 6].map(sem => (
                         <option key={sem} value={sem}>{sem}{sem === 1 ? 'st' : sem === 2 ? 'nd' : sem === 3 ? 'rd' : 'th'} Semester</option>
@@ -2247,160 +2239,201 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     <option value="cie4">CIE-4</option>
                     <option value="cie5">CIE-5</option>
                 </select>
-                <select className={styles.deptSelect} value={selectedSubject?.id || ''} onChange={(e) => { const sub = subjects.find(s => s.id === parseInt(e.target.value)); setSelectedSubject(sub); }}>
-                    {subjects.filter(sub => {
-                        // Filter out IC
-                        if (sub.name === 'IC') return false;
-
-                        // Filter by semester if selected
-                        if (selectedSemester !== 'all' && sub.semester != selectedSemester) return false;
-
-                        return true;
-                    }).map(sub => (<option key={sub.id} value={sub.id}>{sub.name}</option>))}
-                </select><button className={styles.saveBtn} onClick={saveMarks}><Save size={16} /> Save Changes</button></div></div><p className={styles.helperText}>Edit marks directly in the table. Changes are tracked locally until saved. Max Marks: CIE-1 to CIE-5 (50 each) - Total (250)</p><div className={styles.tableWrapper}><table className={styles.table} style={selectedCieType === 'all' ? { minWidth: '1800px' } : {}}><thead><tr><th>Sl. No.</th><th style={{ width: '150px', minWidth: '150px' }}>Reg No</th><th style={{ width: '350px', minWidth: '350px' }}>Student Name</th>
-                    {['cie1', 'all'].includes(selectedCieType) && <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (50)</th>}
-                    {['cie1', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                    {['cie2', 'all'].includes(selectedCieType) && <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (50)</th>}
-                    {['cie2', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                    {['cie3', 'all'].includes(selectedCieType) && <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-3 (50)</th>}
-                    {['cie3', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                    {['cie4', 'all'].includes(selectedCieType) && <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-4 (50)</th>}
-                    {['cie4', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                    {['cie5', 'all'].includes(selectedCieType) && <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-5 (50)</th>}
-                    {['cie5', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                    <th>Total (250)</th><th style={{ background: '#fefce8', color: '#a16207', width: '250px', minWidth: '250px' }}>Remarks</th></tr></thead><tbody>{students.filter(s => selectedSemester === 'all' || s.semester == selectedSemester).map((student, index) => {
-                        const editMark = editingMarks[student.id] || {};
-                        const valCIE1 = (editMark.cie1 !== undefined && editMark.cie1 !== null) ? editMark.cie1 : '';
-                        const valCIE2 = (editMark.cie2 !== undefined && editMark.cie2 !== null) ? editMark.cie2 : '';
-                        const valCIE3 = (editMark.cie3 !== undefined && editMark.cie3 !== null) ? editMark.cie3 : '';
-                        const valCIE4 = (editMark.cie4 !== undefined && editMark.cie4 !== null) ? editMark.cie4 : '';
-                        const valCIE5 = (editMark.cie5 !== undefined && editMark.cie5 !== null) ? editMark.cie5 : '';
-                        const att1Val = (editMark.cie1Att !== undefined && editMark.cie1Att !== null) ? editMark.cie1Att : '';
-                        const att2Val = (editMark.cie2Att !== undefined && editMark.cie2Att !== null) ? editMark.cie2Att : '';
-                        const att3Val = (editMark.cie3Att !== undefined && editMark.cie3Att !== null) ? editMark.cie3Att : '';
-                        const att4Val = (editMark.cie4Att !== undefined && editMark.cie4Att !== null) ? editMark.cie4Att : '';
-                        const att5Val = (editMark.cie5Att !== undefined && editMark.cie5Att !== null) ? editMark.cie5Att : '';
-                        const total = (Number(valCIE1) || 0) + (Number(valCIE2) || 0) + (Number(valCIE3) || 0) + (Number(valCIE4) || 0) + (Number(valCIE5) || 0);
-                        const cieVals = [
-                            { key: 'CIE-1', val: valCIE1, att: att1Val !== '' ? parseFloat(att1Val) : null },
-                            { key: 'CIE-2', val: valCIE2, att: att2Val !== '' ? parseFloat(att2Val) : null },
-                            { key: 'CIE-3', val: valCIE3, att: att3Val !== '' ? parseFloat(att3Val) : null },
-                            { key: 'CIE-4', val: valCIE4, att: att4Val !== '' ? parseFloat(att4Val) : null },
-                            { key: 'CIE-5', val: valCIE5, att: att5Val !== '' ? parseFloat(att5Val) : null }
-                        ];
-                        const parts = []; let worstColor = '#94a3b8'; let worstBg = 'transparent';
-                        cieVals.forEach(c => {
-                            const v = c.val !== '' && c.val !== null && c.val !== undefined ? parseFloat(c.val) : null;
-                            const att = c.att;
-                            if (v == null) return;
-                            if (v < 25 && att != null && att < 75) {
-                                parts.push(`${c.key}: Low Marks, Low Att`); worstColor = '#dc2626'; worstBg = '#fef2f2';
-                            } else if (v < 25) {
-                                parts.push(`${c.key}: Low Marks`);
-                                if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
-                            } else if (att != null && att < 75) {
-                                if (!parts.some(p => p.includes('Low Att'))) { parts.push('Low Att'); }
-                                if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
+                <select className={styles.deptSelect} value={selectedSubject?.id || ''} disabled={!selectedSemester || selectedSemester === 'all'} onChange={(e) => {
+                    setIsTableLoading(true);
+                    if (!e.target.value) { 
+                        setSelectedSubject(null); 
+                        setTimeout(() => setIsTableLoading(false), 30);
+                        return; 
+                    }
+                    const sub = subjects.find(s => s.id === parseInt(e.target.value));
+                    setSelectedSubject(sub);
+                    setTimeout(() => setIsTableLoading(false), 30);
+                }} style={!selectedSemester || selectedSemester === 'all' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}>
+                    <option value="">{!selectedSemester || selectedSemester === 'all' ? '← Select Semester First' : 'Select Subject'}</option>
+                    {selectedSemester && selectedSemester !== 'all' && (() => {
+                        const seen = new Set();
+                        // First pass: collect all clean names that have a Theory version
+                        const theoryNames = new Set();
+                        subjects.forEach(sub => {
+                            if (sub.name === 'IC') return;
+                            if (sub.semester != selectedSemester) return;
+                            if (/\(Theory\)/i.test(sub.name)) {
+                                theoryNames.add(sub.name.replace(/\s*\([\w\s]+\)/gi, '').trim());
                             }
                         });
-                        const filledCount = cieVals.filter(c => c.val !== '' && c.val !== null && c.val !== undefined).length;
-                        let remark = '-'; let remarkColor = '#94a3b8'; let remarkBg = 'transparent';
-                        if (parts.length > 0) {
-                            remark = parts.join(' | '); remarkColor = worstColor; remarkBg = worstBg;
-                        } else if (filledCount > 0) {
-                            const avg = total / filledCount;
-                            const allAttGood = cieVals.filter(c => c.att != null).every(c => c.att >= 75);
-                            if (avg >= 40 && allAttGood) { remark = 'Excellent'; remarkColor = '#15803d'; remarkBg = '#f0fdf4'; }
-                            else { remark = 'Good'; remarkColor = '#2563eb'; remarkBg = '#eff6ff'; }
-                        }
-                        return (<tr key={student.id}><td>{index + 1}</td><td style={{ width: '150px', minWidth: '150px', fontWeight: 600 }}>{student.regNo}</td><td style={{ width: '350px', minWidth: '350px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px', fontWeight: 500 }} title={student.name}>{student.name}</td>
-                            {['cie1', 'all'].includes(selectedCieType) && <td style={['cie1', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE1} max={50} onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)} /></td>}
-                            {['cie1', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att1Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie1Att', e.target.value)} /></td>}
-                            {['cie2', 'all'].includes(selectedCieType) && <td style={['cie2', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE2} max={50} onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)} /></td>}
-                            {['cie2', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att2Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie2Att', e.target.value)} /></td>}
-                            {['cie3', 'all'].includes(selectedCieType) && <td style={['cie3', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE3} max={50} onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)} /></td>}
-                            {['cie3', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att3Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie3Att', e.target.value)} /></td>}
-                            {['cie4', 'all'].includes(selectedCieType) && <td style={['cie4', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE4} max={50} onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)} /></td>}
-                            {['cie4', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att4Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie4Att', e.target.value)} /></td>}
-                            {['cie5', 'all'].includes(selectedCieType) && <td style={['cie5', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE5} max={50} onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)} /></td>}
-                            {['cie5', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att5Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie5Att', e.target.value)} /></td>}
+                        return subjects.filter(sub => {
+                            if (sub.name === 'IC') return false;
+                            if (sub.semester != selectedSemester) return false;
 
-                            <td style={{ fontWeight: 'bold' }}>{Math.min(total, 250)}</td>
-
-                            {(() => {
-                                const getCieRemark = (v, a, label) => {
-                                    if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
-                                    return {
-                                        label,
-                                        lowMarks: v < 25,
-                                        lowAtt: a < 75,
-                                        excellent: v >= 40 && a >= 75,
-                                        severity: (v < 25 && a < 75) ? 3 : (v < 25 ? 2 : (a < 75 ? 2 : 0)),
-                                        text: (v < 25 && a < 75) ? `${label}: Low Marks, Low Att` :
-                                            (v < 25 ? `${label}: Low Marks` :
-                                                (a < 75 ? `${label}: Low Att` :
-                                                    (v >= 40 && a >= 75 ? `${label}: Excellent` : `${label}: Good`)))
-                                    };
-                                };
-
-                                const allCies = [
-                                    getCieRemark(valCIE1 !== '' ? parseFloat(valCIE1) : null, att1Val !== '' ? parseFloat(att1Val) : null, 'CIE-1'),
-                                    getCieRemark(valCIE2 !== '' ? parseFloat(valCIE2) : null, att2Val !== '' ? parseFloat(att2Val) : null, 'CIE-2'),
-                                    getCieRemark(valCIE3 !== '' ? parseFloat(valCIE3) : null, att3Val !== '' ? parseFloat(att3Val) : null, 'CIE-3'),
-                                    getCieRemark(valCIE4 !== '' ? parseFloat(valCIE4) : null, att4Val !== '' ? parseFloat(att4Val) : null, 'CIE-4'),
-                                    getCieRemark(valCIE5 !== '' ? parseFloat(valCIE5) : null, att5Val !== '' ? parseFloat(att5Val) : null, 'CIE-5')
-                                ];
-                                const filled = allCies.filter(r => r !== null);
-
-                                if (selectedCieType === 'all' && filled.length > 0) {
-                                    const worst = Math.max(...filled.map(r => r.severity));
-                                    const color = worst >= 3 ? '#dc2626' : worst >= 2 ? '#ea580c' : '#15803d';
-                                    const bg = worst >= 3 ? '#fef2f2' : worst >= 2 ? '#fff7ed' : '#f0fdf4';
-
-                                    const lowMarksCies = filled.filter(r => r.lowMarks).map(r => r.label);
-                                    const lowAttCies = filled.filter(r => r.lowAtt).map(r => r.label);
-
-                                    let textParts = [];
-                                    if (lowMarksCies.length > 0) textParts.push(`${lowMarksCies.join(',')} Low Marks`);
-                                    if (lowAttCies.length > 0) textParts.push(`${lowAttCies.join(',')} Low Att`);
-                                    if (textParts.length === 0) {
-                                        const allExcellent = filled.every(r => r.excellent);
-                                        textParts.push(allExcellent ? 'All Excellent' : 'All Good');
+                            const cleanName = sub.name.replace(/\s*\([\w\s]+\)/gi, '').trim();
+                            // Skip Lab version if a Theory version exists
+                            if (/\(Lab\)/i.test(sub.name) && theoryNames.has(cleanName)) return false;
+                            if (seen.has(cleanName)) return false;
+                            seen.add(cleanName);
+                            return true;
+                        }).map(sub => {
+                            const cleanName = sub.name.replace(/\s*\([\w\s]+\)/gi, '').trim();
+                            return <option key={sub.id} value={sub.id}>{cleanName}</option>;
+                        });
+                    })()}
+                </select><button className={styles.saveBtn} onClick={saveMarks} disabled={selectedSemester === 'all' || !selectedSubject}><Save size={16} /> Save Changes</button></div>
+                )}
+                </div>
+                {loading || isTableLoading ? (
+                    <div style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
+                        <Skeleton width="100%" height="40px" style={{ marginBottom: '1rem' }} />
+                        <Skeleton width="100%" height="300px" />
+                    </div>
+                ) : selectedSemester !== 'all' && selectedSemester && selectedSubject ? (
+                    <>
+                        <p className={styles.helperText}>Edit marks directly in the table. Changes are tracked locally until saved. Max Marks: CIE-1 to CIE-5 (50 each) - Total (250)</p>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.table} style={selectedCieType === 'all' ? { minWidth: '1800px' } : {}}><thead><tr><th>Sl. No.</th><th style={{ width: '150px', minWidth: '150px' }}>Reg No</th><th style={{ width: '350px', minWidth: '350px' }}>Student Name</th>
+                                {['cie1', 'all'].includes(selectedCieType) && <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (50)</th>}
+                                {['cie1', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                {['cie2', 'all'].includes(selectedCieType) && <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (50)</th>}
+                                {['cie2', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                {['cie3', 'all'].includes(selectedCieType) && <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-3 (50)</th>}
+                                {['cie3', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                {['cie4', 'all'].includes(selectedCieType) && <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-4 (50)</th>}
+                                {['cie4', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                {['cie5', 'all'].includes(selectedCieType) && <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-5 (50)</th>}
+                                {['cie5', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                <th>Total (250)</th><th style={{ background: '#fefce8', color: '#a16207', width: '250px', minWidth: '250px' }}>Remarks</th></tr></thead><tbody>{students.filter(s => selectedSemester === 'all' || s.semester == selectedSemester).map((student, index) => {
+                                    const editMark = editingMarks[student.id] || {};
+                                    const valCIE1 = (editMark.cie1 !== undefined && editMark.cie1 !== null) ? editMark.cie1 : '';
+                                    const valCIE2 = (editMark.cie2 !== undefined && editMark.cie2 !== null) ? editMark.cie2 : '';
+                                    const valCIE3 = (editMark.cie3 !== undefined && editMark.cie3 !== null) ? editMark.cie3 : '';
+                                    const valCIE4 = (editMark.cie4 !== undefined && editMark.cie4 !== null) ? editMark.cie4 : '';
+                                    const valCIE5 = (editMark.cie5 !== undefined && editMark.cie5 !== null) ? editMark.cie5 : '';
+                                    const att1Val = (editMark.cie1Att !== undefined && editMark.cie1Att !== null) ? editMark.cie1Att : '';
+                                    const att2Val = (editMark.cie2Att !== undefined && editMark.cie2Att !== null) ? editMark.cie2Att : '';
+                                    const att3Val = (editMark.cie3Att !== undefined && editMark.cie3Att !== null) ? editMark.cie3Att : '';
+                                    const att4Val = (editMark.cie4Att !== undefined && editMark.cie4Att !== null) ? editMark.cie4Att : '';
+                                    const att5Val = (editMark.cie5Att !== undefined && editMark.cie5Att !== null) ? editMark.cie5Att : '';
+                                    const total = (Number(valCIE1) || 0) + (Number(valCIE2) || 0) + (Number(valCIE3) || 0) + (Number(valCIE4) || 0) + (Number(valCIE5) || 0);
+                                    const cieVals = [
+                                        { key: 'CIE-1', val: valCIE1, att: att1Val !== '' ? parseFloat(att1Val) : null },
+                                        { key: 'CIE-2', val: valCIE2, att: att2Val !== '' ? parseFloat(att2Val) : null },
+                                        { key: 'CIE-3', val: valCIE3, att: att3Val !== '' ? parseFloat(att3Val) : null },
+                                        { key: 'CIE-4', val: valCIE4, att: att4Val !== '' ? parseFloat(att4Val) : null },
+                                        { key: 'CIE-5', val: valCIE5, att: att5Val !== '' ? parseFloat(att5Val) : null }
+                                    ];
+                                    const parts = []; let worstColor = '#94a3b8'; let worstBg = 'transparent';
+                                    cieVals.forEach(c => {
+                                        const v = c.val !== '' && c.val !== null && c.val !== undefined ? parseFloat(c.val) : null;
+                                        const att = c.att;
+                                        if (v == null) return;
+                                        if (v < 25 && att != null && att < 75) {
+                                            parts.push(`${c.key}: Low Marks, Low Att`); worstColor = '#dc2626'; worstBg = '#fef2f2';
+                                        } else if (v < 25) {
+                                            parts.push(`${c.key}: Low Marks`);
+                                            if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
+                                        } else if (att != null && att < 75) {
+                                            if (!parts.some(p => p.includes('Low Att'))) { parts.push('Low Att'); }
+                                            if (worstColor !== '#dc2626') { worstColor = '#ea580c'; worstBg = '#fff7ed'; }
+                                        }
+                                    });
+                                    const filledCount = cieVals.filter(c => c.val !== '' && c.val !== null && c.val !== undefined).length;
+                                    let remark = '-'; let remarkColor = '#94a3b8'; let remarkBg = 'transparent';
+                                    if (parts.length > 0) {
+                                        remark = parts.join(' | '); remarkColor = worstColor; remarkBg = worstBg;
+                                    } else if (filledCount > 0) {
+                                        const avg = total / filledCount;
+                                        const allAttGood = cieVals.filter(c => c.att != null).every(c => c.att >= 75);
+                                        if (avg >= 40 && allAttGood) { remark = 'Excellent'; remarkColor = '#15803d'; remarkBg = '#f0fdf4'; }
+                                        else { remark = 'Good'; remarkColor = '#2563eb'; remarkBg = '#eff6ff'; }
                                     }
-                                    const text = textParts.join(' | ');
-                                    return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
-                                        <div style={{ fontSize: '0.65rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{text}</div>
-                                    </td>;
-                                } else if (selectedCieType === 'all') {
-                                    return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
-                                }
+                                    return (<tr key={student.id}><td>{index + 1}</td><td style={{ width: '150px', minWidth: '150px', fontWeight: 600 }}>{student.regNo}</td><td style={{ width: '350px', minWidth: '350px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px', fontWeight: 500 }} title={student.name}>{student.name}</td>
+                                        {['cie1', 'all'].includes(selectedCieType) && <td style={['cie1', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE1} max={50} onChange={(e) => handleMarkChange(student.id, 'cie1', e.target.value)} /></td>}
+                                        {['cie1', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att1Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie1Att', e.target.value)} /></td>}
+                                        {['cie2', 'all'].includes(selectedCieType) && <td style={['cie2', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE2} max={50} onChange={(e) => handleMarkChange(student.id, 'cie2', e.target.value)} /></td>}
+                                        {['cie2', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att2Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie2Att', e.target.value)} /></td>}
+                                        {['cie3', 'all'].includes(selectedCieType) && <td style={['cie3', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE3} max={50} onChange={(e) => handleMarkChange(student.id, 'cie3', e.target.value)} /></td>}
+                                        {['cie3', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att3Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie3Att', e.target.value)} /></td>}
+                                        {['cie4', 'all'].includes(selectedCieType) && <td style={['cie4', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE4} max={50} onChange={(e) => handleMarkChange(student.id, 'cie4', e.target.value)} /></td>}
+                                        {['cie4', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att4Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie4Att', e.target.value)} /></td>}
+                                        {['cie5', 'all'].includes(selectedCieType) && <td style={['cie5', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><input type="number" className={styles.markInput} value={valCIE5} max={50} onChange={(e) => handleMarkChange(student.id, 'cie5', e.target.value)} /></td>}
+                                        {['cie5', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><input type="number" className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att5Val} max={100} onChange={(e) => handleMarkChange(student.id, 'cie5Att', e.target.value)} /></td>}
 
-                                /* Specific CIE selected */
-                                const indexMap = { 'cie1': 0, 'cie2': 1, 'cie3': 2, 'cie4': 3, 'cie5': 4 };
-                                const focused = allCies[indexMap[selectedCieType]];
+                                        <td style={{ fontWeight: 'bold' }}>{Math.min(total, 250)}</td>
 
-                                if (!focused) return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
-                                const color = focused.severity >= 3 ? '#dc2626' : focused.severity >= 2 ? '#ea580c' : focused.severity === 0 ? '#15803d' : '#2563eb';
-                                const bg = focused.severity >= 3 ? '#fef2f2' : focused.severity >= 2 ? '#fff7ed' : '#f0fdf4';
-                                return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
-                                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{focused.text}</div>
-                                </td>;
+                                        {(() => {
+                                            const getCieRemark = (v, a, label) => {
+                                                if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
+                                                return {
+                                                    label,
+                                                    lowMarks: v < 25,
+                                                    lowAtt: a < 75,
+                                                    excellent: v >= 40 && a >= 75,
+                                                    severity: (v < 25 && a < 75) ? 3 : (v < 25 ? 2 : (a < 75 ? 2 : 0)),
+                                                    text: (v < 25 && a < 75) ? `${label}: Low Marks, Low Att` :
+                                                        (v < 25 ? `${label}: Low Marks` :
+                                                            (a < 75 ? `${label}: Low Att` :
+                                                                (v >= 40 && a >= 75 ? `${label}: Excellent` : `${label}: Good`)))
+                                                };
+                                            };
 
-                            })()}
-                        </tr>);
-                    })}</tbody></table></div></div></div>)}
+                                            const allCies = [
+                                                getCieRemark(valCIE1 !== '' ? parseFloat(valCIE1) : null, att1Val !== '' ? parseFloat(att1Val) : null, 'CIE-1'),
+                                                getCieRemark(valCIE2 !== '' ? parseFloat(valCIE2) : null, att2Val !== '' ? parseFloat(att2Val) : null, 'CIE-2'),
+                                                getCieRemark(valCIE3 !== '' ? parseFloat(valCIE3) : null, att3Val !== '' ? parseFloat(att3Val) : null, 'CIE-3'),
+                                                getCieRemark(valCIE4 !== '' ? parseFloat(valCIE4) : null, att4Val !== '' ? parseFloat(att4Val) : null, 'CIE-4'),
+                                                getCieRemark(valCIE5 !== '' ? parseFloat(valCIE5) : null, att5Val !== '' ? parseFloat(att5Val) : null, 'CIE-5')
+                                            ];
+                                            const filled = allCies.filter(r => r !== null);
+
+                                            if (selectedCieType === 'all' && filled.length > 0) {
+                                                const worst = Math.max(...filled.map(r => r.severity));
+                                                const color = worst >= 3 ? '#dc2626' : worst >= 2 ? '#ea580c' : '#15803d';
+                                                const bg = worst >= 3 ? '#fef2f2' : worst >= 2 ? '#fff7ed' : '#f0fdf4';
+
+                                                const lowMarksCies = filled.filter(r => r.lowMarks).map(r => r.label);
+                                                const lowAttCies = filled.filter(r => r.lowAtt).map(r => r.label);
+
+                                                let textParts = [];
+                                                if (lowMarksCies.length > 0) textParts.push(`${lowMarksCies.join(',')} Low Marks`);
+                                                if (lowAttCies.length > 0) textParts.push(`${lowAttCies.join(',')} Low Att`);
+                                                if (textParts.length === 0) {
+                                                    const allExcellent = filled.every(r => r.excellent);
+                                                    textParts.push(allExcellent ? 'All Excellent' : 'All Good');
+                                                }
+                                                const text = textParts.join(' | ');
+                                                return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
+                                                    <div style={{ fontSize: '0.65rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{text}</div>
+                                                </td>;
+                                            } else if (selectedCieType === 'all') {
+                                                return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
+                                            }
+
+                                            /* Specific CIE selected */
+                                            const indexMap = { 'cie1': 0, 'cie2': 1, 'cie3': 2, 'cie4': 3, 'cie5': 4 };
+                                            const focused = allCies[indexMap[selectedCieType]];
+
+                                            if (!focused) return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
+                                            const color = focused.severity >= 3 ? '#dc2626' : focused.severity >= 2 ? '#ea580c' : focused.severity === 0 ? '#15803d' : '#2563eb';
+                                            const bg = focused.severity >= 3 ? '#fef2f2' : focused.severity >= 2 ? '#fff7ed' : '#f0fdf4';
+                                            return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{focused.text}</div>
+                                            </td>;
+
+                                        })()}
+                                    </tr>);
+                                })}</tbody></table></div></>) : (
+                    <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', margin: '1rem' }}>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        </div>
+                        <h4 style={{ margin: '0 0 0.5rem', color: '#334155', fontSize: '1.1rem' }}>Select Semester & Subject</h4>
+                        <p style={{ margin: 0, fontSize: '0.95rem' }}>Please choose a specific semester and subject from the dropdowns above to view and modify student marks.</p>
+                    </div>
+                )}
+            </div></div>)}
             {activeTab === 'monitoring' && (
                 <div className={styles.monitoringContainer}>
                     <div className={styles.card}>
                         <div className={styles.cardHeader}>
-                            <h3>Subject-wise IA Submission Status</h3>
-                            <div className={styles.filterGroup}>
-                                <select className={styles.deptSelect} style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>
-                                    <option>All Semesters</option>
-                                    <option>2nd Semester</option>
-                                    <option>4th Semester</option>
-                                </select>
-                            </div>
                         </div>
                         <table className={styles.table}>
                             <thead>
@@ -2748,26 +2781,26 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     )}
                 </div>
             )}
-                {viewingFaculty && (<div className={styles.modalOverlay} onClick={() => setViewingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><div><h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2><span className={styles.badge} style={{ position: 'static', padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb', fontWeight: 500, fontSize: '0.85rem' }}>Dashboard Overview</span></div><button className={styles.closeBtn} onClick={() => setViewingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}>{(() => {
-                    let totalAvg = 0;
-                    let evaluatedCount = 0;
-                    const subStats = parseSubjects(viewingFaculty.subjects).map(subName => {
-                        const marks = subjectMarksData[subName] || [];
-                        const validMarks = marks.filter(m => m.cie1Score !== null || m.cie2Score !== null || m.cie3Score !== null || m.cie4Score !== null || m.cie5Score !== null);
-                        const avg = validMarks.length > 0 ? Math.round(validMarks.reduce((acc, m) => {
-                            const scores = [m.cie1Score, m.cie2Score, m.cie3Score, m.cie4Score, m.cie5Score].filter(x => x !== null && x !== undefined);
-                            const studentAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-                            return acc + studentAvg;
-                        }, 0) / validMarks.length) : 0;
+            {viewingFaculty && (<div className={styles.modalOverlay} onClick={() => setViewingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><div><h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2><span className={styles.badge} style={{ position: 'static', padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb', fontWeight: 500, fontSize: '0.85rem' }}>Dashboard Overview</span></div><button className={styles.closeBtn} onClick={() => setViewingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}>{(() => {
+                let totalAvg = 0;
+                let evaluatedCount = 0;
+                const subStats = parseSubjects(viewingFaculty.subjects).map(subName => {
+                    const marks = subjectMarksData[subName] || [];
+                    const validMarks = marks.filter(m => m.cie1Score !== null || m.cie2Score !== null || m.cie3Score !== null || m.cie4Score !== null || m.cie5Score !== null);
+                    const avg = validMarks.length > 0 ? Math.round(validMarks.reduce((acc, m) => {
+                        const scores = [m.cie1Score, m.cie2Score, m.cie3Score, m.cie4Score, m.cie5Score].filter(x => x !== null && x !== undefined);
+                        const studentAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+                        return acc + studentAvg;
+                    }, 0) / validMarks.length) : 0;
 
-                        if (validMarks.length > 0) evaluatedCount += validMarks.length;
-                        totalAvg += avg;
-                        return { name: subName, avg, count: validMarks.length };
-                    });
-                    const overall = subStats.length > 0 ? Math.round(totalAvg / subStats.length) : 0;
+                    if (validMarks.length > 0) evaluatedCount += validMarks.length;
+                    totalAvg += avg;
+                    return { name: subName, avg, count: validMarks.length };
+                });
+                const overall = subStats.length > 0 ? Math.round(totalAvg / subStats.length) : 0;
 
-                    return (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.blue}`}><TrendingUp size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Avg Class Score</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{overall > 0 ? overall : '-'}/50</h3></div></div><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.green}`}><CheckCircle size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Students Evaluated</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{evaluatedCount}</h3></div></div></div><div><h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Assigned Subjects Performance</h4><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>Avg Score</th><th>Status</th></tr></thead><tbody>{subStats.length > 0 ? subStats.map((s, i) => (<tr key={i}><td style={{ fontWeight: 500 }}>{s.name}</td><td>{s.avg || '-'}</td><td><span style={{ color: s.avg >= 35 ? '#16a34a' : s.avg >= 20 ? '#ca8a04' : '#dc2626', fontWeight: 600 }}>{s.avg >= 35 ? 'Good' : s.avg >= 20 ? 'Average' : 'Need Improvement'}</span></td></tr>)) : (<tr><td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8' }}>No subjects found</td></tr>)}</tbody></table></div></div></>);
-                })()}</div></div></div>)}
+                return (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.blue}`}><TrendingUp size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Avg Class Score</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{overall > 0 ? overall : '-'}/50</h3></div></div><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.green}`}><CheckCircle size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Students Evaluated</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{evaluatedCount}</h3></div></div></div><div><h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Assigned Subjects Performance</h4><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>Avg Score</th><th>Status</th></tr></thead><tbody>{subStats.length > 0 ? subStats.map((s, i) => (<tr key={i}><td style={{ fontWeight: 500 }}>{s.name}</td><td>{s.avg || '-'}</td><td><span style={{ color: s.avg >= 35 ? '#16a34a' : s.avg >= 20 ? '#ca8a04' : '#dc2626', fontWeight: 600 }}>{s.avg >= 35 ? 'Good' : s.avg >= 20 ? 'Average' : 'Need Improvement'}</span></td></tr>)) : (<tr><td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8' }}>No subjects found</td></tr>)}</tbody></table></div></div></>);
+            })()}</div></div></div>)}
             {messagingFaculty && (
                 <div className={styles.modalOverlay} onClick={() => setMessagingFaculty(null)}>
                     <div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>

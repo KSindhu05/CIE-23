@@ -6,6 +6,10 @@ import com.example.ia.entity.Subject;
 import com.example.ia.repository.CieMarkRepository;
 import com.example.ia.repository.StudentRepository;
 import com.example.ia.repository.SubjectRepository;
+import com.example.ia.entity.Notification;
+import com.example.ia.entity.User;
+import com.example.ia.repository.NotificationRepository;
+import com.example.ia.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +27,15 @@ public class MarksService {
 
     @Autowired
     private SubjectRepository subjectRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private FacultyService facultyService;
 
     @Transactional
     public void submitMarks(Long subjectId, String cieType, String facultyUsername) {
@@ -44,7 +57,11 @@ public class MarksService {
     }
 
     @Transactional
-    public void updateBatchMarks(List<CieMark> marksPayload) {
+    public void updateBatchMarks(List<CieMark> marksPayload, boolean isHod, String currentUsername) {
+        java.util.List<String> changeDetails = new java.util.ArrayList<>();
+        String subjectName = "";
+        String subjectDepartment = "";
+
         for (CieMark payload : marksPayload) {
             Optional<CieMark> existing = cieMarkRepository.findByStudent_IdAndSubject_IdAndCieType(
                     payload.getStudent().getId(),
@@ -53,6 +70,21 @@ public class MarksService {
 
             if (existing.isPresent()) {
                 CieMark mark = existing.get();
+
+                if (isHod && payload.getMarks() != null) {
+                    Double newMarkValue = payload.getMarks();
+                    if (newMarkValue != null && newMarkValue < 0) newMarkValue = null;
+                    Double oldMarkValue = mark.getMarks();
+                    if ((oldMarkValue == null && newMarkValue != null) || (oldMarkValue != null && !oldMarkValue.equals(newMarkValue))) {
+                        String studentNameInfo = mark.getStudent() != null ? (mark.getStudent().getName() + " (" + mark.getStudent().getRegNo() + ")") : "Unknown Student";
+                        changeDetails.add("- " + studentNameInfo + ": " + (oldMarkValue == null ? "N/A" : oldMarkValue) + " -> " + (newMarkValue == null ? "N/A" : newMarkValue));
+                        if (subjectName.isEmpty() && mark.getSubject() != null) {
+                            subjectName = mark.getSubject().getName() + " (" + mark.getSubject().getCode() + ")";
+                            subjectDepartment = mark.getSubject().getDepartment();
+                        }
+                    }
+                }
+
                 // If the frontend sends < 0, it means the user explicitly cleared the field.
                 // If it sends null, it means the field was untouched and shouldn't be
                 // overwritten.
@@ -90,6 +122,51 @@ public class MarksService {
                     if (payload.getStatus() == null)
                         payload.setStatus("PENDING");
                     cieMarkRepository.save(payload);
+                }
+            }
+        }
+
+        if (isHod && !changeDetails.isEmpty()) {
+            String message = "HOD (" + currentUsername + ") updated marks for " + subjectName + ":\n" + String.join("\n", changeDetails);
+
+            // Notify Principal
+            User principal = userRepository.findByRole("PRINCIPAL").stream().findFirst().orElse(null);
+            if (principal != null) {
+                Notification notif = new Notification();
+                notif.setUser(principal);
+                notif.setMessage(message);
+                notif.setType("INFO");
+                notif.setCategory("HOD Update - " + subjectDepartment);
+                notificationRepository.save(notif);
+            }
+
+            // Notify Faculty
+            if (marksPayload.size() > 0 && marksPayload.get(0).getSubject() != null) {
+                Long subjectId = marksPayload.get(0).getSubject().getId();
+                java.util.Set<Long> affectedStudentIds = new java.util.HashSet<>();
+                for (CieMark pm : marksPayload) {
+                    if (pm.getStudent() != null) affectedStudentIds.add(pm.getStudent().getId());
+                }
+
+                java.util.Set<User> notifiedFaculties = new java.util.HashSet<>();
+                List<User> allFaculties = userRepository.findByRole("FACULTY");
+
+                for (User faculty : allFaculties) {
+                    for (Long studentId : affectedStudentIds) {
+                        if (facultyService.isFacultyAssignedToSubjectAndStudent(faculty.getUsername(), subjectId, studentId)) {
+                            notifiedFaculties.add(faculty);
+                            break; 
+                        }
+                    }
+                }
+
+                for (User faculty : notifiedFaculties) {
+                    Notification notif = new Notification();
+                    notif.setUser(faculty);
+                    notif.setMessage(message);
+                    notif.setType("INFO");
+                    notif.setCategory("HOD Update - " + subjectDepartment);
+                    notificationRepository.save(notif);
                 }
             }
         }
