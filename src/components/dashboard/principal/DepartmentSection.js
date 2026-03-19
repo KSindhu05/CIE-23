@@ -307,7 +307,7 @@ const DepartmentDetails = ({ dept, onBack, allFaculty }) => {
     );
 };
 
-const DepartmentSection = ({ departments, facultyList = [] }) => {
+const DepartmentSection = ({ departments = [], facultyList = [] }) => {
     const [selectedDept, setSelectedDept] = useState(null);
 
     return (

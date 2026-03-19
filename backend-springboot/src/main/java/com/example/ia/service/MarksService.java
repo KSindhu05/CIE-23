@@ -71,13 +71,29 @@ public class MarksService {
             if (existing.isPresent()) {
                 CieMark mark = existing.get();
 
-                if (isHod && payload.getMarks() != null) {
-                    Double newMarkValue = payload.getMarks();
-                    if (newMarkValue != null && newMarkValue < 0) newMarkValue = null;
-                    Double oldMarkValue = mark.getMarks();
-                    if ((oldMarkValue == null && newMarkValue != null) || (oldMarkValue != null && !oldMarkValue.equals(newMarkValue))) {
-                        String studentNameInfo = mark.getStudent() != null ? (mark.getStudent().getName() + " (" + mark.getStudent().getRegNo() + ")") : "Unknown Student";
-                        changeDetails.add("- " + studentNameInfo + ": " + (oldMarkValue == null ? "N/A" : oldMarkValue) + " -> " + (newMarkValue == null ? "N/A" : newMarkValue));
+                if (isHod) {
+                    boolean changed = false;
+                    String studentNameInfo = mark.getStudent() != null ? (mark.getStudent().getName() + " (" + mark.getStudent().getRegNo() + ") [" + payload.getCieType() + "]") : "Unknown Student";
+                    String changeStr = "- " + studentNameInfo + ": ";
+                    
+                    if (payload.getMarks() != null) {
+                        Double newM = payload.getMarks() < 0 ? null : payload.getMarks();
+                        Double oldM = mark.getMarks();
+                        if ((oldM == null && newM != null) || (oldM != null && !oldM.equals(newM))) {
+                            changeStr += "Marks(" + (oldM == null ? "N/A" : oldM) + "->" + (newM == null ? "N/A" : newM) + ") ";
+                            changed = true;
+                        }
+                    }
+                    if (payload.getAttendancePercentage() != null) {
+                        Double newA = payload.getAttendancePercentage() < 0 ? null : payload.getAttendancePercentage();
+                        Double oldA = mark.getAttendancePercentage();
+                        if ((oldA == null && newA != null) || (oldA != null && !oldA.equals(newA))) {
+                            changeStr += "Att(" + (oldA == null ? "N/A" : oldA) + "->" + (newA == null ? "N/A" : newA) + ") ";
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        changeDetails.add(changeStr.trim());
                         if (subjectName.isEmpty() && mark.getSubject() != null) {
                             subjectName = mark.getSubject().getName() + " (" + mark.getSubject().getCode() + ")";
                             subjectDepartment = mark.getSubject().getDepartment();
@@ -85,42 +101,33 @@ public class MarksService {
                     }
                 }
 
-                // If the frontend sends < 0, it means the user explicitly cleared the field.
-                // If it sends null, it means the field was untouched and shouldn't be
-                // overwritten.
                 if (payload.getMarks() != null) {
-                    if (payload.getMarks() < 0) {
-                        mark.setMarks(null);
-                    } else {
-                        mark.setMarks(payload.getMarks());
-                    }
+                    mark.setMarks(payload.getMarks() < 0 ? null : payload.getMarks());
                 }
-
-                // Persist or clear attendance
                 if (payload.getAttendancePercentage() != null) {
-                    if (payload.getAttendancePercentage() < 0) {
-                        mark.setAttendancePercentage(null);
-                    } else {
-                        mark.setAttendancePercentage(payload.getAttendancePercentage());
-                    }
+                    mark.setAttendancePercentage(payload.getAttendancePercentage() < 0 ? null : payload.getAttendancePercentage());
                 }
 
-                // Preserve existing status — do NOT reset to PENDING
-                // HOD edits should keep APPROVED, faculty drafts should keep their status
                 cieMarkRepository.save(mark);
             } else {
-                // For new records, convert explicit clears (< 0) to null
-                if (payload.getMarks() != null && payload.getMarks() < 0) {
-                    payload.setMarks(null);
-                }
-                if (payload.getAttendancePercentage() != null && payload.getAttendancePercentage() < 0) {
-                    payload.setAttendancePercentage(null);
-                }
+                if (payload.getMarks() != null && payload.getMarks() < 0) payload.setMarks(null);
+                if (payload.getAttendancePercentage() != null && payload.getAttendancePercentage() < 0) payload.setAttendancePercentage(null);
 
-                // Only create a new record if there are actual marks or attendance to save
                 if (payload.getMarks() != null || payload.getAttendancePercentage() != null) {
-                    if (payload.getStatus() == null)
-                        payload.setStatus("PENDING");
+                    if (isHod) {
+                        String studentInfo = payload.getStudent() != null ? (payload.getStudent().getName() + " (" + payload.getStudent().getRegNo() + ") [" + payload.getCieType() + "]") : "Unknown";
+                        String changeStr = "- " + studentInfo + ": Added new ";
+                        if (payload.getMarks() != null) changeStr += "Marks=" + payload.getMarks() + " ";
+                        if (payload.getAttendancePercentage() != null) changeStr += "Att=" + payload.getAttendancePercentage();
+                        changeDetails.add(changeStr.trim());
+                        
+                        if (subjectName.isEmpty() && payload.getSubject() != null) {
+                            subjectName = payload.getSubject().getName() + " (" + payload.getSubject().getCode() + ")";
+                            subjectDepartment = payload.getSubject().getDepartment();
+                        }
+                    }
+
+                    if (payload.getStatus() == null) payload.setStatus("PENDING");
                     cieMarkRepository.save(payload);
                 }
             }

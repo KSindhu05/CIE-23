@@ -358,9 +358,6 @@ const PrincipalDashboard = () => {
                     </div>
                     <div className={styles.headerActions}>
                         <StudentSentinel students={deptStudents} />
-                        <select className={styles.yearSelector}>
-                            <option>Academic Year 2025-26</option>
-                        </select>
                     </div>
                 </div>
             </header>
@@ -389,8 +386,8 @@ const PrincipalDashboard = () => {
 
                 {activeTab === 'departments' && (
                     <DepartmentSection
-                        departments={dashboardData?.departments}
-                        facultyList={dashboardData?.faculty}
+                        departments={departments}
+                        facultyList={facultyList}
                         loading={loading}
                     />
                 )}

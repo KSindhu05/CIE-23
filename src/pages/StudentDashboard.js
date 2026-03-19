@@ -503,9 +503,65 @@ const StudentDashboard = () => {
                                 </thead>
                                 <tbody>
                                     {theorySubjects.map((row, idx) => {
-                                        const hasMarks = [row.cie1, row.cie2, row.cie3, row.cie4, row.cie5].some(m => m !== '-');
-                                        const status = getStatus(row.total, 250);
-                                        const remark = hasMarks ? getRemarks(row.total, 250) : '-';
+                                        const getCieRemark = (v, a, label) => {
+                                            if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
+                                            return {
+                                                label,
+                                                lowMarks: v < 25,
+                                                lowAtt: a < 75,
+                                                excellent: v >= 40 && a >= 75,
+                                                severity: (v < 25 && a < 75) ? 3 : (v < 25 ? 2 : (a < 75 ? 2 : 0)),
+                                                text: (v < 25 && a < 75) ? `${label}: Low Marks, Low Att` :
+                                                    (v < 25 ? `${label}: Low Marks` :
+                                                        (a < 75 ? `${label}: Low Att` :
+                                                            (v >= 40 && a >= 75 ? `${label}: Excellent` : `${label}: Good`)))
+                                            };
+                                        };
+
+                                        const allCies = [
+                                            getCieRemark(row.cie1 !== '-' ? parseFloat(row.cie1) : null, row.cie1Att !== '-' ? parseFloat(row.cie1Att) : null, 'CIE-1'),
+                                            getCieRemark(row.cie2 !== '-' ? parseFloat(row.cie2) : null, row.cie2Att !== '-' ? parseFloat(row.cie2Att) : null, 'CIE-2'),
+                                            getCieRemark(row.cie3 !== '-' ? parseFloat(row.cie3) : null, row.cie3Att !== '-' ? parseFloat(row.cie3Att) : null, 'CIE-3'),
+                                            getCieRemark(row.cie4 !== '-' ? parseFloat(row.cie4) : null, row.cie4Att !== '-' ? parseFloat(row.cie4Att) : null, 'CIE-4'),
+                                            getCieRemark(row.cie5 !== '-' ? parseFloat(row.cie5) : null, row.cie5Att !== '-' ? parseFloat(row.cie5Att) : null, 'CIE-5')
+                                        ];
+                                        const filled = allCies.filter(r => r !== null);
+
+                                        let finalRemark = '-';
+                                        let finalColor = '#94a3b8';
+                                        let finalBg = 'transparent';
+
+                                        if (selectedCIE === 'All' && filled.length > 0) {
+                                            const worst = Math.max(...filled.map(r => r.severity));
+                                            finalColor = worst >= 3 ? '#dc2626' : worst >= 2 ? '#ea580c' : '#15803d';
+                                            finalBg = worst >= 3 ? '#fef2f2' : worst >= 2 ? '#fff7ed' : '#f0fdf4';
+
+                                            const lowMarksCies = filled.filter(r => r.lowMarks).map(r => r.label);
+                                            const lowAttCies = filled.filter(r => r.lowAtt).map(r => r.label);
+
+                                            let textParts = [];
+                                            if (lowMarksCies.length > 0) textParts.push(`${lowMarksCies.join(',')} Low Marks`);
+                                            if (lowAttCies.length > 0) textParts.push(`${lowAttCies.join(',')} Low Att`);
+                                            if (textParts.length === 0) {
+                                                const allExcellent = filled.every(r => r.excellent);
+                                                textParts.push(allExcellent ? 'All Excellent' : 'All Good');
+                                            }
+                                            finalRemark = textParts.join(' | ');
+                                        } else if (selectedCIE !== 'All') {
+                                            let target = null;
+                                            if (selectedCIE === 'CIE-1') target = allCies[0];
+                                            else if (selectedCIE === 'CIE-2') target = allCies[1];
+                                            else if (selectedCIE === 'CIE-3') target = allCies[2];
+                                            else if (selectedCIE === 'CIE-4') target = allCies[3];
+                                            else if (selectedCIE === 'CIE-5') target = allCies[4];
+
+                                            if (target) {
+                                                finalRemark = target.text;
+                                                finalColor = target.severity >= 3 ? '#dc2626' : target.severity >= 2 ? '#ea580c' : target.severity === 0 ? '#15803d' : '#2563eb';
+                                                finalBg = target.severity >= 3 ? '#fef2f2' : target.severity >= 2 ? '#fff7ed' : '#f0fdf4';
+                                            }
+                                        }
+
                                         return (
                                             <tr key={idx} style={{ animation: `fadeIn 0.3s ease-out ${idx * 0.05}s backwards` }}>
                                                 <td><div className={styles.subjectCell}><span style={{ fontWeight: 600 }}>{row.subject}</span><span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{row.code}</span></div></td>
@@ -525,8 +581,8 @@ const StudentDashboard = () => {
                                                 )}
                                                 <td style={{ fontWeight: 700, color: 'var(--accent-indigo)' }}>{row.total} / 250</td>
                                                 <td>
-                                                    {hasMarks ? (
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: status.color, background: `${status.color}15`, padding: '6px 10px', borderRadius: '6px', whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4', minWidth: '150px' }}>{remark}</div>
+                                                    {finalRemark !== '-' ? (
+                                                        <div style={{ fontSize: '0.65rem', padding: '6px 4px', fontWeight: 600, color: finalColor, background: finalBg, borderRadius: '6px', whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4', minWidth: '150px' }}>{finalRemark}</div>
                                                     ) : (
                                                         <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '6px 10px', textAlign: 'center' }}>-</div>
                                                     )}
