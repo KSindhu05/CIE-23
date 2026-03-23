@@ -31,7 +31,7 @@ const Login = () => {
 
     // Typewriter Content
     const typeWriterStrings = [
-        "CIA Management System for Diploma Education",
+        "CIE Management System for Diploma Education",
         "Track Internal Assessment Marks",
         "Monitor Academic Performance",
         "Role-Based Access for Students and Faculty"
@@ -183,7 +183,7 @@ const Login = () => {
                 {/* Left Side - Image Illustration */}
                 <div className={styles.leftContent}>
                     <div className={styles.systemTitle}>
-                        <span className={styles.iaText}>CIA</span>
+                        <span className={styles.iaText}>CIE</span>
                         <span className={styles.managementText}>MANAGEMENT SYSTEM</span>
                     </div>
 

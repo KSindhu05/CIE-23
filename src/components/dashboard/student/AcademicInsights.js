@@ -27,8 +27,19 @@ const itemVariants = {
 const AcademicInsights = ({ realMarks, loading = false }) => {
     if (!loading && (!realMarks || realMarks.length === 0)) return null;
 
-    const bestSubject = [...realMarks].sort((a, b) => b.totalScore - a.totalScore)[0];
-    const worstSubject = [...realMarks].sort((a, b) => a.totalScore - b.totalScore)[0];
+    // Find latest CIE with data
+    const cieKeys = ['cie5Score', 'cie4Score', 'cie3Score', 'cie2Score', 'cie1Score'];
+    let latestCieKey = 'cie1Score';
+    for (const key of cieKeys) {
+        if (realMarks.some(m => m[key] != null)) { latestCieKey = key; break; }
+    }
+
+    // Get marks with latest CIE score
+    const marksWithScore = realMarks.filter(m => m[latestCieKey] != null).map(m => ({ ...m, latestScore: m[latestCieKey] }));
+    if (marksWithScore.length === 0) return null;
+
+    const bestSubject = [...marksWithScore].sort((a, b) => b.latestScore - a.latestScore)[0];
+    const worstSubject = [...marksWithScore].sort((a, b) => a.latestScore - b.latestScore)[0];
 
     return (
         <motion.div
@@ -76,13 +87,13 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
                             <div className={styles.insightIndicator} style={{ background: 'var(--success)' }}></div>
                             <div className={styles.insightContent}>
                                 <h4>Strongest Subject</h4>
-                                <p>You are excelling in <strong>{bestSubject?.name}</strong> with a score of {bestSubject?.totalScore}/250.</p>
+                                <p>You are excelling in <strong>{bestSubject?.name}</strong> with a score of {bestSubject?.latestScore}/50.</p>
                             </div>
                             <ArrowUpRight size={18} color="var(--success)" />
                         </motion.div>
 
                         {/* Weakness */}
-                        {worstSubject && worstSubject.totalScore < 175 && (
+                        {worstSubject && worstSubject.latestScore < 35 && (
                             <motion.div
                                 className={styles.insightItem}
                                 variants={itemVariants}
@@ -91,7 +102,7 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
                                 <div className={styles.insightIndicator} style={{ background: 'var(--danger)' }}></div>
                                 <div className={styles.insightContent}>
                                     <h4>Focus Area</h4>
-                                    <p>Consider reviewing <strong>{worstSubject?.name}</strong> to improve your score ({worstSubject?.totalScore}/250).</p>
+                                    <p>Consider reviewing <strong>{worstSubject?.name}</strong> to improve your score ({worstSubject?.latestScore}/50).</p>
                                 </div>
                                 <ArrowDownRight size={18} color="var(--danger)" />
                             </motion.div>

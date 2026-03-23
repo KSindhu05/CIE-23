@@ -36,7 +36,7 @@ const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = 
             iconBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%)',
             iconColor: 'var(--warning)',
             label: 'Avg CIE Score',
-            value: studentInfo.avgCieScore || '0/25',
+            value: studentInfo.avgCieScore || '0/50',
             subtext: 'Current Sem',
         },
         {

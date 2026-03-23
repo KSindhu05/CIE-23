@@ -21,6 +21,8 @@ public class Student {
     private String email;
     private String phone;
     private String parentPhone;
+    private String overallRemarks;
+    private String mentor;
 
     public Long getId() {
         return id;
@@ -92,5 +94,21 @@ public class Student {
 
     public void setParentPhone(String parentPhone) {
         this.parentPhone = parentPhone;
+    }
+
+    public String getOverallRemarks() {
+        return overallRemarks;
+    }
+
+    public void setOverallRemarks(String overallRemarks) {
+        this.overallRemarks = overallRemarks;
+    }
+
+    public String getMentor() {
+        return mentor;
+    }
+
+    public void setMentor(String mentor) {
+        this.mentor = mentor;
     }
 }

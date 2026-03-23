@@ -44,4 +44,12 @@ public class StudentController {
                 .getAuthentication().getName();
         return studentService.getSubjectsForStudent(username);
     }
+
+    @PutMapping("/{id}/mentor")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('FACULTY') or hasRole('HOD') or hasRole('ADMIN')")
+    public org.springframework.http.ResponseEntity<?> updateMentor(@PathVariable Long id, @RequestBody java.util.Map<String, String> request) {
+        String mentorName = request.get("mentor");
+        studentService.updateMentor(id, mentorName);
+        return org.springframework.http.ResponseEntity.ok().build();
+    }
 }

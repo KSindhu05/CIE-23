@@ -216,10 +216,11 @@ export const updateSemesterStatus = async (status) => {
     }
 };
 
-export const resetMarks = async () => {
+export const resetMarks = async (semester = 'All') => {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/principal/semester/reset-marks`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ semester })
         });
         return await safeJson(response);
     } catch (error) {
@@ -228,10 +229,11 @@ export const resetMarks = async () => {
     }
 };
 
-export const resetFaculty = async () => {
+export const resetFaculty = async (semester = 'All') => {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/principal/semester/reset-faculty`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ semester })
         });
         return await safeJson(response);
     } catch (error) {
@@ -240,10 +242,11 @@ export const resetFaculty = async () => {
     }
 };
 
-export const cleanupData = async () => {
+export const cleanupData = async (semester = 'All') => {
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/principal/semester/cleanup-data`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ semester })
         });
         return await safeJson(response);
     } catch (error) {
@@ -252,10 +255,15 @@ export const cleanupData = async () => {
     }
 };
 
-export const shiftSemesters = async () => {
+export const shiftSemesters = async (semester = 'All', fromSemester = null, toSemester = null) => {
     try {
+        const payload = { semester };
+        if (fromSemester) payload.fromSemester = fromSemester;
+        if (toSemester) payload.toSemester = toSemester;
+        
         const response = await authenticatedFetch(`${API_BASE_URL}/principal/semester/shift`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
         return await safeJson(response);
     } catch (error) {

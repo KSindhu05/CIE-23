@@ -4,8 +4,7 @@ import { Doughnut, Line } from 'react-chartjs-2';
 import styles from '../../../pages/PrincipalDashboard.module.css';
 // import { collegeStats, principalStats, academicTrends } from '../../../utils/mockData'; // Removed static mock imports
 import {
-    PendingApprovalsWidget, FocusListWidget,
-    YearComparisonWidget, NotesWidget, FacultyPerformanceWidget, ScheduleWidget, ActionCenter, CIEStatsWidget, LowPerformersWidget
+    FocusListWidget, NotesWidget, CIEStatsWidget, LowPerformersWidget
 } from './Widgets';
 import Skeleton from '../../ui/Skeleton';
 
@@ -175,8 +174,8 @@ const OverviewSection = memo(({
                                         </div>
                                     </div>
                                     <div style={{ marginTop: '1rem', fontWeight: 600, fontSize: '0.9rem', color: '#64748b', textAlign: 'center', lineHeight: 1.2 }}>
-                                        {dept} <br/>
-                                        <span style={{fontSize: '0.75rem', fontWeight: 500}}>
+                                        {dept} <br />
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
                                             ({deptCompletedCounts?.[dept] || 0}/{deptStudentCounts?.[dept] || 0} completed)
                                         </span>
                                     </div>
@@ -186,21 +185,12 @@ const OverviewSection = memo(({
                     </div>
                 </div>
 
-                {/* Trend & Faculty Rows (FLOWCHART: FACULTY MONITORING) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                    <FacultyPerformanceWidget analytics={facultyAnalytics} loading={loading} />
-                    <ScheduleWidget schedule={schedule} loading={loading} />
-                </div>
                 <LowPerformersWidget data={lowPerformers} loading={loading} />
             </div>
 
-            {/* RIGHT COLUMN (Action Center & Approvals) */}
+            {/* RIGHT COLUMN (Focus List) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <ActionCenter />
-                {/* FLOWCHART: PENDING CIE APPROVALS */}
-                <PendingApprovalsWidget approvals={approvals} loading={loading} />
                 <FocusListWidget branches={branches} branchPerformance={branchPerformance} hodSubmissionStatus={hodSubmissionStatus} loading={loading} />
-                <YearComparisonWidget trends={trends} loading={loading} />
             </div>
         </div>
 

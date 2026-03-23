@@ -6,7 +6,7 @@ import authenticatedFetch from '../../../utils/authFetch';
 import API_BASE_URL from '../../../config/api';
 import Skeleton from '../../ui/Skeleton';
 
-const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudentProfile, selectedDept }) => {
+export const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudentProfile, selectedDept }) => {
     const [localToast, setLocalToast] = React.useState('');
     const showLocalToast = (msg) => { setLocalToast(msg); setTimeout(() => setLocalToast(''), 2500); };
     if (!selectedStudentProfile) return null;
@@ -197,9 +197,11 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             const matchesSem = semester === 'All' || s.semester == semester.replace(/\D/g, ''); // Extract number
             const matchesSec = section === 'All' || s.section === section;
 
-            // Risk calculation: student is at risk if total CIE marks < 40% (16/40)
-            const totalMarks = (s.marks?.cie1 || 0) + (s.marks?.cie2 || 0);
-            const isAtRisk = totalMarks < 16;
+            // Risk calculation: student is at risk if total CIE marks < 40%
+            const totalAcquired = Object.values(s.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 || 0) + (marks.cie2 || 0) + (marks.cie3 || 0) + (marks.cie4 || 0) + (marks.cie5 || 0), 0);
+            const totalPossible = Object.values(s.subjectMarks || {}).reduce((count, marks) => count + (marks.cie1 !== undefined ? 1 : 0) + (marks.cie2 !== undefined ? 1 : 0) + (marks.cie3 !== undefined ? 1 : 0) + (marks.cie4 !== undefined ? 1 : 0) + (marks.cie5 !== undefined ? 1 : 0), 0) * 50;
+            const percentage = totalPossible > 0 ? (totalAcquired / totalPossible) * 100 : 0;
+            const isAtRisk = totalPossible > 0 && percentage < 40;
 
             // If filter is active, only show at-risk students; otherwise show all
             const matchesRisk = showAtRisk ? isAtRisk : true;
@@ -485,16 +487,23 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                     <td>{student.semester || student.sem}</td>
 
                                     <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ width: '80px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                                                <div style={{
-                                                    width: `${((student.marks?.cie1 || 0) + (student.marks?.cie2 || 0)) / 40 * 100}%`,
-                                                    height: '100%',
-                                                    background: (((student.marks?.cie1 || 0) + (student.marks?.cie2 || 0)) / 40) >= 0.5 ? '#3b82f6' : '#f59e0b'
-                                                }}></div>
-                                            </div>
-                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{Math.round(((student.marks?.cie1 || 0) + (student.marks?.cie2 || 0)) / 40 * 100)}%</span>
-                                        </div>
+                                        {(() => {
+                                            const totalAcquired = Object.values(student.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 || 0) + (marks.cie2 || 0) + (marks.cie3 || 0) + (marks.cie4 || 0) + (marks.cie5 || 0), 0);
+                                            const totalPossible = Object.values(student.subjectMarks || {}).reduce((count, marks) => count + (marks.cie1 !== undefined ? 1 : 0) + (marks.cie2 !== undefined ? 1 : 0) + (marks.cie3 !== undefined ? 1 : 0) + (marks.cie4 !== undefined ? 1 : 0) + (marks.cie5 !== undefined ? 1 : 0), 0) * 50;
+                                            const percentage = totalPossible > 0 ? Math.round((totalAcquired / totalPossible) * 100) : 0;
+                                            return (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ width: '80px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                                                        <div style={{
+                                                            width: `${percentage}%`,
+                                                            height: '100%',
+                                                            background: percentage >= 50 ? '#3b82f6' : '#f59e0b'
+                                                        }}></div>
+                                                    </div>
+                                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{percentage}%</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
 
                                     <td>

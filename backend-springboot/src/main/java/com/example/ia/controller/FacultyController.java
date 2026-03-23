@@ -58,9 +58,9 @@ public class FacultyController {
      */
     @GetMapping("/my-students")
     @PreAuthorize("hasRole('FACULTY')")
-    public ResponseEntity<List<Student>> getMyStudents() {
+    public ResponseEntity<List<com.example.ia.payload.response.StudentResponse>> getMyStudents() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        List<Student> students = facultyService.getStudentsForFaculty(username);
+        List<com.example.ia.payload.response.StudentResponse> students = facultyService.getStudentsForFacultyWithAnalytics(username);
         return ResponseEntity.ok(students);
     }
 

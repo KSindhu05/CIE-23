@@ -162,7 +162,10 @@ public class DataInitializer {
                 studentUser.setSemester("2"); // From CSV: Sem 2
                 studentUser.setSection("A");
                 userRepository.save(studentUser);
+                System.out.println("✅ Student user created: 459CS25001 / " + defaultPassword);
+            }
 
+            if (studentRepository.findByRegNo("459CS25001").isEmpty()) {
                 Student studentEntity = new Student();
                 studentEntity.setRegNo("459CS25001");
                 studentEntity.setName("A KAVITHA");
@@ -172,8 +175,7 @@ public class DataInitializer {
                 studentEntity.setEmail("459CS25001@student.college.edu");
                 studentEntity.setPhone("9071407865"); // From CSV
                 studentRepository.save(studentEntity);
-
-                System.out.println("✅ Student user created: 459CS25001 / " + defaultPassword);
+                System.out.println("✅ Student entity created: 459CS25001");
             }
 
             // 5. Real Student Seeding (459CS25002 - ABHISHEKA)

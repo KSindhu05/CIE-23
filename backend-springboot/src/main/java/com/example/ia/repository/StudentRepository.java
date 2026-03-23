@@ -2,8 +2,10 @@ package com.example.ia.repository;
 
 import com.example.ia.entity.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.List;
@@ -32,4 +34,19 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByDepartmentInAndSectionIn(Collection<String> departments, Collection<String> sections);
 
     long countByDepartment(String department);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Student s SET s.semester = :toSem WHERE s.semester = :fromSem")
+    int updateSemester(@Param("fromSem") Integer fromSem, @Param("toSem") Integer toSem);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Student s SET s.semester = CASE WHEN s.semester < 6 THEN s.semester + 1 ELSE 1 END WHERE s.semester IS NOT NULL")
+    int shiftAllSemesters();
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Student s SET s.semester = CASE WHEN s.semester < 6 THEN s.semester + 1 ELSE 1 END WHERE s.semester = :targetSem")
+    int shiftSpecificSemester(@Param("targetSem") Integer targetSem);
 }

@@ -84,67 +84,132 @@ public class PrincipalController {
     @PostMapping("/semester/reset-marks")
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
-    public ResponseEntity<?> resetMarks() {
-        cieMarkRepository.deleteAll();
-        attendanceRepository.deleteAll();
-
-        return ResponseEntity.ok(Map.of("message", "All CIE marks and attendance have been permanently wiped."));
+    public ResponseEntity<?> resetMarks(@RequestBody Map<String, String> request) {
+        String targetSemester = request.getOrDefault("semester", "All");
+        if ("All".equalsIgnoreCase(targetSemester)) {
+            cieMarkRepository.deleteAll();
+            attendanceRepository.deleteAll();
+            return ResponseEntity.ok(Map.of("message", "All CIE marks and attendance have been permanently wiped."));
+        } else {
+            Integer sem = Integer.parseInt(targetSemester);
+            List<CieMark> marks = cieMarkRepository.findAll().stream()
+                .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
+                .collect(Collectors.toList());
+            cieMarkRepository.deleteAll(marks);
+            
+            List<Attendance> atts = attendanceRepository.findAll().stream()
+                .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
+                .collect(Collectors.toList());
+            attendanceRepository.deleteAll(atts);
+            return ResponseEntity.ok(Map.of("message", "CIE marks and attendance for Semester " + sem + " have been wiped."));
+        }
     }
 
     @PostMapping("/semester/reset-faculty")
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
-    public ResponseEntity<?> resetFaculty() {
-        // 1. Clear faculty user fields (subjects, semester, section)
+    public ResponseEntity<?> resetFaculty(@RequestBody Map<String, String> request) {
+        String targetSemester = request.getOrDefault("semester", "All");
+        boolean isAll = "All".equalsIgnoreCase(targetSemester);
+
         List<User> faculty = userRepository.findByRole("FACULTY");
         for (User f : faculty) {
-            f.setSubjects(null);
-            f.setSemester(null);
-            f.setSection(null);
-            userRepository.save(f);
+            if (isAll) {
+                f.setSubjects(null);
+                f.setSemester(null);
+                f.setSection(null);
+                userRepository.save(f);
+            } else {
+                if (f.getSemester() != null && f.getSemester().contains(targetSemester)) {
+                    String newSem = Arrays.stream(f.getSemester().split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.equals(targetSemester))
+                            .collect(Collectors.joining(", "));
+                    f.setSemester(newSem.isEmpty() ? null : newSem);
+                    userRepository.save(f);
+                }
+            }
         }
 
-        // 2. Clear instructorName from all subjects
         List<Subject> allSubjects = subjectRepository.findAll();
         for (Subject s : allSubjects) {
-            s.setInstructorName(null);
-            subjectRepository.save(s);
+            if (isAll || (s.getSemester() != null && s.getSemester().toString().equals(targetSemester))) {
+                s.setInstructorName(null);
+                subjectRepository.save(s);
+            }
         }
 
-        // 3. Delete all faculty assignment requests
-        assignmentRequestRepository.deleteAll();
+        if (isAll) {
+            assignmentRequestRepository.deleteAll();
+        } else {
+            List<com.example.ia.entity.FacultyAssignmentRequest> requests = assignmentRequestRepository.findAll().stream()
+                    .filter(r -> targetSemester.equals(r.getSemester()))
+                    .collect(Collectors.toList());
+            assignmentRequestRepository.deleteAll(requests);
+        }
 
         return ResponseEntity.ok(
-                Map.of("message", "Faculty workloads, subject assignments, and assignment requests have been reset."));
+                Map.of("message", "Faculty workloads, subject assignments, and assignment requests have been reset" + (isAll ? "." : " for Semester " + targetSemester + ".")));
     }
 
     @PostMapping("/semester/cleanup-data")
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
-    public ResponseEntity<?> cleanupData() {
-        notificationRepository.deleteAll();
-        announcementRepository.deleteAll();
-        attendanceRepository.deleteAll();
-        return ResponseEntity
-                .ok(Map.of("message", "Notifications, CIE schedules, and attendance records have been cleaned up."));
+    public ResponseEntity<?> cleanupData(@RequestBody Map<String, String> request) {
+        String targetSemester = request.getOrDefault("semester", "All");
+        boolean isAll = "All".equalsIgnoreCase(targetSemester);
+
+        if (isAll) {
+            notificationRepository.deleteAll();
+            announcementRepository.deleteAll();
+            attendanceRepository.deleteAll();
+            return ResponseEntity.ok(Map.of("message", "Notifications, CIE schedules, and attendance records have been cleaned up."));
+        } else {
+            Integer sem = Integer.parseInt(targetSemester);
+            
+            List<Attendance> atts = attendanceRepository.findAll().stream()
+                .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
+                .collect(Collectors.toList());
+            attendanceRepository.deleteAll(atts);
+            
+            List<Announcement> anns = announcementRepository.findAll().stream()
+                .filter(a -> a.getSubject() != null && sem.equals(a.getSubject().getSemester()))
+                .collect(Collectors.toList());
+            announcementRepository.deleteAll(anns);
+            
+            return ResponseEntity.ok(Map.of("message", "CIE schedules and attendance for Semester " + sem + " have been cleaned up."));
+        }
     }
 
     @PostMapping("/semester/shift")
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
-    public ResponseEntity<?> shiftSemesters() {
-        List<Student> students = studentRepository.findAll();
-        for (Student s : students) {
-            if (s.getSemester() != null) {
-                if (s.getSemester() < 6) {
-                    s.setSemester(s.getSemester() + 1);
-                } else if (s.getSemester() == 6) {
-                    s.setSemester(1);
+    public ResponseEntity<?> shiftSemesters(@RequestBody Map<String, String> request) {
+        String fromSemStr = request.get("fromSemester");
+        String toSemStr = request.get("toSemester");
+        String targetSemester = request.getOrDefault("semester", "All");
+        boolean isAll = "All".equalsIgnoreCase(targetSemester);
+
+        if (fromSemStr != null && toSemStr != null) {
+            // Granular Shift: From X to Y (Atomic)
+            Integer fromSem = Integer.parseInt(fromSemStr);
+            Integer toSem = Integer.parseInt(toSemStr);
+            int count = studentRepository.updateSemester(fromSem, toSem);
+            return ResponseEntity.ok(Map.of("message", "Shifted " + count + " students from Semester " + fromSem + " to " + toSem + "."));
+        } else {
+            // Sequential Shift: All or Target -> Target+1 (Atomic)
+            int count;
+            if (isAll) {
+                count = studentRepository.shiftAllSemesters();
+            } else {
+                try {
+                    count = studentRepository.shiftSpecificSemester(Integer.parseInt(targetSemester));
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Invalid semester format"));
                 }
-                studentRepository.save(s);
             }
+            return ResponseEntity.ok(Map.of("message", "Shifted " + count + " students to the next semester."));
         }
-        return ResponseEntity.ok(Map.of("message", "All students have been shifted to the next semester."));
     }
 
     @GetMapping("/dashboard")

@@ -28,6 +28,8 @@ public class CieMark {
     @Column(nullable = false)
     private String status = "PENDING";
 
+    private String remarks;
+
     public Long getId() {
         return id;
     }
@@ -74,6 +76,14 @@ public class CieMark {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 
     // Attendance percentage (0-100) entered by faculty

@@ -53,6 +53,9 @@ const PrincipalDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [semesterStatus, setSemesterStatus] = useState('ACTIVE');
+    const [targetSemester, setTargetSemester] = useState('');
+    const [shiftFrom, setShiftFrom] = useState('');
+    const [shiftTo, setShiftTo] = useState('');
     const [resetLoading, setResetLoading] = useState(false);
 
     // Directory State
@@ -485,7 +488,22 @@ const PrincipalDashboard = () => {
                                         ⚠️ All actions below are permanent and institution-wide. Proceed with caution.
                                     </p>
                                 </div>
-                                <div style={{ marginLeft: 'auto' }}>
+                                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <select
+                                        value={targetSemester}
+                                        onChange={(e) => setTargetSemester(e.target.value)}
+                                        style={{
+                                            padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid #fca5a5',
+                                            background: '#fff', color: '#1e293b', fontWeight: 600, fontSize: '0.85rem',
+                                            cursor: 'pointer', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="" disabled>Select Target Semester</option>
+                                        <option value="All">Target: All Semesters</option>
+                                        {[1, 2, 3, 4, 5, 6].map(sem => (
+                                            <option key={sem} value={sem}>Target: Semester {sem}</option>
+                                        ))}
+                                    </select>
                                     <span style={{
                                         background: semesterStatus === 'ACTIVE'
                                             ? 'linear-gradient(135deg, #065f46, #059669)'
@@ -597,34 +615,34 @@ const PrincipalDashboard = () => {
                                 </div>
                                 <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#1e293b' }}>Clear Academic Marks</h3>
                                 <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                                    Permanently wipe all CIE marks for every student across all departments. <strong style={{ color: '#dc2626' }}>Irreversible.</strong>
+                                    Permanently wipe CIE marks for {targetSemester === 'All' ? 'every student across all departments' : `students in Semester ${targetSemester}`}. <strong style={{ color: '#dc2626' }}>Irreversible.</strong>
                                 </p>
                                 <button
                                     onClick={async () => {
                                         const confirmed = await showConfirm({
-                                            title: 'Wipe All Marks',
-                                            message: 'CRITICAL: Are you sure you want to WIPE ALL MARKS? This cannot be undone.',
+                                            title: 'Wipe Marks',
+                                            message: targetSemester === 'All' ? 'CRITICAL: Are you sure you want to WIPE ALL MARKS? This cannot be undone.' : `CRITICAL: Are you sure you want to WIPE MARKS FOR SEMESTER ${targetSemester}? This cannot be undone.`,
                                             variant: 'danger',
-                                            confirmText: 'Wipe All Marks'
+                                            confirmText: 'Wipe Marks'
                                         });
                                         if (confirmed) {
                                             setResetLoading(true);
-                                            resetMarks()
-                                                .then(() => showToast('All Marks Cleared', 'success'))
+                                            resetMarks(targetSemester)
+                                                .then(() => showToast(`Marks Cleared (${targetSemester === 'All' ? 'All' : 'Sem ' + targetSemester})`, 'success'))
                                                 .catch(() => showToast('Failed to clear marks', 'error'))
                                                 .finally(() => setResetLoading(false));
                                         }
                                     }}
-                                    disabled={resetLoading}
+                                    disabled={resetLoading || !targetSemester}
                                     style={{
                                         width: '100%', padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '10px',
                                         background: '#ffffff',
-                                        color: '#1e293b', fontWeight: 600, fontSize: '0.9rem', cursor: resetLoading ? 'not-allowed' : 'pointer',
+                                        color: '#1e293b', fontWeight: 600, fontSize: '0.9rem', cursor: resetLoading || !targetSemester ? 'not-allowed' : 'pointer',
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: resetLoading ? 0.7 : 1
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: resetLoading || !targetSemester ? 0.5 : 1
                                     }}
                                     onMouseEnter={e => {
-                                        if (!resetLoading) {
+                                        if (!resetLoading && targetSemester) {
                                             e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
                                             e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)';
                                             e.currentTarget.style.borderColor = '#cbd5e1';
@@ -667,47 +685,77 @@ const PrincipalDashboard = () => {
                                     }}>PROGRESSION</div>
                                 </div>
                                 <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#1e293b' }}>Shift to Next Semester</h3>
-                                <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                                    Advance all students forward by one semester (e.g., <strong style={{ color: '#16a34a' }}>Sem 2 → 3</strong>). Students in 6th sem remain unchanged.
-                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                    <select
+                                        value={shiftFrom}
+                                        onChange={(e) => setShiftFrom(e.target.value)}
+                                        style={{
+                                            flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #bbf7d0',
+                                            background: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: '0.8rem', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="" disabled>From</option>
+                                        {[1, 2, 3, 4, 5, 6].map(sem => (
+                                            <option key={sem} value={sem}>Sem {sem}</option>
+                                        ))}
+                                    </select>
+                                    <span style={{ color: '#16a34a', fontWeight: 900 }}>→</span>
+                                    <select
+                                        value={shiftTo}
+                                        onChange={(e) => setShiftTo(e.target.value)}
+                                        style={{
+                                            flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #bbf7d0',
+                                            background: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: '0.8rem', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="" disabled>To</option>
+                                        {[1, 2, 3, 4, 5, 6].map(sem => (
+                                            <option key={sem} value={sem}>Sem {sem}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <button
                                     onClick={async () => {
                                         const confirmed = await showConfirm({
                                             title: 'Semester Shift',
-                                            message: 'Shift all students to the next academic semester?',
+                                            message: `Move all students from Semester ${shiftFrom} to Semester ${shiftTo}?`,
                                             variant: 'warning',
-                                            confirmText: 'Shift Semesters'
+                                            confirmText: 'Move Students'
                                         });
                                         if (confirmed) {
                                             setResetLoading(true);
-                                            shiftSemesters()
-                                                .then(() => showToast('Students Shifted Successfully', 'success'))
+                                            shiftSemesters(targetSemester || 'All', shiftFrom, shiftTo)
+                                                .then((res) => {
+                                                    showToast(res.message || 'Students Shifted Successfully', 'success');
+                                                    setShiftFrom('');
+                                                    setShiftTo('');
+                                                })
                                                 .catch(() => showToast('Failed to shift semesters', 'error'))
                                                 .finally(() => setResetLoading(false));
                                         }
                                     }}
-                                    disabled={resetLoading}
+                                    disabled={resetLoading || !shiftFrom || !shiftTo}
                                     style={{
-                                        width: '100%', padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '10px',
-                                        background: '#ffffff',
-                                        color: '#1e293b', fontWeight: 600, fontSize: '0.9rem', cursor: resetLoading ? 'not-allowed' : 'pointer',
+                                        width: '100%', padding: '0.75rem', border: '1px solid #bbf7d0', borderRadius: '10px',
+                                        background: shiftFrom && shiftTo ? '#f0fdf4' : '#ffffff',
+                                        color: '#16a34a', fontWeight: 600, fontSize: '0.9rem', cursor: resetLoading || !shiftFrom || !shiftTo ? 'not-allowed' : 'pointer',
                                         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: resetLoading ? 0.7 : 1
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: resetLoading || !shiftFrom || !shiftTo ? 0.5 : 1
                                     }}
                                     onMouseEnter={e => {
-                                        if (!resetLoading) {
+                                        if (!resetLoading && shiftFrom && shiftTo) {
                                             e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
-                                            e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.08)';
-                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                            e.currentTarget.style.boxShadow = '0 10px 25px rgba(34,197,94,0.1)';
+                                            e.currentTarget.style.borderColor = '#86efac';
                                         }
                                     }}
                                     onMouseLeave={e => {
                                         e.currentTarget.style.transform = 'translateY(0) scale(1)';
                                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                        e.currentTarget.style.borderColor = '#bbf7d0';
                                     }}
                                 >
-                                    {resetLoading ? '⏳ Shifting...' : '🚀 Run Semester Shift'}
+                                    {resetLoading ? '⏳ Shifting...' : '🚀 Move Students'}
                                 </button>
                             </div>
 
@@ -739,34 +787,37 @@ const PrincipalDashboard = () => {
                                 </div>
                                 <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#1e293b' }}>Faculty & Data Cleanup</h3>
                                 <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                                    Reset faculty workloads and wipe all notifications &amp; CIE schedules to prep for the next academic session.
+                                    Reset faculty workloads and wipe notifications &amp; CIE schedules for {targetSemester === 'All' ? 'the entire institution' : `Semester ${targetSemester}`}.
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                                     <button
                                         onClick={async () => {
                                             const confirmed = await showConfirm({
                                                 title: 'Reset Faculty',
-                                                message: 'Reset all faculty assignments?',
+                                                message: targetSemester === 'All' ? 'Reset all faculty assignments?' : `Reset faculty assignments related to Semester ${targetSemester}?`,
                                                 variant: 'warning',
                                                 confirmText: 'Reset'
                                             });
                                             if (confirmed) {
-                                                resetFaculty()
+                                                resetFaculty(targetSemester)
                                                     .then(() => showToast('Faculty Workloads Reset', 'success'))
                                                     .catch(() => showToast('Failed to reset faculty', 'error'));
                                             }
                                         }}
+                                        disabled={!targetSemester}
                                         style={{
                                             flex: 1, padding: '0.7rem', border: '1px solid #e2e8f0',
                                             borderRadius: '10px', background: '#ffffff',
-                                            color: '#1e293b', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                                            color: '#1e293b', fontWeight: 600, fontSize: '0.85rem', cursor: !targetSemester ? 'not-allowed' : 'pointer',
                                             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: !targetSemester ? 0.5 : 1
                                         }}
                                         onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)';
-                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                            if (targetSemester) {
+                                                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                                                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)';
+                                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                            }
                                         }}
                                         onMouseLeave={e => {
                                             e.currentTarget.style.transform = 'translateY(0) scale(1)';
@@ -780,27 +831,30 @@ const PrincipalDashboard = () => {
                                         onClick={async () => {
                                             const confirmed = await showConfirm({
                                                 title: 'System Cleanup',
-                                                message: 'Cleanup all notifications and schedules?',
+                                                message: targetSemester === 'All' ? 'Cleanup all notifications and schedules?' : `Cleanup schedules and attendance for Semester ${targetSemester}?`,
                                                 variant: 'warning',
                                                 confirmText: 'Cleanup'
                                             });
                                             if (confirmed) {
-                                                cleanupData()
+                                                cleanupData(targetSemester)
                                                     .then(() => showToast('System Cleanup Done', 'success'))
                                                     .catch(() => showToast('Cleanup failed', 'error'));
                                             }
                                         }}
+                                        disabled={!targetSemester}
                                         style={{
                                             flex: 1, padding: '0.7rem', border: '1px solid #e2e8f0',
                                             borderRadius: '10px', background: '#ffffff',
-                                            color: '#1e293b', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                                            color: '#1e293b', fontWeight: 600, fontSize: '0.85rem', cursor: !targetSemester ? 'not-allowed' : 'pointer',
                                             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', opacity: !targetSemester ? 0.5 : 1
                                         }}
                                         onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)';
-                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                            if (targetSemester) {
+                                                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                                                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.06)';
+                                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                            }
                                         }}
                                         onMouseLeave={e => {
                                             e.currentTarget.style.transform = 'translateY(0) scale(1)';
