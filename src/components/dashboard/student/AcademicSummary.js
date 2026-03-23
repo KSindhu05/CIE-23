@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
+import { TrendingUp, BookOpen, AlertCircle, CheckCircle, User } from 'lucide-react';
 import styles from '../../../pages/StudentDashboard.module.css';
 import Skeleton from '../../ui/Skeleton';
 
@@ -46,6 +46,14 @@ const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = 
             label: 'CIE Progress',
             value: cieStatus,
             subtext: 'CIEs Completed',
+        },
+        {
+            icon: <User size={22} />,
+            iconBg: 'linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)',
+            iconColor: '#6366f1',
+            label: 'Assigned Mentor',
+            value: studentInfo.mentor || 'Not Assigned',
+            subtext: 'Academic Guide',
         },
     ];
 

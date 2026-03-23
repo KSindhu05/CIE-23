@@ -50,7 +50,8 @@ const StudentDashboard = () => {
         rollNo: user?.username || '...',
         branch: '...',
         semester: '...',
-        cgpa: 0
+        cgpa: 0,
+        mentor: 'Not Assigned'
     });
 
     React.useEffect(() => {
@@ -144,6 +145,7 @@ const StudentDashboard = () => {
                             cgpa: aggregatePercentage,
                             avgCieScore: `${avgScore50}/50`,
                             parentPhone: s.parentPhone,
+                            mentor: s.mentor || 'Not Assigned',
                             overallRemarks: s.overallRemarks ? `${s.overallRemarks}${autoRemark ? ' | ' + autoRemark : ''}` : (autoRemark || "Consistent performance.")
                         }));
                         if (s.department) fetchPerfConfig(s.department);
@@ -155,7 +157,7 @@ const StudentDashboard = () => {
                                 const s = await profileRes.json();
                                 setStudentInfo(prev => ({
                                     ...prev,
-                                    name: s.name, rollNo: s.regNo, branch: s.department, semester: s.semester, parentPhone: s.parentPhone
+                                    name: s.name, rollNo: s.regNo, branch: s.department, semester: s.semester, parentPhone: s.parentPhone, mentor: s.mentor || 'Not Assigned'
                                 }));
                                 setSelectedSemester(s.semester.toString());
                                 if (s.department) fetchPerfConfig(s.department);
