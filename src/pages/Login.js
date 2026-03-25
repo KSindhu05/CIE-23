@@ -306,7 +306,23 @@ const Login = () => {
                     />
                 ))}
             </div>
-        </div >
+
+            {/* Global Developer Footer */}
+            <div style={{
+                position: 'absolute',
+                bottom: '5px',
+                width: '100%',
+                textAlign: 'center',
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '0.95rem',
+                zIndex: 10,
+                lineHeight: '1.6',
+                textShadow: '0 2px 4px rgba(0,0,0,0.8)'
+            }}>
+                Developed by <strong>Team Crafters</strong> | Contact: +91 8951366931 | Email: <a href="mailto:praveenkumarch062006@gmail.com" style={{ color: 'inherit', textDecoration: 'underline' }}>praveenkumarch062006@gmail.com</a><br />
+                © 2026 Sanjay Gandhi Polytechnic. All Rights Reserved.
+            </div>
+        </div>
     );
 };
 
