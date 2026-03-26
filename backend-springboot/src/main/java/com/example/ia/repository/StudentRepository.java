@@ -49,4 +49,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Transactional
     @Query("UPDATE Student s SET s.semester = CASE WHEN s.semester < 6 THEN s.semester + 1 ELSE 1 END WHERE s.semester = :targetSem")
     int shiftSpecificSemester(@Param("targetSem") Integer targetSem);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Student s WHERE s.semester = :semester")
+    void deleteBySemester(@Param("semester") Integer semester);
 }

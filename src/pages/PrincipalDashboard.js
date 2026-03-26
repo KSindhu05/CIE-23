@@ -58,6 +58,7 @@ const PrincipalDashboard = () => {
     const [targetSemester, setTargetSemester] = useState('');
     const [shiftFrom, setShiftFrom] = useState('');
     const [shiftTo, setShiftTo] = useState('');
+    const [deleteGraduating, setDeleteGraduating] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
 
     // Directory State
@@ -504,12 +505,15 @@ const PrincipalDashboard = () => {
                                                 setShiftFrom(currentSem.toString());
                                                 if (currentSem < 6) {
                                                     setShiftTo((currentSem + 1).toString());
+                                                    setDeleteGraduating(false);
                                                 } else {
-                                                    setShiftTo('');
+                                                    setShiftTo('End');
+                                                    setDeleteGraduating(true);
                                                 }
                                             } else {
                                                 setShiftFrom('');
                                                 setShiftTo('');
+                                                setDeleteGraduating(false);
                                             }
                                         }}
                                         className={styles.semesterDropdown}
@@ -629,7 +633,18 @@ const PrincipalDashboard = () => {
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.5rem', opacity: !targetSemester ? 0.5 : 1 }}>
                                     <select
                                         value={shiftFrom}
-                                        onChange={(e) => setShiftFrom(e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setShiftFrom(val);
+                                            if (val === '6') {
+                                                setShiftTo('End');
+                                                setDeleteGraduating(true);
+                                            } else if (val) {
+                                                const next = parseInt(val) + 1;
+                                                if (next <= 6) setShiftTo(next.toString());
+                                                setDeleteGraduating(false);
+                                            }
+                                        }}
                                         disabled={!targetSemester}
                                         style={{
                                             flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #bbf7d0',
@@ -645,7 +660,11 @@ const PrincipalDashboard = () => {
                                     <span style={{ color: '#16a34a', fontWeight: 900 }}>→</span>
                                     <select
                                         value={shiftTo}
-                                        onChange={(e) => setShiftTo(e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setShiftTo(val);
+                                            if (val === 'End') setDeleteGraduating(true);
+                                        }}
                                         disabled={!targetSemester}
                                         style={{
                                             flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #bbf7d0',
@@ -657,8 +676,57 @@ const PrincipalDashboard = () => {
                                         {[1, 2, 3, 4, 5, 6].map(sem => (
                                             <option key={sem} value={sem}>Sem {sem}</option>
                                         ))}
+                                        <option value="End">End (Graduation)</option>
                                     </select>
                                 </div>
+
+                                {/* Graduation Cleanup Toggle */}
+                                <div style={{ 
+                                    marginBottom: '1.5rem', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '0.75rem',
+                                    padding: '0.75rem',
+                                    background: deleteGraduating ? '#fff1f2' : '#f8fafc',
+                                    borderRadius: '10px',
+                                    border: `1px solid ${deleteGraduating ? '#fecdd3' : '#e2e8f0'}`,
+                                    transition: 'all 0.3s ease',
+                                    cursor: !targetSemester ? 'not-allowed' : 'pointer',
+                                    opacity: !targetSemester ? 0.5 : 1
+                                }}
+                                onClick={() => targetSemester && setDeleteGraduating(!deleteGraduating)}
+                                >
+                                    <div style={{
+                                        width: '40px',
+                                        height: '20px',
+                                        background: deleteGraduating ? '#ef4444' : '#cbd5e1',
+                                        borderRadius: '20px',
+                                        position: 'relative',
+                                        transition: 'background 0.3s ease'
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '2px',
+                                            left: deleteGraduating ? '22px' : '2px',
+                                            width: '16px',
+                                            height: '16px',
+                                            background: '#fff',
+                                            borderRadius: '50%',
+                                            transition: 'left 0.3s ease',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                        }} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: deleteGraduating ? '#991b1b' : '#334155' }}>
+                                            Delete Graduating Students
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', color: deleteGraduating ? '#b91c1c' : '#64748b' }}>
+                                            Wipe names & marks for 6th Sem students
+                                        </span>
+                                    </div>
+                                    {deleteGraduating && <Trash2 size={16} color="#ef4444" style={{ marginLeft: 'auto' }} />}
+                                </div>
+
                                 <button
                                     onClick={async () => {
                                         const confirmed = await showConfirm({
@@ -669,11 +737,12 @@ const PrincipalDashboard = () => {
                                         });
                                         if (confirmed) {
                                             setResetLoading(true);
-                                            shiftSemesters(targetSemester || 'All', shiftFrom, shiftTo)
+                                            shiftSemesters(targetSemester || 'All', shiftFrom, shiftTo === 'End' ? null : shiftTo, deleteGraduating || shiftTo === 'End')
                                                 .then((res) => {
                                                     showToast(res.message || 'Students Shifted Successfully', 'success');
                                                     setShiftFrom('');
                                                     setShiftTo('');
+                                                    setDeleteGraduating(false);
                                                 })
                                                 .catch(() => showToast('Failed to shift semesters', 'error'))
                                                 .finally(() => setResetLoading(false));

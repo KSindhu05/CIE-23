@@ -255,9 +255,9 @@ export const cleanupData = async (semester = 'All') => {
     }
 };
 
-export const shiftSemesters = async (semester = 'All', fromSemester = null, toSemester = null) => {
+export const shiftSemesters = async (semester = 'All', fromSemester = null, toSemester = null, deleteGraduating = false) => {
     try {
-        const payload = { semester };
+        const payload = { semester, deleteGraduating };
         if (fromSemester) payload.fromSemester = fromSemester;
         if (toSemester) payload.toSemester = toSemester;
         

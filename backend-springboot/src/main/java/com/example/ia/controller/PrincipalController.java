@@ -263,11 +263,40 @@ public class PrincipalController {
     @PostMapping("/semester/shift")
     @PreAuthorize("hasRole('PRINCIPAL')")
     @Transactional
-    public ResponseEntity<?> shiftSemesters(@RequestBody Map<String, String> request) {
-        String fromSemStr = request.get("fromSemester");
-        String toSemStr = request.get("toSemester");
-        String targetSemester = request.getOrDefault("semester", "All");
+    public ResponseEntity<?> shiftSemesters(@RequestBody Map<String, Object> request) {
+        String fromSemStr = (String) request.get("fromSemester");
+        String toSemStr = (String) request.get("toSemester");
+        String targetSemester = (String) request.getOrDefault("semester", "All");
         boolean isAll = "All".equalsIgnoreCase(targetSemester);
+        
+        Boolean deleteGraduating = (Boolean) request.getOrDefault("deleteGraduating", false);
+
+        if (Boolean.TRUE.equals(deleteGraduating)) {
+            // Delete students in 6th semester (and their marks/attendance)
+            List<Student> graduatingStudents = studentRepository.findAll().stream()
+                .filter(s -> Integer.valueOf(6).equals(s.getSemester()))
+                .collect(Collectors.toList());
+            
+            if (!graduatingStudents.isEmpty()) {
+                Set<Long> studentIds = graduatingStudents.stream().map(Student::getId).collect(Collectors.toSet());
+                
+                // 1. Delete Marks
+                List<CieMark> marks = cieMarkRepository.findAll().stream()
+                    .filter(m -> m.getStudent() != null && studentIds.contains(m.getStudent().getId()))
+                    .collect(Collectors.toList());
+                cieMarkRepository.deleteAll(marks);
+
+                // 2. Delete Attendance
+                List<Attendance> atts = attendanceRepository.findAll().stream()
+                    .filter(a -> a.getStudent() != null && studentIds.contains(a.getStudent().getId()))
+                    .collect(Collectors.toList());
+                attendanceRepository.deleteAll(atts);
+
+                // 3. Delete Students
+                studentRepository.deleteAll(graduatingStudents);
+                System.out.println("DEBUG: Deleted " + graduatingStudents.size() + " graduating students (6th Sem)");
+            }
+        }
 
         if (fromSemStr != null && toSemStr != null) {
             // Granular Shift: From X to Y (Atomic)
