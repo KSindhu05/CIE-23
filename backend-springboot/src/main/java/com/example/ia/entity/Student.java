@@ -15,6 +15,7 @@ public class Student {
     @Column(nullable = false)
     private String name;
 
+    private String nameKn;
     private String department;
     private Integer semester;
     private String section;
@@ -46,6 +47,14 @@ public class Student {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNameKn() {
+        return nameKn;
+    }
+
+    public void setNameKn(String nameKn) {
+        this.nameKn = nameKn;
     }
 
     public String getDepartment() {

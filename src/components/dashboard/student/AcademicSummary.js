@@ -17,43 +17,35 @@ const cardVariants = {
     }),
 };
 
-const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = false }) => {
+const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = false, t }) => {
     const riskColor = riskLevel === 'High' ? 'var(--danger)' : riskLevel === 'Moderate' ? 'var(--warning)' : 'var(--success)';
     const riskLabel = riskLevel || 'Low';
     const isHighRisk = riskLevel === 'High';
 
     const cards = [
         {
-            icon: <TrendingUp size={22} />,
-            iconBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)',
-            iconColor: 'var(--secondary)',
-            label: 'Aggregate %',
-            value: `${studentInfo.cgpa || '0'}%`,
-            subtext: 'Current Sem',
-        },
-        {
             icon: <BookOpen size={22} />,
             iconBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%)',
             iconColor: 'var(--warning)',
-            label: 'Avg CIE Score',
+            label: t('avgCieScoreLabel'),
             value: studentInfo.avgCieScore || '0/50',
-            subtext: 'Current Sem',
+            subtext: t('currentSem'),
         },
         {
             icon: <CheckCircle size={22} />,
             iconBg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(52, 211, 153, 0.08) 100%)',
             iconColor: 'var(--success)',
-            label: 'CIE Progress',
+            label: t('cieProgressLabel'),
             value: cieStatus,
-            subtext: 'CIEs Completed',
+            subtext: t('ciesCompleted'),
         },
         {
             icon: <User size={22} />,
             iconBg: 'linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)',
             iconColor: '#6366f1',
-            label: 'Assigned Mentor',
-            value: studentInfo.mentor || 'Not Assigned',
-            subtext: 'Academic Guide',
+            label: t('assignedMentorLabel'),
+            value: studentInfo.mentor || t('notAssigned'),
+            subtext: t('academicGuide'),
         },
     ];
 
@@ -109,13 +101,13 @@ const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = 
                     <AlertCircle size={22} />
                 </motion.div>
                 <div className={styles.summaryInfo}>
-                    <span className={styles.summaryLabel}>Academic Status</span>
+                    <span className={styles.summaryLabel}>{t('academicStatus')}</span>
                     {loading ? (
                         <Skeleton width="100px" height="28px" style={{ margin: '4px 0' }} />
                     ) : (
-                        <h3 className={styles.summaryValue} style={{ color: riskColor }}>{riskLabel} Risk</h3>
+                        <h3 className={styles.summaryValue} style={{ color: riskColor }}>{t(riskLabel.toLowerCase())} {t('riskLevel')}</h3>
                     )}
-                    <span className={styles.summarySubtext}>Based on Marks</span>
+                    <span className={styles.summarySubtext}>{t('basedOnMarks')}</span>
                 </div>
             </motion.div>
         </div>

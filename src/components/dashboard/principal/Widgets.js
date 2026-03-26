@@ -420,7 +420,7 @@ export const LowPerformersWidget = memo(({ data, loading }) => {
                                         <td style={{ padding: '0.75rem', color: '#64748b', fontSize: '0.9rem' }}>{item.subject?.code}</td>
                                         <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                             <span style={{ background: '#fee2e2', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem' }}>
-                                                {item.marks}
+                                                {item.marks === -2 ? 'AB' : item.marks}
                                             </span>
                                         </td>
                                         <td style={{ padding: '0.75rem', textAlign: 'right' }}>

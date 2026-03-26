@@ -1,10 +1,8 @@
 package com.example.ia.service;
 
-import com.example.ia.entity.Student;
 import com.example.ia.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 @Service
@@ -21,19 +19,19 @@ public class StudentService {
     @Autowired
     private com.example.ia.repository.FacultyAssignmentRequestRepository assignmentRequestRepository;
 
-    public List<Student> getAllStudents(String department) {
+    public List<com.example.ia.entity.Student> getAllStudents(String department) {
         if (department != null && !department.equals("all")) {
             return studentRepository.findByDepartment(department);
         }
         return studentRepository.findAll();
     }
 
-    public java.util.Optional<Student> getStudentByRegNo(String regNo) {
+    public java.util.Optional<com.example.ia.entity.Student> getStudentByRegNo(String regNo) {
         return studentRepository.findByRegNoIgnoreCase(regNo);
     }
 
     public java.util.List<com.example.ia.payload.response.FacultyResponse> getFacultyForStudent(String username) {
-        Student student = studentRepository.findByRegNoIgnoreCase(username).orElse(null);
+        com.example.ia.entity.Student student = studentRepository.findByRegNoIgnoreCase(username).orElse(null);
         if (student == null)
             return java.util.List.of();
 
@@ -172,30 +170,38 @@ public class StudentService {
     private com.example.ia.repository.CieMarkRepository cieMarkRepository;
 
     public List<com.example.ia.payload.response.StudentResponse> getStudentsWithAnalytics(String department) {
-        List<Student> students;
+        List<com.example.ia.entity.Student> students;
         if (department != null && !department.equals("all")) {
             students = studentRepository.findByDepartment(department);
         } else {
             students = studentRepository.findAll();
         }
 
-        return students.stream().map(student -> {
-            List<com.example.ia.entity.CieMark> marksList = cieMarkRepository.findByStudent_Id(student.getId());
-            java.util.Map<String, Double> marksMap = new java.util.HashMap<>();
-            java.util.Map<String, java.util.Map<String, Object>> subjectMarks = new java.util.HashMap<>();
+        return students.stream()
+                .map(this::mapToStudentResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
 
-            int cie1Count = 0;
-            double totalCie1Marks = 0.0;
+    public java.util.Optional<com.example.ia.payload.response.StudentResponse> getStudentProfile(String username) {
+        return studentRepository.findByRegNoIgnoreCase(username)
+                .map(this::mapToStudentResponse);
+    }
 
-            for (com.example.ia.entity.CieMark mark : marksList) {
-                // Determine key based on cieType (e.g., CIE1, CIE2)
-                String key = mark.getCieType().toLowerCase().replace(" ", "").replace("-", "");
-                Double markValue = mark.getMarks() != null ? mark.getMarks() : 0.0;
+    private com.example.ia.payload.response.StudentResponse mapToStudentResponse(com.example.ia.entity.Student student) {
+        List<com.example.ia.entity.CieMark> marksList = cieMarkRepository.findByStudent_Id(student.getId());
+        java.util.Map<String, Double> marksMap = new java.util.HashMap<>();
+        java.util.Map<String, java.util.Map<String, Object>> subjectMarks = new java.util.HashMap<>();
 
-                // Add to flat marksMap (summing them up to avoid overwrite loss in pie charts)
-                marksMap.put(key, marksMap.getOrDefault(key, 0.0) + markValue);
+        int cie1Count = 0;
+        double totalCie1Marks = 0.0;
 
-                // Add to subject-wise map
+        for (com.example.ia.entity.CieMark mark : marksList) {
+            String key = (mark.getCieType() != null) ? mark.getCieType().toLowerCase().replace(" ", "").replace("-", "") : "default";
+            Double markValue = mark.getMarks() != null ? mark.getMarks() : 0.0;
+
+            marksMap.put(key, marksMap.getOrDefault(key, 0.0) + markValue);
+
+            if (mark.getSubject() != null) {
                 String subName = mark.getSubject().getName();
                 subjectMarks.putIfAbsent(subName, new java.util.HashMap<>());
                 subjectMarks.get(subName).put(key, markValue);
@@ -206,44 +212,62 @@ public class StudentService {
                     subjectMarks.get(subName).put(key + "_remarks", mark.getRemarks());
                 }
 
-                // Count for CIE-1 completion (only if marks are entered)
                 if (key.equals("cie1") && mark.getMarks() != null) {
                     cie1Count++;
                     totalCie1Marks += markValue;
                 }
             }
+        }
 
-            // Direct lookup: get subjects for this student's department + semester
-            java.util.List<com.example.ia.entity.Subject> subjects = java.util.List.of();
-            if (student.getDepartment() != null && student.getSemester() != null) {
-                subjects = subjectRepository.findByDepartmentAndSemester(
-                        student.getDepartment(), student.getSemester());
+        java.util.List<com.example.ia.entity.Subject> subjects = java.util.List.of();
+        if (student.getDepartment() != null && student.getSemester() != null) {
+            subjects = subjectRepository.findByDepartmentAndSemester(
+                    student.getDepartment(), student.getSemester());
+        }
+
+        java.util.Set<String> uniqueSubjectNames = subjects.stream()
+                .map(s -> s.getName().replaceAll("(?i)\\s*[\\[\\(]?(Theory|Lab|T|L)[\\]\\)]?\\s*$", "").trim())
+                .collect(java.util.stream.Collectors.toSet());
+        int enrolledCount = uniqueSubjectNames.size();
+
+        Boolean isCie1Complete = (enrolledCount > 0 && cie1Count >= enrolledCount);
+        Double overallCie1Percentage = (cie1Count > 0) ? (totalCie1Marks / (cie1Count * 50.0)) * 100.0 : 0.0;
+
+        // Dynamic Mentor Lookup
+        String mentorNameDisplay = student.getMentor();
+        String mentorKnResult = null;
+        if (mentorNameDisplay != null && !mentorNameDisplay.isBlank()) {
+            com.example.ia.entity.User mentorAccount = userRepository.findByUsername(mentorNameDisplay).orElse(null);
+            
+            if (mentorAccount == null) {
+                String normDisplay = normalizeName(mentorNameDisplay);
+                if (!normDisplay.isEmpty()) {
+                    for (com.example.ia.entity.User u : userRepository.findAll()) {
+                        String normUser = normalizeName(u.getFullName());
+                        if (!normUser.isEmpty() && (normDisplay.contains(normUser) || normUser.contains(normDisplay))) {
+                            mentorAccount = u;
+                            break;
+                        }
+                    }
+                }
             }
-
-            // Filter out Lab duplicates - only count unique base subject names
-            java.util.Set<String> uniqueSubjectNames = subjects.stream()
-                    .map(s -> s.getName().replaceAll("(?i)\\s*[\\[\\(]?(Theory|Lab|T|L)[\\]\\)]?\\s*$", "").trim())
-                    .collect(java.util.stream.Collectors.toSet());
-            int enrolledCount = uniqueSubjectNames.size();
-
-            Boolean isCie1Complete = (enrolledCount > 0 && cie1Count >= enrolledCount);
-            Double overallCie1Percentage = 0.0;
-
-            if (cie1Count > 0) {
-                overallCie1Percentage = (totalCie1Marks / (cie1Count * 50.0)) * 100.0;
+            
+            if (mentorAccount != null) {
+                mentorNameDisplay = mentorAccount.getFullName();
+                mentorKnResult = mentorAccount.getFullNameKn();
             }
+        }
 
-            System.out.println("DEBUG [StudentAnalytics] " + student.getRegNo()
-                    + " | dept=" + student.getDepartment()
-                    + " | sem=" + student.getSemester()
-                    + " | enrolledSubjects=" + enrolledCount
-                    + " | cie1Count=" + cie1Count
-                    + " | complete=" + isCie1Complete
-                    + " | overallCie1Percentage=" + overallCie1Percentage);
+        final String finalMentorName = mentorNameDisplay;
+        final String finalMentorKn = mentorKnResult;
 
-            return new com.example.ia.payload.response.StudentResponse(student, marksMap, subjectMarks, isCie1Complete,
-                    overallCie1Percentage);
-        }).collect(java.util.stream.Collectors.toList());
+        return new com.example.ia.payload.response.StudentResponse(student, marksMap, subjectMarks, isCie1Complete,
+                overallCie1Percentage, finalMentorKn) {
+            @Override
+            public String getMentor() {
+                return finalMentorName;
+            }
+        };
     }
 
     public void updateMentor(Long studentId, String mentorName) {
@@ -251,5 +275,21 @@ public class StudentService {
             student.setMentor(mentorName);
             studentRepository.save(student);
         });
+    }
+
+    private String normalizeName(String name) {
+        if (name == null)
+            return "";
+        return name.toLowerCase()
+                .replace("miss ", "").replace("miss.", "")
+                .replace("mr ", "").replace("mr.", "")
+                .replace("mrs ", "").replace("mrs.", "")
+                .replace("dr ", "").replace("dr.", "")
+                .replace("prof ", "").replace("prof.", "")
+                .replace("mam", "")
+                .replace("sir", "")
+                .replace(".", "")
+                .replace(" ", "")
+                .trim();
     }
 }

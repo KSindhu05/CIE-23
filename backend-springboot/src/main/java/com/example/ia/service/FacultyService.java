@@ -212,7 +212,7 @@ public class FacultyService {
                 overallCie1Percentage = (totalCie1Marks / (cie1Count * 50.0)) * 100.0;
             }
             
-            return new com.example.ia.payload.response.StudentResponse(student, marksMap, subjectMarks, isCie1Complete, overallCie1Percentage);
+            return new com.example.ia.payload.response.StudentResponse(student, marksMap, subjectMarks, isCie1Complete, overallCie1Percentage, null);
         }).collect(java.util.stream.Collectors.toList());
     }
 

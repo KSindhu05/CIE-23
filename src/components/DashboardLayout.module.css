@@ -13,13 +13,6 @@
     position: relative;
     height: 100vh;
     overflow-y: auto;
-    /* Hide scrollbar */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.mainContent::-webkit-scrollbar {
-    display: none;
 }
 
 .floatingControls {

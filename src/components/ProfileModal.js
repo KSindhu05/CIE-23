@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API_BASE_URL from '../config/api';
 import authenticatedFetch from '../utils/authFetch';
-import { X, User, Lock, Eye, EyeOff, Save, Shield, Mail, Building, Hash, GraduationCap, Layers, Edit3, Check } from 'lucide-react';
+import { X, User, Lock, Eye, EyeOff, Save, Shield, Mail, Building, Hash, GraduationCap, Layers, Edit3, Check, Info, Calendar, Key } from 'lucide-react';
 import styles from './ProfileModal.module.css';
 
-const ProfileModal = ({ onClose }) => {
+const ProfileModal = ({ onClose, inline = false }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('details');
     const [profile, setProfile] = useState(null);
@@ -40,6 +40,7 @@ const ProfileModal = ({ onClose }) => {
                 setNewUsername(data.username || '');
                 setEditForm({
                     fullName: data.fullName || '',
+                    fullNameKn: data.fullNameKn || '',
                     email: data.email || '',
                     department: data.department || '',
                     designation: data.designation || ''
@@ -79,6 +80,7 @@ const ProfileModal = ({ onClose }) => {
         setEditing(false);
         setEditForm({
             fullName: profile?.fullName || '',
+            fullNameKn: profile?.fullNameKn || '',
             email: profile?.email || '',
             department: profile?.department || '',
             designation: profile?.designation || ''
@@ -109,6 +111,14 @@ const ProfileModal = ({ onClose }) => {
 
         setSaving(true);
         try {
+            const body = { currentPassword };
+            if (canChangeUsername && newUsername !== profile?.username) {
+                body.newUsername = newUsername;
+            }
+            if (newPassword) {
+                body.newPassword = newPassword;
+            }
+
             const res = await authenticatedFetch(`${API_BASE_URL}/profile/credentials`, {
                 method: 'PUT',
                 body: JSON.stringify(body)
@@ -130,14 +140,6 @@ const ProfileModal = ({ onClose }) => {
         }
     };
 
-    const getHeaderGradient = (role) => {
-        switch (role) {
-            case 'PRINCIPAL': return 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%)';
-            case 'HOD': return 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%)';
-            case 'FACULTY': return 'linear-gradient(135deg, #047857 0%, #059669 50%, #10b981 100%)';
-            default: return 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)';
-        }
-    };
 
     const getRoleLabel = (role) => {
         switch (role) {
@@ -149,56 +151,65 @@ const ProfileModal = ({ onClose }) => {
     };
 
     const role = profile?.role || user?.role;
-    const canEdit = role === 'PRINCIPAL' || role === 'HOD';
-
+    const canEditAll = role === 'PRINCIPAL' || role === 'HOD';
+    const canEditAny = role === 'PRINCIPAL' || role === 'HOD' || role === 'FACULTY';
     const roleAsDesignation = role === 'PRINCIPAL' ? 'Principal' : role === 'HOD' ? 'Head of Department' : 'Faculty';
 
-    const detailCards = [
-        { key: 'fullName', icon: <User size={16} />, label: 'Full Name', value: profile?.fullName, bg: '#eff6ff', iconColor: '#2563eb', editable: true },
-        { key: 'email', icon: <Mail size={16} />, label: 'Email', value: profile?.email, bg: '#fef3c7', iconColor: '#d97706', editable: true },
-        { key: 'username', icon: <Hash size={16} />, label: 'Username', value: profile?.username, bg: '#f0fdf4', iconColor: '#059669', editable: true },
-        { key: 'designation', icon: <GraduationCap size={16} />, label: 'Designation', value: profile?.designation || roleAsDesignation, bg: '#ecfdf5', iconColor: '#059669', editable: true },
+    // Build detail cards
+    const personalCards = [
+        { key: 'fullName', icon: <User size={24} />, label: 'Full Name', value: profile?.fullName, bg: '#eff6ff', iconColor: '#2563eb', editable: true, accentColor: '#2563eb' },
+        { key: 'fullNameKn', icon: <User size={24} />, label: 'Full Name (Kannada)', value: profile?.fullNameKn, bg: '#f0fdf4', iconColor: '#059669', editable: true, accentColor: '#059669' },
+        { key: 'email', icon: <Mail size={24} />, label: 'Email Address', value: profile?.email, bg: '#fef3c7', iconColor: '#d97706', editable: true, accentColor: '#d97706' },
     ];
 
-    // Show Department for non-Principal
+    const accountCards = [
+        { key: 'username', icon: <Hash size={24} />, label: 'Username / Login ID', value: profile?.username, bg: '#f0fdf4', iconColor: '#059669', editable: false, accentColor: '#059669' },
+        { key: 'designation', icon: <GraduationCap size={24} />, label: 'Designation', value: profile?.designation || roleAsDesignation, bg: '#faf5ff', iconColor: '#7c3aed', editable: canEditAll, accentColor: '#7c3aed' },
+    ];
+
     if (role !== 'PRINCIPAL') {
-        detailCards.push(
-            { key: 'department', icon: <Building size={16} />, label: 'Department', value: profile?.department, bg: '#fce7f3', iconColor: '#be185d', editable: canEdit },
+        accountCards.push(
+            { key: 'department', icon: <Building size={24} />, label: 'Department', value: profile?.department, bg: '#fce7f3', iconColor: '#be185d', editable: canEditAll, accentColor: '#be185d' }
         );
     }
 
-    // Add faculty-specific fields
     if (role === 'FACULTY') {
-        detailCards.push(
-            { key: 'semester', icon: <GraduationCap size={16} />, label: 'Semester', value: profile?.semester, bg: '#ecfdf5', iconColor: '#059669', editable: false },
-            { key: 'section', icon: <Layers size={16} />, label: 'Section', value: profile?.section, bg: '#fff7ed', iconColor: '#ea580c', editable: false }
+        accountCards.push(
+            { key: 'semester', icon: <GraduationCap size={24} />, label: 'Semester', value: profile?.semester, bg: '#ecfdf5', iconColor: '#059669', editable: false, accentColor: '#059669' },
+            { key: 'section', icon: <Layers size={24} />, label: 'Section', value: profile?.section, bg: '#fff7ed', iconColor: '#ea580c', editable: false, accentColor: '#ea580c' }
         );
     }
 
-    return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className={styles.header} style={{ background: getHeaderGradient(role) }}>
-                    <div className={styles.headerBg} />
-                    <div className={styles.headerContent}>
-                        <div className={styles.headerInfo}>
-                            <div className={styles.avatarLarge}>
-                                {(profile?.fullName || user?.fullName || '?').charAt(0).toUpperCase()}
-                            </div>
-                            <div className={styles.headerTextGroup}>
-                                <h2 className={styles.headerName}>{profile?.fullName || user?.fullName || 'User'}</h2>
-                                {profile?.email && (
-                                    <span className={styles.headerSubtext}>{profile.email}</span>
-                                )}
-                                <span className={styles.roleBadge}>
-                                    <Shield size={11} /> {role}
-                                </span>
-                            </div>
-                        </div>
-                        <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
-                    </div>
-                </div>
+    const renderDetailCard = (card, i) => (
+        <div key={i} className={styles.detailCard} style={{ '--accent': card.accentColor }}>
+            <div className={styles.detailIcon} style={{ background: card.bg, color: card.iconColor }}>
+                {card.icon}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                <div className={styles.detailLabel}>{card.label}</div>
+                {editing && card.editable ? (
+                    <input
+                        value={editForm[card.key] || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, [card.key]: e.target.value }))}
+                        style={{
+                            fontSize: '1.05rem', fontWeight: 600, color: '#1e293b',
+                            border: '1.5px solid #c7d2eb', borderRadius: '10px',
+                            padding: '10px 14px', width: '100%', boxSizing: 'border-box',
+                            outline: 'none', background: '#f8fafc'
+                        }}
+                    />
+                ) : (
+                    <div className={styles.detailValue}>{card.value || '—'}</div>
+                )}
+            </div>
+        </div>
+    );
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const modalContent = (
+        <div className={inline ? styles.inlineContainer : styles.modal} onClick={(e) => e.stopPropagation()}>
 
                 {/* Tabs */}
                 <div className={styles.tabs}>
@@ -206,53 +217,39 @@ const ProfileModal = ({ onClose }) => {
                         className={`${styles.tab} ${activeTab === 'details' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('details')}
                     >
-                        <User size={15} /> My Details
+                        <User size={20} /> My Details
                     </button>
                     <button
                         className={`${styles.tab} ${activeTab === 'credentials' ? styles.tabActive : ''}`}
                         onClick={() => setActiveTab('credentials')}
                     >
-                        <Lock size={15} /> Change Credentials
+                        <Lock size={20} /> Change Credentials
                     </button>
 
-                    {/* Edit button for Principal/HOD */}
-                    {canEdit && activeTab === 'details' && (
-                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {canEditAny && activeTab === 'details' && (
+                        <div className={styles.tabActions}>
                             {editing ? (
                                 <>
                                     <button
                                         onClick={handleCancelEdit}
-                                        style={{
-                                            padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                                            background: 'white', color: '#64748b', fontSize: '0.8rem', fontWeight: 600,
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
-                                        }}
+                                        className={styles.cancelEditBtn}
                                     >
-                                        <X size={14} /> Cancel
+                                        <X size={18} /> Cancel
                                     </button>
                                     <button
                                         onClick={handleSaveProfile}
                                         disabled={savingProfile}
-                                        style={{
-                                            padding: '6px 14px', borderRadius: '8px', border: 'none',
-                                            background: '#2563eb', color: 'white', fontSize: '0.8rem', fontWeight: 600,
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                                            opacity: savingProfile ? 0.6 : 1
-                                        }}
+                                        className={styles.saveChangesBtn}
                                     >
-                                        <Check size={14} /> {savingProfile ? 'Saving...' : 'Save'}
+                                        <Check size={18} /> {savingProfile ? 'Saving...' : 'Save Changes'}
                                     </button>
                                 </>
                             ) : (
                                 <button
                                     onClick={() => setEditing(true)}
-                                    style={{
-                                        padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                                        background: 'white', color: '#2563eb', fontSize: '0.8rem', fontWeight: 600,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
-                                    }}
+                                    className={styles.editProfileBtn}
                                 >
-                                    <Edit3 size={14} /> Edit Profile
+                                    <Edit3 size={18} /> Edit Profile
                                 </button>
                             )}
                         </div>
@@ -268,36 +265,54 @@ const ProfileModal = ({ onClose }) => {
                             {saveMsg.text && (
                                 <div
                                     className={`${styles.alert} ${saveMsg.type === 'error' ? styles.alertError : styles.alertSuccess}`}
-                                    style={{ marginBottom: '1rem' }}
+                                    style={{ marginBottom: '1.25rem' }}
                                 >
                                     {saveMsg.text}
                                 </div>
                             )}
+
+                            {/* Personal Information Section */}
+                            <div className={styles.sectionHeader}>
+                                <User size={18} /> Personal Information
+                                <div className={styles.sectionLine} />
+                            </div>
                             <div className={styles.detailsGrid}>
-                                {detailCards.map((card, i) => (
-                                    <div key={i} className={styles.detailCard}>
-                                        <div className={styles.detailIcon} style={{ background: card.bg, color: card.iconColor }}>
-                                            {card.icon}
-                                        </div>
-                                        <div className={styles.detailLabel}>{card.label}</div>
-                                        {editing && card.editable ? (
-                                            <input
-                                                value={editForm[card.key] || ''}
-                                                onChange={e => setEditForm(prev => ({ ...prev, [card.key]: e.target.value }))}
-                                                style={{
-                                                    fontSize: '0.9rem', fontWeight: 600, color: '#1e293b',
-                                                    border: '1.5px solid #c7d2eb', borderRadius: '8px',
-                                                    padding: '6px 10px', width: '100%', boxSizing: 'border-box',
-                                                    outline: 'none', background: '#f8fafc'
-                                                }}
-                                                onFocus={e => e.target.style.borderColor = '#2563eb'}
-                                                onBlur={e => e.target.style.borderColor = '#c7d2eb'}
-                                            />
-                                        ) : (
-                                            <div className={styles.detailValue}>{card.value || '—'}</div>
-                                        )}
+                                {personalCards.map(renderDetailCard)}
+                            </div>
+
+                            {/* Account Information Section */}
+                            <div className={styles.sectionHeader} style={{ marginTop: '0.75rem' }}>
+                                <Shield size={18} /> Account & Role Information
+                                <div className={styles.sectionLine} />
+                            </div>
+                            <div className={styles.detailsGrid}>
+                                {accountCards.map(renderDetailCard)}
+                            </div>
+
+                            {/* Quick Info / Meta Row */}
+                            <div className={styles.metaRow}>
+                                <div className={styles.metaItem}>
+                                    <div className={styles.metaIcon}><Shield size={14} /></div>
+                                    <span>Role: <strong>{getRoleLabel(role)}</strong></span>
+                                </div>
+                                <div className={styles.metaItem}>
+                                    <div className={styles.metaIcon}><Calendar size={14} /></div>
+                                    <span>Today: <strong>{dateStr}</strong></span>
+                                </div>
+                                {profile?.username && (
+                                    <div className={styles.metaItem}>
+                                        <div className={styles.metaIcon}><Hash size={14} /></div>
+                                        <span>ID: <strong>{profile.username}</strong></span>
                                     </div>
-                                ))}
+                                )}
+                            </div>
+
+                            <div className={styles.footerInfo}>
+                                <Info size={16} />
+                                {canEditAny
+                                    ? 'Click "Edit Profile" to update your personal details.'
+                                    : 'Contact your HOD or administrator to update profile details.'
+                                }
                             </div>
                         </>
                     ) : (
@@ -308,6 +323,14 @@ const ProfileModal = ({ onClose }) => {
                                 </div>
                             )}
 
+                            <div className={styles.credInfo}>
+                                <div className={styles.credInfoIcon}><Key size={20} /></div>
+                                <span>
+                                    Change your login credentials below. You must enter your current password to make any changes.
+                                    {canChangeUsername && ' As an HOD, you can also change your username.'}
+                                </span>
+                            </div>
+
                             <div className={styles.field}>
                                 <label>Current Password <span className={styles.required}>*</span></label>
                                 <div className={styles.passwordWrapper}>
@@ -315,11 +338,11 @@ const ProfileModal = ({ onClose }) => {
                                         type={showCurrentPw ? 'text' : 'password'}
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
-                                        placeholder="Enter current password"
+                                        placeholder="Enter your current password"
                                         required
                                     />
                                     <button type="button" className={styles.eyeBtn} onClick={() => setShowCurrentPw(!showCurrentPw)}>
-                                        {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {showCurrentPw ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
                             </div>
@@ -331,7 +354,7 @@ const ProfileModal = ({ onClose }) => {
                                         type="text"
                                         value={newUsername}
                                         onChange={(e) => setNewUsername(e.target.value)}
-                                        placeholder="Enter new username"
+                                        placeholder="Enter new username (leave unchanged to keep current)"
                                     />
                                 </div>
                             )}
@@ -343,33 +366,46 @@ const ProfileModal = ({ onClose }) => {
                                         type={showNewPw ? 'text' : 'password'}
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="Leave blank to keep current"
+                                        placeholder="Leave blank to keep current password"
                                     />
                                     <button type="button" className={styles.eyeBtn} onClick={() => setShowNewPw(!showNewPw)}>
-                                        {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {showNewPw ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
                             </div>
 
                             {newPassword && (
                                 <div className={styles.field}>
-                                    <label>Confirm New Password</label>
+                                    <label>Confirm New Password <span className={styles.required}>*</span></label>
                                     <input
                                         type="password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="Re-enter new password"
+                                        placeholder="Re-enter your new password"
                                     />
                                 </div>
                             )}
 
                             <button type="submit" className={styles.saveBtn} disabled={saving}>
-                                <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                                {saving ? 'Saving...' : 'Save Credentials'}
                             </button>
+                            <div className={styles.footerInfo}>
+                                <Info size={16} />
+                                If you change your username, you will need to log in again with the new username.
+                            </div>
                         </form>
                     )}
                 </div>
             </div>
+    );
+
+    if (inline) {
+        return modalContent;
+    }
+
+    return (
+        <div className={styles.overlay} onClick={onClose}>
+            {modalContent}
         </div>
     );
 };

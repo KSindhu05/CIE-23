@@ -5,7 +5,7 @@ import API_BASE_URL from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
 import { useDialog } from '../components/GlobalDialogProvider';
 import {
-    LayoutDashboard, Users, FileText, CheckCircle, TrendingUp, BarChart2,
+    LayoutDashboard, Users, User, FileText, CheckCircle, TrendingUp, BarChart2,
     AlertTriangle, Briefcase, Bell, Activity, Clock, Award, ClipboardList, Phone,
     Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest, Eye, Send, Unlock, LockOpen
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
 } from '../utils/mockData';
 import styles from './HODDashboard.module.css';
 import Skeleton from '../components/ui/Skeleton';
+import ProfileModal from '../components/ProfileModal';
 import { StudentProfileModal } from '../components/dashboard/principal/DirectorySection';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
@@ -47,15 +48,15 @@ const parseSubjects = (subjects) => {
     return [];
 };
 
-const DebouncedInput = ({ value, onChange, max, style, className }) => {
-    const [localValue, setLocalValue] = useState(value);
+const DebouncedInput = ({ value, onChange, max, style, className, disabled }) => {
+    const [localValue, setLocalValue] = useState(value === -2.0 ? 'AB' : value);
 
     useEffect(() => {
-        setLocalValue(value);
+        setLocalValue(value === -2.0 ? 'AB' : value);
     }, [value]);
 
     const handleBlur = () => {
-        if (localValue !== value) {
+        if (localValue !== (value === -2.0 ? 'AB' : value)) {
             onChange(localValue);
         }
     };
@@ -94,9 +95,9 @@ const DebouncedInput = ({ value, onChange, max, style, className }) => {
     };
 
     const handleChange = (e) => {
-        let val = e.target.value;
-        if (val === 'Ab') {
-            setLocalValue(val);
+        let val = e.target.value.toUpperCase();
+        if (val === 'A' || val === 'AB') {
+            setLocalValue('AB');
             return;
         }
 
@@ -116,40 +117,60 @@ const DebouncedInput = ({ value, onChange, max, style, className }) => {
 
     return (
         <input
-            type="number"
+            type="text"
             className={className}
-            style={style}
+            style={{
+                ...style,
+                backgroundColor: disabled ? '#f1f5f9' : (style?.backgroundColor || 'white'),
+                cursor: disabled ? 'not-allowed' : 'text',
+                opacity: disabled ? 0.7 : 1
+            }}
             value={localValue === null || localValue === undefined ? '' : localValue}
-            max={max}
-            min="0"
             onChange={handleChange}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder={disabled ? '-' : ''}
         />
     );
 };
 
-const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, styles, handleMarkChange, perfConfig }) => {
+const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, styles, handleMarkChange, perfConfig, subjectRole }) => {
     const valCIE1 = (editMark.cie1 !== undefined && editMark.cie1 !== null) ? editMark.cie1 : '';
     const valCIE2 = (editMark.cie2 !== undefined && editMark.cie2 !== null) ? editMark.cie2 : '';
     const valCIE3 = (editMark.cie3 !== undefined && editMark.cie3 !== null) ? editMark.cie3 : '';
     const valCIE4 = (editMark.cie4 !== undefined && editMark.cie4 !== null) ? editMark.cie4 : '';
     const valCIE5 = (editMark.cie5 !== undefined && editMark.cie5 !== null) ? editMark.cie5 : '';
+    
+    // Attendance
     const att1Val = (editMark.cie1Att !== undefined && editMark.cie1Att !== null) ? editMark.cie1Att : '';
     const att2Val = (editMark.cie2Att !== undefined && editMark.cie2Att !== null) ? editMark.cie2Att : '';
     const att3Val = (editMark.cie3Att !== undefined && editMark.cie3Att !== null) ? editMark.cie3Att : '';
     const att4Val = (editMark.cie4Att !== undefined && editMark.cie4Att !== null) ? editMark.cie4Att : '';
     const att5Val = (editMark.cie5Att !== undefined && editMark.cie5Att !== null) ? editMark.cie5Att : '';
-    const total = (Number(valCIE1) || 0) + (Number(valCIE2) || 0) + (Number(valCIE3) || 0) + (Number(valCIE4) || 0) + (Number(valCIE5) || 0);
+
+    // Total should treat -2.0 as 0
+    const total = 
+        (valCIE1 === -2.0 ? 0 : (Number(valCIE1) || 0)) + 
+        (valCIE2 === -2.0 ? 0 : (Number(valCIE2) || 0)) + 
+        (valCIE3 === -2.0 ? 0 : (Number(valCIE3) || 0)) + 
+        (valCIE4 === -2.0 ? 0 : (Number(valCIE4) || 0)) + 
+        (valCIE5 === -2.0 ? 0 : (Number(valCIE5) || 0));
+
     const cieVals = [
-        { key: 'CIE-1', val: valCIE1, att: att1Val !== '' ? parseFloat(att1Val) : null },
-        { key: 'CIE-2', val: valCIE2, att: att2Val !== '' ? parseFloat(att2Val) : null },
-        { key: 'CIE-3', val: valCIE3, att: att3Val !== '' ? parseFloat(att3Val) : null },
-        { key: 'CIE-4', val: valCIE4, att: att4Val !== '' ? parseFloat(att4Val) : null },
-        { key: 'CIE-5', val: valCIE5, att: att5Val !== '' ? parseFloat(att5Val) : null }
+        { key: 'CIE-1 (Theory)', val: valCIE1, att: att1Val !== '' ? parseFloat(att1Val) : null },
+        { key: 'Skill Test 1 (Lab)', val: valCIE2, att: att2Val !== '' ? parseFloat(att2Val) : null },
+        { key: 'CIE-2 (Theory)', val: valCIE3, att: att3Val !== '' ? parseFloat(att3Val) : null },
+        { key: 'Skill Test 2 (Lab)', val: valCIE4, att: att4Val !== '' ? parseFloat(att4Val) : null },
+        { key: 'Activity', val: valCIE5, att: att5Val !== '' ? parseFloat(att5Val) : null }
     ];
+
+    const isTheoryOnly = subjectRole === 'THEORY';
+    const isLabOnly = subjectRole === 'LAB';
+
     const parts = []; let worstColor = '#94a3b8'; let worstBg = 'transparent';
     cieVals.forEach(c => {
+        if (c.val === -2.0) return; // Skip absent for low marks warnings
         const v = c.val !== '' && c.val !== null && c.val !== undefined ? parseFloat(c.val) : null;
         const att = c.att;
         if (v == null) return;
@@ -165,16 +186,16 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
     });
 
     return (<tr key={student.id}><td>{index + 1}</td><td style={{ width: '150px', minWidth: '150px', fontWeight: 600 }}>{student.regNo}</td><td style={{ width: '350px', minWidth: '350px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px', fontWeight: 500 }} title={student.name}>{student.name}</td>
-        {['cie1', 'all'].includes(selectedCieType) && <td style={['cie1', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE1} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie1', newVal)} /></td>}
-        {['cie1', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att1Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie1Att', newVal)} /></td>}
-        {['cie2', 'all'].includes(selectedCieType) && <td style={['cie2', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE2} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie2', newVal)} /></td>}
-        {['cie2', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att2Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie2Att', newVal)} /></td>}
-        {['cie3', 'all'].includes(selectedCieType) && <td style={['cie3', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE3} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie3', newVal)} /></td>}
-        {['cie3', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att3Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie3Att', newVal)} /></td>}
-        {['cie4', 'all'].includes(selectedCieType) && <td style={['cie4', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE4} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie4', newVal)} /></td>}
-        {['cie4', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att4Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie4Att', newVal)} /></td>}
-        {['cie5', 'all'].includes(selectedCieType) && <td style={['cie5', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE5} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie5', newVal)} /></td>}
-        {['cie5', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att5Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie5Att', newVal)} /></td>}
+        {['cie1', 'all'].includes(selectedCieType) && <td style={['cie1', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE1} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie1', newVal)} disabled={isLabOnly && valCIE1 !== '' && valCIE1 !== null} /></td>}
+        {['cie1', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att1Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie1Att', newVal)} disabled={isLabOnly && att1Val !== '' && att1Val !== null} /></td>}
+        {['cie2', 'all'].includes(selectedCieType) && <td style={['cie2', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE2} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie2', newVal)} disabled={isTheoryOnly && valCIE2 !== '' && valCIE2 !== null} /></td>}
+        {['cie2', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att2Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie2Att', newVal)} disabled={isTheoryOnly && att2Val !== '' && att2Val !== null} /></td>}
+        {['cie3', 'all'].includes(selectedCieType) && <td style={['cie3', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE3} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie3', newVal)} disabled={isLabOnly && valCIE3 !== '' && valCIE3 !== null} /></td>}
+        {['cie3', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att3Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie3Att', newVal)} disabled={isLabOnly && att3Val !== '' && att3Val !== null} /></td>}
+        {['cie4', 'all'].includes(selectedCieType) && <td style={['cie4', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE4} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie4', newVal)} disabled={isTheoryOnly && valCIE4 !== '' && valCIE4 !== null} /></td>}
+        {['cie4', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att4Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie4Att', newVal)} disabled={isTheoryOnly && att4Val !== '' && att4Val !== null} /></td>}
+        {['cie5', 'all'].includes(selectedCieType) && <td style={['cie5', 'all'].includes(selectedCieType) && selectedCieType !== 'all' ? { background: '#f8fafc' } : {}}><DebouncedInput className={styles.markInput} value={valCIE5} max={50} onChange={(newVal) => handleMarkChange(student.id, 'cie5', newVal)} disabled={isLabOnly && valCIE5 !== '' && valCIE5 !== null} /></td>}
+        {['cie5', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}><DebouncedInput className={styles.markInput} style={{ border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={att5Val} max={100} onChange={(newVal) => handleMarkChange(student.id, 'cie5Att', newVal)} disabled={isLabOnly && att5Val !== '' && att5Val !== null} /></td>}
 
         <td style={{ fontWeight: 'bold' }}>{Math.min(total, 250)}</td>
 
@@ -209,11 +230,11 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
             };
 
             const allCies = [
-                getCieRemark(valCIE1 !== '' ? parseFloat(valCIE1) : null, att1Val !== '' ? parseFloat(att1Val) : null, 'CIE-1'),
-                getCieRemark(valCIE2 !== '' ? parseFloat(valCIE2) : null, att2Val !== '' ? parseFloat(att2Val) : null, 'CIE-2'),
-                getCieRemark(valCIE3 !== '' ? parseFloat(valCIE3) : null, att3Val !== '' ? parseFloat(att3Val) : null, 'CIE-3'),
-                getCieRemark(valCIE4 !== '' ? parseFloat(valCIE4) : null, att4Val !== '' ? parseFloat(att4Val) : null, 'CIE-4'),
-                getCieRemark(valCIE5 !== '' ? parseFloat(valCIE5) : null, att5Val !== '' ? parseFloat(att5Val) : null, 'CIE-5')
+                getCieRemark(valCIE1 !== '' ? (valCIE1 === -2.0 ? 0 : parseFloat(valCIE1)) : null, att1Val !== '' ? parseFloat(att1Val) : null, 'CIE-1 (Theory)'),
+                getCieRemark(valCIE2 !== '' ? (valCIE2 === -2.0 ? 0 : parseFloat(valCIE2)) : null, att2Val !== '' ? parseFloat(att2Val) : null, 'Skill Test 1 (Lab)'),
+                getCieRemark(valCIE3 !== '' ? (valCIE3 === -2.0 ? 0 : parseFloat(valCIE3)) : null, att3Val !== '' ? parseFloat(att3Val) : null, 'CIE-2 (Theory)'),
+                getCieRemark(valCIE4 !== '' ? (valCIE4 === -2.0 ? 0 : parseFloat(valCIE4)) : null, att4Val !== '' ? parseFloat(att4Val) : null, 'Skill Test 2 (Lab)'),
+                getCieRemark(valCIE5 !== '' ? (valCIE5 === -2.0 ? 0 : parseFloat(valCIE5)) : null, att5Val !== '' ? parseFloat(att5Val) : null, 'Activity')
             ];
             const filled = allCies.filter(r => r !== null);
 
@@ -227,7 +248,7 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
 
                 let text = '';
                 if (lowMarksCies.length > 0 && lowAttCies.length > 0) {
-                    text = `Needs Attention – Low marks in ${lowMarksCies.length} CIE${lowMarksCies.length > 1 ? 's' : ''}, Low attendance in ${lowAttCies.length} CIE${lowAttCies.length > 1 ? 's' : ''}`;
+                    text = `Needs Attention – Low marks in ${lowMarksCies.join(', ')}, Low attendance in ${lowAttCies.join(', ')}`;
                 } else if (lowMarksCies.length > 0) {
                     text = `Below Average – Low marks in ${lowMarksCies.join(', ')}`;
                 } else if (lowAttCies.length > 0) {
@@ -243,6 +264,17 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
                 return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
             }
 
+            const getLabel = (type) => {
+                const map = {
+                    cie1: 'CIE-1 (Theory)',
+                    cie2: 'Skill Test 1 (Lab)',
+                    cie3: 'CIE-2 (Theory)',
+                    cie4: 'Skill Test 2 (Lab)',
+                    cie5: 'Activity'
+                };
+                return map[type] || type.toUpperCase();
+            };
+
             const focused = getCieRemark(
                 selectedCieType === 'cie1' ? (valCIE1 !== '' ? parseFloat(valCIE1) : null) :
                     selectedCieType === 'cie2' ? (valCIE2 !== '' ? parseFloat(valCIE2) : null) :
@@ -256,7 +288,7 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
                             selectedCieType === 'cie4' ? (att4Val !== '' ? parseFloat(att4Val) : null) :
                                 (att5Val !== '' ? parseFloat(att5Val) : null),
 
-                selectedCieType.replace('cie', 'CIE-')
+                getLabel(selectedCieType)
             );
             if (!focused) return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
             const color = focused.severity >= 3 ? '#dc2626' : focused.severity >= 2 ? '#ea580c' : focused.severity === 0 ? '#15803d' : '#2563eb';
@@ -290,15 +322,22 @@ const HODAllSubjectsStudentRow = React.memo(({ student, index, editMarks, validS
                     {cieTypes.map((cieKey, cieIdx) => {
                         const valCIE = (subjectMarks[cieKey] !== undefined && subjectMarks[cieKey] !== null) ? subjectMarks[cieKey] : '';
                         const valAtt = (subjectMarks[`${cieKey}Att`] !== undefined && subjectMarks[`${cieKey}Att`] !== null) ? subjectMarks[`${cieKey}Att`] : '';
-                        const isLastCie = cieIdx === cieTypes.length - 1;
+                        const isTheoryOnly = (sub.role === 'THEORY' || (!sub.role && !sub.name.toLowerCase().includes('lab')));
+                        const isLabOnly = (sub.role === 'LAB' || (!sub.role && sub.name.toLowerCase().includes('lab')));
+                        
+                        const isTheoryCie = ['cie1', 'cie3', 'cie5'].includes(cieKey);
+                        const isLabCie = ['cie2', 'cie4'].includes(cieKey);
+                        
+                        const isDisabled = ((isTheoryOnly && isLabCie) || (isLabOnly && isTheoryCie)) && (valCIE !== '' && valCIE !== null);
+                        const isAttDisabled = ((isTheoryOnly && isLabCie) || (isLabOnly && isTheoryCie)) && (valAtt !== '' && valAtt !== null);
 
                         return (
                             <React.Fragment key={`${sub.id}-${cieKey}`}>
                                 <td style={{ background: '#f8fafc', padding: '4px', width: '55px', minWidth: '55px', borderBottom: '1px solid #e2e8f0' }}>
-                                    <DebouncedInput className={styles.markInput} style={{ width: '100%', minWidth: '45px', padding: '6px 4px', textAlign: 'center' }} value={valCIE} max={50} onChange={(newVal) => handleMarkChange(student.id, cieKey, newVal, sub.id)} />
+                                    <DebouncedInput className={styles.markInput} style={{ width: '100%', minWidth: '45px', padding: '6px 4px', textAlign: 'center' }} value={valCIE} max={50} onChange={(newVal) => handleMarkChange(student.id, cieKey, newVal, sub.id)} disabled={isDisabled} />
                                 </td>
-                                <td style={{ background: '#f0fdf4', padding: '4px', width: '55px', minWidth: '55px', borderRight: isLastCie ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0' }}>
-                                    <DebouncedInput className={styles.markInput} style={{ width: '100%', minWidth: '45px', padding: '6px 4px', textAlign: 'center', border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={valAtt} max={100} onChange={(newVal) => handleMarkChange(student.id, `${cieKey}Att`, newVal, sub.id)} />
+                                <td style={{ background: '#f0fdf4', padding: '4px', width: '55px', minWidth: '55px', borderRight: cieIdx === cieTypes.length - 1 ? '1px solid #e2e8f0' : 'none', borderBottom: '1px solid #e2e8f0' }}>
+                                    <DebouncedInput className={styles.markInput} style={{ width: '100%', minWidth: '45px', padding: '6px 4px', textAlign: 'center', border: '1px solid #86efac', color: '#15803d', background: '#f0fdf4' }} value={valAtt} max={100} onChange={(newVal) => handleMarkChange(student.id, `${cieKey}Att`, newVal, sub.id)} disabled={isAttDisabled} />
                                 </td>
                             </React.Fragment>
                         );
@@ -324,7 +363,7 @@ const HODAllSubjectsStudentRow = React.memo(({ student, index, editMarks, validS
                     const att = subMarks[`${cie}Att`];
                     if (score !== undefined && score !== null && score !== '') {
                         totalEvaluated++;
-                        const s = parseFloat(score);
+                        const s = score === -2.0 ? 0 : parseFloat(score);
                         const a = parseFloat(att);
                         if (s < lowMarksThreshold) lowMarksCount++;
                         if (a < lowAttThreshold) lowAttCount++;
@@ -503,11 +542,16 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         username: '',
         email: '',
         password: 'password',
-        designation: 'Faculty',
+        designation: 'Sr. Lecturer',
         semester: '',
         section: '',
         subjects: ''
     });
+
+    // Custom Designations for Faculty
+    const [customDesignations, setCustomDesignations] = useState(['Sr. Lecturer', 'Lecturer', 'Asst-Lecturer', 'Inst']);
+    const [showAddDesignationInput, setShowAddDesignationInput] = useState(false);
+    const [newDesignationName, setNewDesignationName] = useState('');
 
     // CIE Schedule Form State
     const [scheduleForm, setScheduleForm] = useState({
@@ -706,8 +750,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
         { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
         { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, isActive: activeTab === 'update-marks', onClick: () => { setSelectedSubject(null); setSelectedSemester('all'); setActiveTab('update-marks'); } },
+        { label: 'My Profile', category: 'Account', path: '#profile', icon: <User size={20} />, isActive: activeTab === 'profile', onClick: () => setActiveTab('profile') },
         {
-            label: 'Notifications', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: async () => {
+            label: 'Notifications', category: 'Account', path: '#notifications', icon: <Bell size={20} />, isActive: activeTab === 'notifications', onClick: async () => {
                 setActiveTab('notifications');
                 setUnreadCount(0);
                 setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -776,7 +821,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             username: fac.username || '',
             email: fac.email || '',
             password: '',
-            designation: fac.designation || 'Assistant Professor',
+            designation: fac.designation || 'Sr. Lecturer',
             semester: fac.semester || '',
             section: fac.section || '',
             subjects: fac.subjects || '',
@@ -1407,7 +1452,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     const handleMarkChange = (studentId, field, value, subjectId = null) => {
         let finalValue = value;
-        if (value !== '') {
+        if (value === 'AB') {
+            finalValue = -2.0;
+        } else if (value !== '') {
             let numValue = parseInt(value, 10);
             if (isNaN(numValue)) return;
             const max = field.includes('Att') ? 100 : 50;
@@ -2838,6 +2885,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     // Extracted tab-rendering content into a reusable function
     const renderContent = () => (
         <>
+            {activeTab === 'profile' && <ProfileModal inline={true} />}
             {activeTab === 'announcements' && (<div className={styles.announcementContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department IA Schedule</h3><div style={{ display: 'flex', gap: '10px' }}><button className={styles.secondaryBtn}><Calendar size={16} /> Sync to Calendar</button><button className={styles.quickBtn} style={{ background: '#fef3c7', color: '#d97706' }}><ShieldAlert size={16} /> Check Conflicts</button></div></div><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>CIE Round</th><th>Faculty</th><th>Scheduled Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{departmentAnnouncements.length > 0 ? departmentAnnouncements.map((ann, idx) => (<tr key={idx}><td style={{ fontWeight: 600 }}>{ann.subject?.name}</td><td><span className={styles.tag}>CIE-{ann.cieNumber}</span></td><td>{ann.faculty?.username}</td><td>{ann.scheduledDate}</td><td><span className={`${styles.statusBadge} ${styles.approved}`}>{ann.status || 'SCHEDULED'}</span></td><td>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button className={styles.iconBtn} onClick={() => handleEditSchedule(ann)} title="Edit" style={{ color: '#2563eb', background: '#dbeafe' }}><Edit size={16} /></button>
@@ -3094,11 +3142,11 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                         </select>
                         <select className={styles.deptSelect} value={selectedCieType} onChange={(e) => setSelectedCieType(e.target.value)} style={{ marginRight: '10px' }}>
                             <option value="all">All CIEs & Attendance</option>
-                            <option value="cie1">CIE-1</option>
-                            <option value="cie2">CIE-2</option>
-                            <option value="cie3">CIE-3</option>
-                            <option value="cie4">CIE-4</option>
-                            <option value="cie5">CIE-5</option>
+                            <option value="cie1">CIE-1 (Theory)</option>
+                            <option value="cie2">Skill Test 1 (Lab)</option>
+                            <option value="cie3">CIE-2 (Theory)</option>
+                            <option value="cie4">Skill Test 2 (Lab)</option>
+                            <option value="cie5">Activity</option>
                         </select>
                         <select className={styles.deptSelect} value={selectedSubject?.id || ''} disabled={!selectedSemester || selectedSemester === 'all'} onChange={(e) => {
                             setIsTableLoading(true);
@@ -3215,31 +3263,31 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                     <React.Fragment key={`subhead-${sub.id}`}>
                                                         {['cie1', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }}>C1</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }} title="CIE-1 (Theory)">C1</th>
                                                                 <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie1' ? '1px solid #e2e8f0' : 'none' }}>A1</th>
                                                             </>
                                                         )}
                                                         {['cie2', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }}>C2</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }} title="Skill Test 1 (Lab)">S1</th>
                                                                 <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie2' ? '1px solid #e2e8f0' : 'none' }}>A2</th>
                                                             </>
                                                         )}
                                                         {['cie3', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }}>C3</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }} title="CIE-2 (Theory)">C2</th>
                                                                 <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie3' ? '1px solid #e2e8f0' : 'none' }}>A3</th>
                                                             </>
                                                         )}
                                                         {['cie4', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }}>C4</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }} title="Skill Test 2 (Lab)">S2</th>
                                                                 <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie4' ? '1px solid #e2e8f0' : 'none' }}>A4</th>
                                                             </>
                                                         )}
                                                         {['cie5', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }}>C5</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center' }} title="Activity">AC</th>
                                                                 <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>A5</th>
                                                             </>
                                                         )}
@@ -3270,15 +3318,15 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                 <th style={{ textAlign: 'center' }}>Sl. No.</th>
                                                 <th style={{ width: '150px', minWidth: '150px', textAlign: 'center' }}>Reg No</th>
                                                 <th style={{ width: '350px', minWidth: '350px', textAlign: 'center' }}>Student Name</th>
-                                                {['cie1', 'all'].includes(selectedCieType) && <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (50)</th>}
+                                                {['cie1', 'all'].includes(selectedCieType) && <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (Theory) (50)</th>}
                                                 {['cie1', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                                {['cie2', 'all'].includes(selectedCieType) && <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (50)</th>}
+                                                {['cie2', 'all'].includes(selectedCieType) && <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Skill Test 1 (Lab) (50)</th>}
                                                 {['cie2', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                                {['cie3', 'all'].includes(selectedCieType) && <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-3 (50)</th>}
+                                                {['cie3', 'all'].includes(selectedCieType) && <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (Theory) (50)</th>}
                                                 {['cie3', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                                {['cie4', 'all'].includes(selectedCieType) && <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-4 (50)</th>}
+                                                {['cie4', 'all'].includes(selectedCieType) && <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Skill Test 2 (Lab) (50)</th>}
                                                 {['cie4', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                                {['cie5', 'all'].includes(selectedCieType) && <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-5 (50)</th>}
+                                                {['cie5', 'all'].includes(selectedCieType) && <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Activity (50)</th>}
                                                 {['cie5', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
                                                 <th style={{ textAlign: 'center' }}>Total (250)</th><th style={{ background: '#fefce8', color: '#a16207', width: '250px', minWidth: '250px', textAlign: 'center' }}>Remarks</th>
                                             </tr>
@@ -3294,6 +3342,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                     styles={styles}
                                                     handleMarkChange={handleMarkChange}
                                                     perfConfig={perfConfig}
+                                                    subjectRole={selectedSubject?.role || (selectedSubject?.name?.toLowerCase().includes('lab') ? 'LAB' : 'THEORY')}
                                                 />
                                             ))}
                                         </tbody>
@@ -3381,7 +3430,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 <div className={styles.modalBody}>
                                     <p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>
                                         Status: <span className={`${styles.statusBadge} ${viewingSubject.status === 'Approved' ? styles.approved : viewingSubject.status === 'Submitted' ? styles.submitted : styles.pending}`} style={{ marginLeft: '10px' }}>{viewingSubject.status}</span>
-                                    </p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1</th><th>Att %</th><th>CIE-2</th><th>CIE-3</th><th>CIE-4</th><th>CIE-5</th><th>Total</th></tr></thead><tbody>{(() => { const subjectMarks = subjectMarksData[viewingSubject.name] || []; const studentsToShow = viewingSubject.status === 'Pending' ? deptStudents.filter(student => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); return !studentMark || (studentMark.cie1Score === null && studentMark.cie2Score === null && studentMark.cie3Score === null); }) : deptStudents; return studentsToShow.map((student, index) => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); const cie1 = studentMark?.cie1Score ?? '-'; const cie2 = studentMark?.cie2Score ?? '-'; const cie3 = studentMark?.cie3Score ?? '-'; const cie4 = studentMark?.cie4Score ?? '-'; const cie5 = studentMark?.cie5Score ?? '-'; const att = studentMark?.attendancePercentage ?? '-'; const total = (studentMark?.cie1Score || 0) + (studentMark?.cie2Score || 0) + (studentMark?.cie3Score || 0) + (studentMark?.cie4Score || 0) + (studentMark?.cie5Score || 0); return (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{cie1}</td><td>{att !== '-' ? `${att}%` : '-'}</td><td>{cie2}</td><td>{cie3}</td><td>{cie4}</td><td>{cie5}</td><td style={{ fontWeight: 'bold' }}>{studentMark ? total : '-'}</td></tr>); }); })()}</tbody></table></div></div></div></div>)}</div>)}
+                                    </p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1 (T)</th><th>Att %</th><th>ST-1 (L)</th><th>CIE-2 (T)</th><th>ST-2 (L)</th><th>Activity</th><th>Total</th></tr></thead><tbody>{(() => { const subjectMarks = subjectMarksData[viewingSubject.name] || []; const studentsToShow = viewingSubject.status === 'Pending' ? deptStudents.filter(student => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); return !studentMark || (studentMark.cie1Score === null && studentMark.cie2Score === null && studentMark.cie3Score === null); }) : deptStudents; return studentsToShow.map((student, index) => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); const cie1 = studentMark?.cie1Score ?? '-'; const cie2 = studentMark?.cie2Score ?? '-'; const cie3 = studentMark?.cie3Score ?? '-'; const cie4 = studentMark?.cie4Score ?? '-'; const cie5 = studentMark?.cie5Score ?? '-'; const att = studentMark?.attendancePercentage ?? '-'; const total = (studentMark?.cie1Score || 0) + (studentMark?.cie2Score || 0) + (studentMark?.cie3Score || 0) + (studentMark?.cie4Score || 0) + (studentMark?.cie5Score || 0); return (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{cie1}</td><td>{att !== '-' ? `${att}%` : '-'}</td><td>{cie2}</td><td>{cie3}</td><td>{cie4}</td><td>{cie5}</td><td style={{ fontWeight: 'bold' }}>{studentMark ? total : '-'}</td></tr>); }); })()}</tbody></table></div></div></div></div>)}</div>)}
             {activeTab === 'performance' && (() => {
                 const applyFilters = (list) => list
                     .filter(item => hodFilterSubject === 'All' || item.subject === hodFilterSubject)
@@ -3486,7 +3535,11 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 </select>
                                 <select className={styles.filterSelect} value={hodFilterCIE} onChange={(e) => setHodFilterCIE(e.target.value)}>
                                     <option value="All">All CIE</option>
-                                    {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => (<option key={cie} value={cie}>{cie}</option>))}
+                                    <option value="CIE1">CIE-1 (Theory)</option>
+                                    <option value="CIE2">Skill Test 1 (Lab)</option>
+                                    <option value="CIE3">CIE-2 (Theory)</option>
+                                    <option value="CIE4">Skill Test 2 (Lab)</option>
+                                    <option value="CIE5">Activity</option>
                                 </select>
                             </div>
                         </div>
@@ -3779,7 +3832,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                         <div className={styles.cardHeader}>
                             <h3>Department Faculty ({facultyList.length})</h3>
                             <div style={{ display: 'flex', gap: '1rem', position: 'relative' }}>
-                                <button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password', designation: 'Faculty', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button>
+                                <button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password', designation: 'Sr. Lecturer', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button>
                                 <div style={{ position: 'relative' }}>
                                     <button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}><Edit size={16} /> Edit Faculty</button>
                                     {showEditSelection && (
@@ -3871,7 +3924,70 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                         <div className={styles.formGroup}><label>Username</label><input value={facultyForm.username} onChange={e => setFacultyForm({ ...facultyForm, username: e.target.value })} required placeholder="jdoe" className={styles.input} />{editingFaculty && <small style={{ color: '#64748b', fontSize: '0.75rem' }}>⚠️ Changing the username will update the faculty's login ID.</small>}</div>
                                         <div className={styles.formGroup}><label>Email</label><input value={facultyForm.email} onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })} type="email" required placeholder="john@college.edu" className={styles.input} /></div>
                                         {!editingFaculty && (<div className={styles.formGroup}><label>Password</label><input value={facultyForm.password} onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })} required placeholder="password" className={styles.input} /></div>)}
-                                        <div className={styles.formGroup}><label>Designation</label><select value={facultyForm.designation} onChange={e => setFacultyForm({ ...facultyForm, designation: e.target.value })} className={styles.input}><option>Faculty</option><option>Guest Faculty</option></select></div>
+                                        <div className={styles.formGroup}>
+                                            <label>Designation</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <select
+                                                    value={facultyForm.designation}
+                                                    onChange={e => {
+                                                        if (e.target.value === 'ADD_NEW') {
+                                                            setShowAddDesignationInput(true);
+                                                        } else {
+                                                            setFacultyForm({ ...facultyForm, designation: e.target.value });
+                                                            setShowAddDesignationInput(false);
+                                                        }
+                                                    }}
+                                                    className={styles.input}
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    {customDesignations.map(desig => (
+                                                        <option key={desig} value={desig}>{desig}</option>
+                                                    ))}
+                                                    <option value="ADD_NEW" style={{ fontWeight: 'bold', color: '#2563eb' }}>+ Add New Designation</option>
+                                                </select>
+                                            </div>
+                                            {showAddDesignationInput && (
+                                                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', animation: 'fadeIn 0.2s ease-out' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter designation name"
+                                                        className={styles.input}
+                                                        value={newDesignationName}
+                                                        onChange={(e) => setNewDesignationName(e.target.value)}
+                                                        autoFocus
+                                                        style={{ flex: 1 }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className={styles.primaryBtn}
+                                                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                                                        onClick={() => {
+                                                            const name = newDesignationName.trim();
+                                                            if (name && !customDesignations.includes(name)) {
+                                                                setCustomDesignations([...customDesignations, name]);
+                                                                setFacultyForm({ ...facultyForm, designation: name });
+                                                                setShowAddDesignationInput(false);
+                                                                setNewDesignationName('');
+                                                            } else if (customDesignations.includes(name)) {
+                                                                setFacultyForm({ ...facultyForm, designation: name });
+                                                                setShowAddDesignationInput(false);
+                                                                setNewDesignationName('');
+                                                            }
+                                                        }}
+                                                    >
+                                                        Add
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.secondaryBtn}
+                                                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                                                        onClick={() => setShowAddDesignationInput(false)}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className={styles.formGroup}><label>CIE Role</label><select value={facultyForm.cieRole || ''} onChange={e => setFacultyForm({ ...facultyForm, cieRole: e.target.value })} className={styles.input}><option value=''>All CIEs (Default)</option><option value='THEORY'>Theory Only (CIE-1, 2, 5)</option><option value='LAB'>Lab Only (CIE-3, 4)</option></select><small style={{ color: '#64748b', fontSize: '0.75rem' }}>Set for subjects shared between Theory and Lab faculty.</small></div>
                                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                                             <button type="button" className={styles.secondaryBtn} onClick={() => setShowAddFacultyModal(false)}>Cancel</button>
@@ -4062,11 +4178,11 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>CIE Type</label>
                                     <select className={styles.select} id="unlockCIE" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
-                                        <option value="CIE1">CIE-1</option>
-                                        <option value="CIE2">CIE-2</option>
-                                        <option value="CIE3">CIE-3</option>
-                                        <option value="CIE4">CIE-4</option>
-                                        <option value="CIE5">CIE-5</option>
+                                        <option value="CIE1">CIE-1 (Theory)</option>
+                                        <option value="CIE2">Skill Test 1 (Lab)</option>
+                                        <option value="CIE3">CIE-2 (Theory)</option>
+                                        <option value="CIE4">Skill Test 2 (Lab)</option>
+                                        <option value="CIE5">Activity</option>
                                     </select>
                                 </div>
                                 <button
@@ -4238,7 +4354,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                 fontWeight: scheduleForm.cieNumber === num ? '600' : '400'
                                             }}>
                                                 <input type="radio" name="cieNumber" value={num} checked={scheduleForm.cieNumber === num} onChange={() => setScheduleForm({ ...scheduleForm, cieNumber: num })} style={{ display: 'none' }} />
-                                                CIE-{num}
+                                                {num === 1 ? 'CIE-1 (T)' : num === 2 ? 'ST-1 (L)' : num === 3 ? 'CIE-2 (T)' : num === 4 ? 'ST-2 (L)' : 'Activity'}
                                             </label>
                                         ))}
                                     </div>

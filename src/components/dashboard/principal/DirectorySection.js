@@ -48,22 +48,22 @@ export const StudentProfileModal = ({ selectedStudentProfile, setSelectedStudent
                             <thead>
                                 <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
                                     <th style={{ textAlign: 'left', padding: '0.5rem' }}>Subject</th>
-                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-1</th>
-                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-2</th>
-                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-3</th>
-                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-4</th>
-                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-5</th>
+                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-1 (Theory)</th>
+                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>Skill Test 1 (Lab)</th>
+                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-3 (Theory)</th>
+                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>Skill Test 2 (Lab)</th>
+                                    <th style={{ textAlign: 'center', padding: '0.5rem' }}>CIE-5 (Activity)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {s.subjectMarks && Object.entries(s.subjectMarks).map(([subj, marks]) => (
                                     <tr key={subj} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                         <td style={{ padding: '0.5rem', color: '#0f172a', fontWeight: 500 }}>{subj}</td>
-                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie1 !== undefined ? marks.cie1 : '-'}</td>
-                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie2 !== undefined ? marks.cie2 : '-'}</td>
-                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie3 !== undefined ? marks.cie3 : '-'}</td>
-                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie4 !== undefined ? marks.cie4 : '-'}</td>
-                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie5 !== undefined ? marks.cie5 : '-'}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie1 !== undefined ? (marks.cie1 === -2 ? 'AB' : marks.cie1) : '-'}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie2 !== undefined ? (marks.cie2 === -2 ? 'AB' : marks.cie2) : '-'}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie3 !== undefined ? (marks.cie3 === -2 ? 'AB' : marks.cie3) : '-'}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie4 !== undefined ? (marks.cie4 === -2 ? 'AB' : marks.cie4) : '-'}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.5rem' }}>{marks.cie5 !== undefined ? (marks.cie5 === -2 ? 'AB' : marks.cie5) : '-'}</td>
                                     </tr>
                                 ))}
                                 {(!s.subjectMarks || Object.keys(s.subjectMarks).length === 0) && (
@@ -150,7 +150,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             const matchesSec = section === 'All' || s.section === section;
 
             // Risk calculation: student is at risk if total CIE marks < 40%
-            const totalAcquired = Object.values(s.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 || 0) + (marks.cie2 || 0) + (marks.cie3 || 0) + (marks.cie4 || 0) + (marks.cie5 || 0), 0);
+            const totalAcquired = Object.values(s.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 === -2 ? 0 : (marks.cie1 || 0)) + (marks.cie2 === -2 ? 0 : (marks.cie2 || 0)) + (marks.cie3 === -2 ? 0 : (marks.cie3 || 0)) + (marks.cie4 === -2 ? 0 : (marks.cie4 || 0)) + (marks.cie5 === -2 ? 0 : (marks.cie5 || 0)), 0);
             const totalPossible = Object.values(s.subjectMarks || {}).reduce((count, marks) => count + (marks.cie1 !== undefined ? 1 : 0) + (marks.cie2 !== undefined ? 1 : 0) + (marks.cie3 !== undefined ? 1 : 0) + (marks.cie4 !== undefined ? 1 : 0) + (marks.cie5 !== undefined ? 1 : 0), 0) * 50;
             const percentage = totalPossible > 0 ? (totalAcquired / totalPossible) * 100 : 0;
             const isAtRisk = totalPossible > 0 && percentage < 40;
@@ -207,9 +207,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
 
             Object.entries(m).forEach(([subjName, sm]) => {
                 ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cieType => {
-                    const score = sm[cieType];
                     if (score !== undefined && score !== null && score !== '') {
-                        const scoreNum = parseFloat(score);
+                        const scoreNum = score === -2 ? 0 : parseFloat(score);
                         const attVal = sm[cieType + '_att'] != null ? parseFloat(sm[cieType + '_att']) : null;
                         const dbRemarks = sm[cieType + '_remarks'] || null;
 
@@ -231,7 +230,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                         else low.push(entry);
                     }
                 });
-                totalA += (parseFloat(sm.cie1) || 0) + (parseFloat(sm.cie2) || 0) + (parseFloat(sm.cie3) || 0) + (parseFloat(sm.cie4) || 0) + (parseFloat(sm.cie5) || 0);
+                totalA += (parseFloat(sm.cie1 === -2 ? 0 : sm.cie1) || 0) + (parseFloat(sm.cie2 === -2 ? 0 : sm.cie2) || 0) + (parseFloat(sm.cie3 === -2 ? 0 : sm.cie3) || 0) + (parseFloat(sm.cie4 === -2 ? 0 : sm.cie4) || 0) + (parseFloat(sm.cie5 === -2 ? 0 : sm.cie5) || 0);
                 totalP += (sm.cie1 !== undefined ? 1 : 0) + (sm.cie2 !== undefined ? 1 : 0) + (sm.cie3 !== undefined ? 1 : 0) + (sm.cie4 !== undefined ? 1 : 0) + (sm.cie5 !== undefined ? 1 : 0);
             });
             const pct = (totalP * 50) > 0 ? (totalA / (totalP * 50)) : 0;
@@ -803,7 +802,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
 
                                         <td>
                                             {(() => {
-                                                const totalAcquired = Object.values(student.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 || 0) + (marks.cie2 || 0) + (marks.cie3 || 0) + (marks.cie4 || 0) + (marks.cie5 || 0), 0);
+                                                const totalAcquired = Object.values(student.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 === -2 ? 0 : (marks.cie1 || 0)) + (marks.cie2 === -2 ? 0 : (marks.cie2 || 0)) + (marks.cie3 === -2 ? 0 : (marks.cie3 || 0)) + (marks.cie4 === -2 ? 0 : (marks.cie4 || 0)) + (marks.cie5 === -2 ? 0 : (marks.cie5 || 0)), 0);
                                                 const totalPossible = Object.values(student.subjectMarks || {}).reduce((count, marks) => count + (marks.cie1 !== undefined ? 1 : 0) + (marks.cie2 !== undefined ? 1 : 0) + (marks.cie3 !== undefined ? 1 : 0) + (marks.cie4 !== undefined ? 1 : 0) + (marks.cie5 !== undefined ? 1 : 0), 0) * 50;
                                                 const percentage = totalPossible > 0 ? Math.round((totalAcquired / totalPossible) * 100) : 0;
                                                 return (
@@ -874,11 +873,11 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                 {selectedMarksSubject !== 'ALL' && (
                                     <select className={styles.filterSelect} value={selectedCieType} onChange={e => setSelectedCieType(e.target.value)}>
                                         <option value="all">View All CIEs</option>
-                                        <option value="cie1">CIE-1</option>
-                                        <option value="cie2">CIE-2</option>
-                                        <option value="cie3">CIE-3</option>
-                                        <option value="cie4">CIE-4</option>
-                                        <option value="cie5">CIE-5</option>
+                                        <option value="cie1">CIE-1 (Theory)</option>
+                                        <option value="cie2">Skill Test 1 (Lab)</option>
+                                        <option value="cie3">CIE-3 (Theory)</option>
+                                        <option value="cie4">Skill Test 2 (Lab)</option>
+                                        <option value="cie5">CIE-5 (Activity)</option>
                                     </select>
                                 )}
                             </div>
@@ -900,7 +899,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                         ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cie => {
                                                             if (sm[cie] !== undefined) {
                                                                 subTotal++;
-                                                                if (parseFloat(sm[cie]) >= 20) subPassed++;
+                                                                const score = sm[cie] === -2 ? 0 : parseFloat(sm[cie]);
+                                                                if (score >= 20) subPassed++;
                                                             }
                                                         });
                                                     });
@@ -924,31 +924,31 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                         {['cie1', 'all'].includes(selectedCieType) && (
                                                             <>
                                                                 <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>C1</th>
-                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie1' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A1</th>
+                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie1' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A1%</th>
                                                             </>
                                                         )}
                                                         {['cie2', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>C2</th>
-                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie2' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A2</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>S1</th>
+                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie2' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A2%</th>
                                                             </>
                                                         )}
                                                         {['cie3', 'all'].includes(selectedCieType) && (
                                                             <>
                                                                 <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>C3</th>
-                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie3' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A3</th>
+                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie3' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A3%</th>
                                                             </>
                                                         )}
                                                         {['cie4', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>C4</th>
-                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie4' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A4</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>S2</th>
+                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: selectedCieType === 'cie4' ? '1px solid #cbd5e1' : 'none', borderBottom: '1px solid #cbd5e1' }}>A4%</th>
                                                             </>
                                                         )}
                                                         {['cie5', 'all'].includes(selectedCieType) && (
                                                             <>
-                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>C5</th>
-                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>A5</th>
+                                                                <th style={{ background: '#eff6ff', color: '#1d4ed8', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>AC</th>
+                                                                <th style={{ background: '#f0fdf4', color: '#15803d', width: '55px', minWidth: '55px', padding: '8px 2px', fontSize: '0.8rem', textAlign: 'center', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>A5%</th>
                                                             </>
                                                         )}
                                                     </React.Fragment>
@@ -977,8 +977,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                                         if (sm.cie1 !== undefined) { grandTotal += parseFloat(sm.cie1); grandCount++; }
                                                                         return (
                                                                             <>
-                                                                                <td style={{ textAlign: 'center', padding: '6px', borderRight: '1px dashed #e2e8f0', color: sm.cie1 !== undefined && sm.cie1 < 20 ? '#ef4444' : '#1e293b', fontWeight: sm.cie1 !== undefined ? 600 : 400, background: '#f8fafc' }}>
-                                                                                    {sm.cie1 !== undefined ? sm.cie1 : '-'}
+                                                                                <td style={{ textAlign: 'center', padding: '6px', borderRight: '1px dashed #e2e8f0', color: sm.cie1 !== undefined && (sm.cie1 === -2 || sm.cie1 < 20) ? '#ef4444' : '#1e293b', fontWeight: sm.cie1 !== undefined ? 600 : 400, background: '#f8fafc' }}>
+                                                                                    {sm.cie1 !== undefined ? (sm.cie1 === -2 ? 'AB' : sm.cie1) : '-'}
                                                                                 </td>
                                                                                 <td style={{ textAlign: 'center', padding: '6px', borderRight: '1px solid #cbd5e1', color: '#64748b', fontSize: '0.85rem' }}>
                                                                                     {sm.cie1_att !== undefined ? sm.cie1_att + '%' : '-'}
@@ -1042,8 +1042,8 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                             );
                                                         })}
                                                         <td style={{ textAlign: 'center', borderLeft: '1px solid #e2e8f0', fontWeight: 'bold', backgroundColor: '#fefce8', verticalAlign: 'middle', padding: '8px' }}>
-                                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', background: grandCount > 0 && (grandTotal / grandCount) >= 20 ? '#dcfce7' : '#fee2e2', color: grandCount > 0 && (grandTotal / grandCount) >= 20 ? '#16a34a' : '#ef4444' }}>
-                                                                {grandCount > 0 ? Math.round(grandTotal / grandCount) : '-'}
+                                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', background: grandCount > 0 && ((grandTotal < 0 ? 0 : grandTotal) / grandCount) >= 20 ? '#dcfce7' : '#fee2e2', color: grandCount > 0 && ((grandTotal < 0 ? 0 : grandTotal) / grandCount) >= 20 ? '#16a34a' : '#ef4444' }}>
+                                                                {grandCount > 0 ? Math.round((grandTotal < 0 ? 0 : grandTotal) / grandCount) : '-'}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1060,11 +1060,11 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                 <th rowSpan="2" style={{ background: '#f8fafc', width: '50px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>Sl. No.</th>
                                                 <th rowSpan="2" style={{ background: '#f8fafc', width: '120px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>Reg No</th>
                                                 <th rowSpan="2" style={{ background: '#f8fafc', width: '220px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>Student Name</th>
-                                                {['cie1', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-1 (50)</th>}
-                                                {['cie2', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-2 (50)</th>}
-                                                {['cie3', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-3 (50)</th>}
-                                                {['cie4', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-4 (50)</th>}
-                                                {['cie5', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-5 (50)</th>}
+                                                {['cie1', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-1 (Theory)</th>}
+                                                {['cie2', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>Skill Test 1 (Lab)</th>}
+                                                {['cie3', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-3 (Theory)</th>}
+                                                {['cie4', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>Skill Test 2 (Lab)</th>}
+                                                {['cie5', 'all'].includes(selectedCieType) && <th colSpan={2} style={{ background: '#eff6ff', color: '#1d4ed8', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', textAlign: 'center' }}>CIE-5 (Activity)</th>}
                                                 <th rowSpan="2" style={{ textAlign: 'center', background: '#fefce8', color: '#a16207', borderBottom: '1px solid #cbd5e1' }}>Total</th>
                                             </tr>
                                             <tr>
@@ -1115,7 +1115,10 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                                             </React.Fragment>
                                                         )}
                                                         <td style={{ textAlign: 'center', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', backgroundColor: '#fefce8', color: '#0f172a' }}>
-                                                            {((sm.cie1 || 0) + (sm.cie2 || 0) + (sm.cie3 || 0) + (sm.cie4 || 0) + (sm.cie5 || 0)) || '-'}
+                                                            {(() => {
+                                                                const t = (sm.cie1 === -2 ? 0 : (sm.cie1 || 0)) + (sm.cie2 === -2 ? 0 : (sm.cie2 || 0)) + (sm.cie3 === -2 ? 0 : (sm.cie3 || 0)) + (sm.cie4 === -2 ? 0 : (sm.cie4 || 0)) + (sm.cie5 === -2 ? 0 : (sm.cie5 || 0));
+                                                                return t || '-';
+                                                            })()}
                                                         </td>
                                                     </tr>
                                                 );
@@ -1169,7 +1172,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                     </select>
                                     <select className={styles.filterSelect} value={perfCieFilter} onChange={(e) => setPerfCieFilter(e.target.value)}>
                                         <option value="All">All CIE</option>
-                                        {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => (<option key={cie} value={cie}>{cie}</option>))}
+                                        {['CIE1 (Theory)', 'Skill Test 1 (Lab)', 'CIE3 (Theory)', 'Skill Test 2 (Lab)', 'CIE-5 (Activity)'].map((label, idx) => (<option key={idx} value={`CIE${idx+1}`}>{label}</option>))}
                                     </select>
                                 </div>
                             </div>

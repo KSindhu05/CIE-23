@@ -3,12 +3,13 @@ import DashboardLayout from '../components/DashboardLayout';
 import API_BASE_URL from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useDialog } from '../components/GlobalDialogProvider';
-import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingUp, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2, Building2, Send, RefreshCw, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, Save, AlertCircle, Phone, FileText, CheckCircle, Search, Filter, Mail, X, Download, Clock, BarChart2, TrendingUp, TrendingDown, Award, ClipboardList, AlertTriangle, Edit3, Edit, Calendar, UserCheck, BookOpen, Upload, Megaphone, Lock, Bell, MapPin, Trash2, Building2, Send, RefreshCw, MessageSquare, User, ChevronDown } from 'lucide-react';
 import { facultyData, facultyProfiles, facultySubjects, studentsList, labSchedule, getMenteesForFaculty } from '../utils/mockData';
 import styles from './FacultyDashboard.module.css';
 import authenticatedFetch from '../utils/authFetch';
 import Skeleton from '../components/ui/Skeleton';
 import { StudentProfileModal } from '../components/dashboard/principal/DirectorySection';
+import ProfileModal from '../components/ProfileModal';
 
 
 
@@ -68,8 +69,8 @@ const DebouncedInput = ({ value, onChange, max, style, className, disabled, onFo
     };
 
     const handleChange = (e) => {
-        let val = e.target.value;
-        if (val === 'Ab') {
+        let val = e.target.value.toUpperCase();
+        if (val === 'A' || val === 'AB') {
             setLocalValue(val);
             return;
         }
@@ -90,10 +91,10 @@ const DebouncedInput = ({ value, onChange, max, style, className, disabled, onFo
 
     return (
         <input
-            type="number"
+            type="text"
             className={className}
             style={style}
-            value={localValue === null || localValue === undefined ? '' : localValue}
+            value={localValue === null || localValue === undefined ? '' : (localValue === -2.0 ? 'AB' : localValue)}
             max={max}
             min="0"
             disabled={disabled}
@@ -105,16 +106,15 @@ const DebouncedInput = ({ value, onChange, max, style, className, disabled, onFo
     );
 };
 
-const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, setSelectedCieType, styles, handleMarkChange, cieLockStatus, calculateAverage }) => {
+const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, setSelectedCieType, styles, handleMarkChange, cieLockStatus, calculateAverage, subjectRole }) => {
     const sMarks = marks || {};
     const ia1Mark = sMarks['CIE1'] || {};
 
-    const valCIE1 = sMarks.cie1 !== undefined ? sMarks.cie1 : (ia1Mark.cie1Score != null ? ia1Mark.cie1Score : '');
-    const valCIE2 = sMarks.cie2 !== undefined ? sMarks.cie2 : (ia1Mark.cie2Score != null ? ia1Mark.cie2Score : '');
-    const valCIE3 = sMarks.cie3 !== undefined ? sMarks.cie3 : '';
-    const valCIE4 = sMarks.cie4 !== undefined ? sMarks.cie4 : '';
-    const valCIE5 = sMarks.cie5 !== undefined ? sMarks.cie5 : '';
-
+    const valCIE1 = sMarks.cie1 !== undefined ? (sMarks.cie1 === -2.0 ? 'AB' : sMarks.cie1) : (ia1Mark.cie1Score != null ? (ia1Mark.cie1Score === -2.0 ? 'AB' : ia1Mark.cie1Score) : '');
+    const valCIE2 = sMarks.cie2 !== undefined ? (sMarks.cie2 === -2.0 ? 'AB' : sMarks.cie2) : (ia1Mark.cie2Score != null ? (ia1Mark.cie2Score === -2.0 ? 'AB' : ia1Mark.cie2Score) : '');
+    const valCIE3 = sMarks.cie3 !== undefined ? (sMarks.cie3 === -2.0 ? 'AB' : sMarks.cie3) : '';
+    const valCIE4 = sMarks.cie4 !== undefined ? (sMarks.cie4 === -2.0 ? 'AB' : sMarks.cie4) : '';
+    const valCIE5 = sMarks.cie5 !== undefined ? (sMarks.cie5 === -2.0 ? 'AB' : sMarks.cie5) : '';
     const renderAttendanceCell = (cieKey) => {
         if (selectedCieType !== cieKey && selectedCieType !== 'all') return null;
         const attField = cieKey + 'Att';
@@ -144,8 +144,8 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     onChange={(newVal) => handleMarkChange(student.id, 'cie1', newVal)}
                     onFocus={() => { if (selectedCieType !== 'all') setSelectedCieType('cie1') }}
                     max={50}
-                    disabled={cieLockStatus.cie1}
-                    style={cieLockStatus.cie1 ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
+                    disabled={(cieLockStatus.cie1 && (valCIE1 !== '' && valCIE1 !== null)) || subjectRole?.toUpperCase() === 'LAB'}
+                    style={(cieLockStatus.cie1 && (valCIE1 !== '' && valCIE1 !== null)) || subjectRole?.toUpperCase() === 'LAB' ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
                 />
             </td>
             {renderAttendanceCell('cie1')}
@@ -156,8 +156,8 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     onChange={(newVal) => handleMarkChange(student.id, 'cie2', newVal)}
                     onFocus={() => { if (selectedCieType !== 'all') setSelectedCieType('cie2') }}
                     max={50}
-                    disabled={cieLockStatus.cie2}
-                    style={cieLockStatus.cie2 ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
+                    disabled={(cieLockStatus.cie2 && (valCIE2 !== '' && valCIE2 !== null)) || subjectRole?.toUpperCase() === 'THEORY'}
+                    style={(cieLockStatus.cie2 && (valCIE2 !== '' && valCIE2 !== null)) || subjectRole?.toUpperCase() === 'THEORY' ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
                 />
             </td>
             {renderAttendanceCell('cie2')}
@@ -168,8 +168,8 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     onChange={(newVal) => handleMarkChange(student.id, 'cie3', newVal)}
                     onFocus={() => { if (selectedCieType !== 'all') setSelectedCieType('cie3') }}
                     max={50}
-                    disabled={cieLockStatus.cie3}
-                    style={cieLockStatus.cie3 ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
+                    disabled={(cieLockStatus.cie3 && (valCIE3 !== '' && valCIE3 !== null)) || subjectRole?.toUpperCase() === 'LAB'}
+                    style={(cieLockStatus.cie3 && (valCIE3 !== '' && valCIE3 !== null)) || subjectRole?.toUpperCase() === 'LAB' ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
                 />
             </td>
             {renderAttendanceCell('cie3')}
@@ -180,8 +180,8 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     onChange={(newVal) => handleMarkChange(student.id, 'cie4', newVal)}
                     onFocus={() => { if (selectedCieType !== 'all') setSelectedCieType('cie4') }}
                     max={50}
-                    disabled={cieLockStatus.cie4}
-                    style={cieLockStatus.cie4 ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
+                    disabled={(cieLockStatus.cie4 && (valCIE4 !== '' && valCIE4 !== null)) || subjectRole?.toUpperCase() === 'THEORY'}
+                    style={(cieLockStatus.cie4 && (valCIE4 !== '' && valCIE4 !== null)) || subjectRole?.toUpperCase() === 'THEORY' ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
                 />
             </td>
             {renderAttendanceCell('cie4')}
@@ -192,72 +192,84 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     onChange={(newVal) => handleMarkChange(student.id, 'cie5', newVal)}
                     onFocus={() => { if (selectedCieType !== 'all') setSelectedCieType('cie5') }}
                     max={50}
-                    disabled={cieLockStatus.cie5}
-                    style={cieLockStatus.cie5 ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
+                    disabled={(cieLockStatus.cie5 && (valCIE5 !== '' && valCIE5 !== null)) || subjectRole?.toUpperCase() === 'LAB'}
+                    style={(cieLockStatus.cie5 && (valCIE5 !== '' && valCIE5 !== null)) || subjectRole?.toUpperCase() === 'LAB' ? { background: '#e5e7eb', cursor: 'not-allowed' } : {}}
                 />
             </td>
             {renderAttendanceCell('cie5')}
             <td style={{ fontWeight: 'bold' }}>{calculateAverage(student)}</td>
-            {(() => {
-                const getCieRemark = (key, label) => {
-                    const v = sMarks[key] !== undefined && sMarks[key] !== '' ? parseFloat(sMarks[key]) : null;
-                    const a = sMarks[key + 'Att'] !== undefined && sMarks[key + 'Att'] !== '' ? parseFloat(sMarks[key + 'Att']) : null;
-                    if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
+            <td style={{ fontWeight: 'bold', background: '#fefce8', color: '#854d0e' }}>
+                {(() => {
+                    const total = calculateAverage(student);
+                    return total !== "-" ? ((total / 250) * 100).toFixed(1) + '%' : "-";
+                })()}
+            </td>
+            <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', verticalAlign: 'top' }}>
+                {(() => {
+                    const getCieRemark = (key, label) => {
+                        const v = sMarks[key] !== undefined && sMarks[key] !== '' ? parseFloat(sMarks[key]) : null;
+                        const a = sMarks[key + 'Att'] !== undefined && sMarks[key + 'Att'] !== '' ? parseFloat(sMarks[key + 'Att']) : null;
+                        if (v == null || isNaN(v) || a == null || isNaN(a)) return null;
 
-                    return {
-                        label,
-                        lowMarks: v < 25,
-                        lowAtt: a < 75,
-                        excellent: v >= 40 && a >= 75,
-                        severity: (v < 25 && a < 75) ? 3 : (v < 25 ? 2 : (a < 75 ? 2 : 0)),
-                        text: (v < 25 && a < 75) ? `${label}: Low Marks, Low Att` :
-                            (v < 25 ? `${label}: Low Marks` :
-                                (a < 75 ? `${label}: Low Att` :
-                                    (v >= 40 && a >= 75 ? `${label}: Excellent` : `${label}: Good`)))
+                        let statusText = "";
+                        let color = "#15803d"; // Default Green (Good)
+
+                        if (v < 25 && a < 75) {
+                            statusText = "Low Marks & Att";
+                            color = "#dc2626"; // Red
+                        } else if (v < 25) {
+                            statusText = "Low Marks";
+                            color = "#ea580c"; // Orange
+                        } else if (a < 75) {
+                            statusText = "Low Att";
+                            color = "#ea580c"; // Orange
+                        } else if (v >= 40 && a >= 75) {
+                            statusText = "Excellent";
+                            color = "#15803d"; // Green
+                        } else {
+                            statusText = "Good";
+                            color = "#15803d"; // Green
+                        }
+
+                        return { label, text: statusText, color, key };
                     };
-                };
-                const allCies = [
-                    getCieRemark('cie1', 'CIE-1'), getCieRemark('cie2', 'CIE-2'),
-                    getCieRemark('cie3', 'CIE-3'), getCieRemark('cie4', 'CIE-4'),
-                    getCieRemark('cie5', 'CIE-5')
-                ];
-                const filled = allCies.filter(r => r !== null);
 
-                if (selectedCieType === 'all' && filled.length > 0) {
-                    const worst = Math.max(...filled.map(r => r.severity));
-                    const color = worst >= 3 ? '#dc2626' : worst >= 2 ? '#ea580c' : '#15803d';
-                    const bg = worst >= 3 ? '#fef2f2' : worst >= 2 ? '#fff7ed' : '#f0fdf4';
+                    const cieConfigs = [
+                        { key: 'cie1', label: 'CIE-1 (T)' },
+                        { key: 'cie2', label: 'ST-1 (L)' },
+                        { key: 'cie3', label: 'CIE-2 (T)' },
+                        { key: 'cie4', label: 'ST-2 (L)' },
+                        { key: 'cie5', label: 'Activity' }
+                    ];
 
-                    const lowMarksCies = filled.filter(r => r.lowMarks).map(r => r.label);
-                    const lowAttCies = filled.filter(r => r.lowAtt).map(r => r.label);
+                    const results = cieConfigs
+                        .map(cfg => getCieRemark(cfg.key, cfg.label))
+                        .filter(r => r !== null);
 
-                    let textParts = [];
-                    if (lowMarksCies.length > 0) {
-                        textParts.push(`${lowMarksCies.join(',')} Low Marks`);
+                    if (results.length === 0) {
+                        return <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>-</div>;
                     }
-                    if (lowAttCies.length > 0) {
-                        textParts.push(`${lowAttCies.join(',')} Low Att`);
-                    }
-                    if (textParts.length === 0) {
-                        const allExcellent = filled.every(r => r.excellent);
-                        textParts.push(allExcellent ? 'All Excellent' : 'All Good');
-                    }
-                    const text = textParts.join(' | ');
-                    return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{text}</div>
-                    </td>;
-                } else if (selectedCieType === 'all' && filled.length === 0) {
-                    return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
-                }
 
-                const focused = getCieRemark(selectedCieType, selectedCieType.replace('cie', 'CIE-'));
-                if (!focused) return <td style={{ width: '250px', minWidth: '250px', padding: 0 }}><div style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '8px 4px' }}>-</div></td>;
-                const color = focused.severity >= 3 ? '#dc2626' : focused.severity >= 2 ? '#ea580c' : focused.severity === 0 ? '#15803d' : '#2563eb';
-                const bg = focused.severity >= 3 ? '#fef2f2' : focused.severity >= 2 ? '#fff7ed' : '#f0fdf4';
-                return <td style={{ width: '250px', minWidth: '250px', padding: '8px 4px', background: bg }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color, whiteSpace: 'normal', wordWrap: 'break-word', lineHeight: '1.4' }}>{focused.text}</div>
-                </td>;
-            })()}
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            {results.map((r, i) => (
+                                <div key={i} style={{ 
+                                    fontSize: '0.65rem', 
+                                    fontWeight: r.key === selectedCieType ? 800 : 500,
+                                    color: r.color,
+                                    lineHeight: '1.2',
+                                    padding: '1px 4px',
+                                    borderRadius: '4px',
+                                    background: r.key === selectedCieType ? '#f8fafc' : 'transparent',
+                                    borderLeft: r.key === selectedCieType ? `3px solid ${r.color}` : 'none'
+                                }}>
+                                    <span style={{ opacity: 0.8 }}>{r.label}:</span> {r.text}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
+            </td>
         </tr>
     );
 }, (prev, next) => {
@@ -268,7 +280,8 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
         prev.styles === next.styles &&
         prev.handleMarkChange === next.handleMarkChange &&
         prev.cieLockStatus === next.cieLockStatus &&
-        prev.calculateAverage === next.calculateAverage;
+        prev.calculateAverage === next.calculateAverage &&
+        prev.subjectRole === next.subjectRole;
 });
 
 const FacultyDashboard = () => {
@@ -291,6 +304,54 @@ const FacultyDashboard = () => {
     const [selectedOverviewDept, setSelectedOverviewDept] = useState(null); // New state for Dept selection in Overview
     const [selectedCieType, setSelectedCieType] = useState('cie1'); // Which CIE is currently selected for attendance entry
     const [marks, setMarks] = useState({}); // Map { studentId: { co1: val... } }
+
+    const handleMarkChange = (studentId, field, value) => {
+        setMarks(prev => {
+            let numValue = value;
+            if (value === 'A' || value === 'AB' || value === 'Ab') {
+                numValue = -2.0;
+            } else if (value === '') {
+                numValue = '';
+            } else {
+                const parsed = parseInt(value, 10);
+                if (!isNaN(parsed)) {
+                    numValue = parsed;
+                }
+            }
+
+            // Attendance fields allow up to 100, CIE marks max 50
+            const max = field.endsWith('Att') ? 100 : 50;
+            if (typeof numValue === 'number' && numValue !== -2.0) {
+                if (numValue < 0) numValue = 0;
+                if (numValue > max) numValue = max;
+            }
+
+            // Update Global State (Real-time analytics)
+            if (selectedSubject) {
+                setAllStudentMarks(prevAll => {
+                    const subMarks = prevAll[selectedSubject.id] || {};
+                    return {
+                        ...prevAll,
+                        [selectedSubject.id]: {
+                            ...subMarks,
+                            [studentId]: {
+                                ...(subMarks[studentId] || {}),
+                                [field]: numValue
+                            }
+                        }
+                    };
+                });
+            }
+
+            return {
+                ...prev,
+                [studentId]: {
+                    ...(prev[studentId] || { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', cie1Att: '', cie2Att: '', cie3Att: '', cie4Att: '', cie5Att: '' }),
+                    [field]: numValue
+                }
+            };
+        });
+    };
     const [isLocked, setIsLocked] = useState(false); // For Commit/Edit workflow
     const [cieLockStatus, setCieLockStatus] = useState({ cie1: false, cie2: false, cie3: false, cie4: false, cie5: false }); // Per-CIE lock
     const [saving, setSaving] = useState(false);
@@ -1063,7 +1124,16 @@ const FacultyDashboard = () => {
             onClick: () => { setActiveSection('Dept Assignment'); setSelectedSubject(null); }
         },
         {
+            label: 'My Profile',
+            category: 'Account',
+            path: '/dashboard/faculty',
+            icon: <User size={20} />,
+            isActive: activeSection === 'My Profile',
+            onClick: () => { setActiveSection('My Profile'); setSelectedSubject(null); }
+        },
+        {
             label: 'Notifications',
+            category: 'Account',
             path: '/dashboard/faculty',
             icon: <Bell size={20} />,
             isActive: activeSection === 'Notifications',
@@ -1136,7 +1206,7 @@ const FacultyDashboard = () => {
                             // 0 = faculty entered zero (show '0')
                             const isNotEntered = m.marks === null || m.marks === undefined;
                             const isPending = m.status === 'PENDING' || !m.status;
-                            const markVal = (isNotEntered && isPending) ? '' : (m.marks !== null && m.marks !== undefined ? m.marks : '');
+                            const markVal = (isNotEntered && isPending) ? '' : (m.marks === -2.0 ? 'AB' : (m.marks !== null && m.marks !== undefined ? m.marks : ''));
                             newMarks[sId][key] = markVal;
 
                             // Capture attendance per CIE record
@@ -1164,16 +1234,16 @@ const FacultyDashboard = () => {
 
                 setCieLockStatus({
                     cie1: role === 'LAB' || cieStatuses.cie1.has('SUBMITTED') || cieStatuses.cie1.has('APPROVED'),
-                    cie2: role === 'LAB' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
-                    cie3: role === 'THEORY' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
+                    cie2: role === 'THEORY' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
+                    cie3: role === 'LAB' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
                     cie4: role === 'THEORY' || cieStatuses.cie4.has('SUBMITTED') || cieStatuses.cie4.has('APPROVED'),
                     cie5: role === 'LAB' || cieStatuses.cie5.has('SUBMITTED') || cieStatuses.cie5.has('APPROVED'),
                 });
                 // Compute overall lock status from individual CIE statuses
                 const anyCieLocked = Object.values({
                     cie1: role === 'LAB' || cieStatuses.cie1.has('SUBMITTED') || cieStatuses.cie1.has('APPROVED'),
-                    cie2: role === 'LAB' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
-                    cie3: role === 'THEORY' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
+                    cie2: role === 'THEORY' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
+                    cie3: role === 'LAB' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
                     cie4: role === 'THEORY' || cieStatuses.cie4.has('SUBMITTED') || cieStatuses.cie4.has('APPROVED'),
                     cie5: role === 'LAB' || cieStatuses.cie5.has('SUBMITTED') || cieStatuses.cie5.has('APPROVED'),
                 }).some(v => v);
@@ -1189,39 +1259,6 @@ const FacultyDashboard = () => {
 
 
 
-    const handleMarkChange = (studentId, field, value) => {
-        let numValue = parseInt(value, 10);
-        if (value === '' || value === 'Ab') numValue = value; // Allow empty or Ab
-
-        // Attendance fields allow up to 100, CIE marks max 50
-        let max = field.endsWith('Att') ? 100 : 50;
-
-        if (typeof numValue === 'number' && numValue < 0) numValue = 0;
-        if (typeof numValue === 'number' && numValue > max) numValue = max;
-
-        // Update Local State (for UI)
-        setMarks(prev => ({
-            ...prev,
-            [studentId]: {
-                ...prev[studentId],
-                [field]: numValue
-            }
-        }));
-
-        // Update Global State (Real-time Low Performers)
-        if (selectedSubject) {
-            setAllStudentMarks(prev => ({
-                ...prev,
-                [selectedSubject.id]: {
-                    ...prev[selectedSubject.id]?.[studentId],
-                    [studentId]: {
-                        ...prev[selectedSubject.id]?.[studentId],
-                        [field]: numValue
-                    }
-                }
-            }));
-        }
-    };
 
     const getLowPerformers = () => {
         let lowList = [];
@@ -1234,8 +1271,8 @@ const FacultyDashboard = () => {
             Object.keys(studentsMarks).forEach(stdId => {
                 const m = studentsMarks[stdId];
                 // Check ANY IA < 15
-                const s1 = m.cie1 === 'Ab' ? 0 : (parseInt(m.cie1) || 0);
-                const s2 = m.cie2 === 'Ab' ? 0 : (parseInt(m.cie2) || 0);
+                const s1 = (m.cie1 === 'Ab' || m.cie1 === 'A' || m.cie1 === 'AB') ? 0 : (parseInt(m.cie1) || 0);
+                const s2 = (m.cie2 === 'Ab' || m.cie2 === 'A' || m.cie2 === 'AB') ? 0 : (parseInt(m.cie2) || 0);
 
                 // Find lowest score
                 const minScore = Math.min(s1, s2);
@@ -1255,17 +1292,17 @@ const FacultyDashboard = () => {
         });
 
         // Sort by lowest score and take top 5
-        return lowList.sort((a, b) => (a.score === 'Ab' ? 0 : a.score) - (b.score === 'Ab' ? 0 : b.score)).slice(0, 5);
+        return lowList.sort((a, b) => ((a.score === 'Ab' || a.score === 'A' || a.score === 'AB') ? 0 : a.score) - ((b.score === 'Ab' || b.score === 'A' || b.score === 'AB') ? 0 : b.score)).slice(0, 5);
     };
 
     const calculateAverage = (student) => {
         if (selectedSubject) {
             const sMarks = marks[student.id] || {};
-            const valCIE1 = Number(sMarks.cie1 === 'Ab' ? 0 : sMarks.cie1) || 0;
-            const valCIE2 = Number(sMarks.cie2 === 'Ab' ? 0 : sMarks.cie2) || 0;
-            const valCIE3 = Number(sMarks.cie3 === 'Ab' ? 0 : sMarks.cie3) || 0;
-            const valCIE4 = Number(sMarks.cie4 === 'Ab' ? 0 : sMarks.cie4) || 0;
-            const valCIE5 = Number(sMarks.cie5 === 'Ab' ? 0 : sMarks.cie5) || 0;
+            const valCIE1 = Number((sMarks.cie1 === 'Ab' || sMarks.cie1 === 'A' || sMarks.cie1 === 'AB') ? 0 : sMarks.cie1) || 0;
+            const valCIE2 = Number((sMarks.cie2 === 'Ab' || sMarks.cie2 === 'A' || sMarks.cie2 === 'AB') ? 0 : sMarks.cie2) || 0;
+            const valCIE3 = Number((sMarks.cie3 === 'Ab' || sMarks.cie3 === 'A' || sMarks.cie3 === 'AB') ? 0 : sMarks.cie3) || 0;
+            const valCIE4 = Number((sMarks.cie4 === 'Ab' || sMarks.cie4 === 'A' || sMarks.cie4 === 'AB') ? 0 : sMarks.cie4) || 0;
+            const valCIE5 = Number((sMarks.cie5 === 'Ab' || sMarks.cie5 === 'A' || sMarks.cie5 === 'AB') ? 0 : sMarks.cie5) || 0;
             return valCIE1 + valCIE2 + valCIE3 + valCIE4 + valCIE5;
         }
         return "-";
@@ -1290,7 +1327,7 @@ const FacultyDashboard = () => {
 
                 let score = null;
                 if (val === '') score = -1; // -1 signals backend to clear the field
-                else if (val === 'Ab') score = 0;
+                else if (val === 'Ab' || val === 'A' || val === 'AB') score = -2.0; // Absent
                 else if (val !== undefined && val !== null) score = parseFloat(val);
 
                 // If both are completely untouched/undefined, skip sending this CIE type entirely
@@ -1470,11 +1507,11 @@ const FacultyDashboard = () => {
                                 <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'left', color: '#374151', fontWeight: '600' }}>Sl</th>
                                 <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'left', color: '#374151', fontWeight: '600' }}>Reg No</th>
                                 <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'left', color: '#374151', fontWeight: '600' }}>Student Name</th>
-                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-1</th>
-                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-2</th>
-                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-3</th>
-                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-4</th>
-                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-5</th>
+                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-1 (T)</th>
+                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>ST-1 (L)</th>
+                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>CIE-2 (T)</th>
+                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>ST-2 (L)</th>
+                                <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '600' }}>Activity</th>
                                 <th style={{ padding: '10px 12px', borderBottom: '2px solid #e5e7eb', textAlign: 'center', color: '#374151', fontWeight: '700' }}>Total</th>
                             </tr>
                         </thead>
@@ -1516,7 +1553,7 @@ const FacultyDashboard = () => {
 
     // --- NEW FEATURE: EXPORT CSV ---
     const downloadCSV = () => {
-        const headers = ['Reg No', 'Name', 'Section', 'Batch', 'CIE-1', 'CIE-2', 'CIE-3', 'CIE-4', 'CIE-5', 'Total'];
+        const headers = ['Reg No', 'Name', 'Section', 'Batch', 'CIE-1 (T)', 'ST-1 (L)', 'CIE-2 (T)', 'ST-2 (L)', 'Activity', 'Total'];
         const rows = students.map(s => {
             const sMarks = marks[s.id] || {};
             const ia1Mark = sMarks['CIE1'] || {};
@@ -2761,7 +2798,7 @@ const FacultyDashboard = () => {
                                 </div>
                             </div>
                             <div className={styles.maxMarksBadge}>
-                                Max: CIE-1(50), CIE-2(50), CIE-3(50), CIE-4(50), CIE-5(50)
+                                Max Marks (50 each): CIE-1(T), ST-1(L), CIE-2(T), ST-2(L), Activity
                             </div>
                         </div>
                     </div>
@@ -2771,32 +2808,40 @@ const FacultyDashboard = () => {
                     <div className={styles.headerTitleGroup}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '1rem' }}>
                             <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>View:</span>
-                            <select
-                                className={styles.deptSelect}
-                                value={selectedCieType}
-                                onChange={(e) => setSelectedCieType(e.target.value)}
-                                style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
-                            >
-                                <option value="cie1">CIE-1</option>
-                                <option value="cie2">CIE-2</option>
-                                <option value="cie3">CIE-3</option>
-                                <option value="cie4">CIE-4</option>
-                                <option value="cie5">CIE-5</option>
-                                <option value="all">All CIEs & Attendance</option>
-                            </select>
+                            <div className={styles.cieSelectContainer}>
+                                <select
+                                    className={styles.cieSelect}
+                                    value={selectedCieType}
+                                    onChange={(e) => setSelectedCieType(e.target.value)}
+                                >
+                                    <option value="cie1">CIE-1 (Theory)</option>
+                                    <option value="cie2">Skill Test 1 (Lab)</option>
+                                    <option value="cie3">CIE-2 (Theory)</option>
+                                    <option value="cie4">Skill Test 2 (Lab)</option>
+                                    <option value="cie5">Activity</option>
+                                    <option value="all">All Assessments & Attendance</option>
+                                </select>
+                                <div className={styles.cieSelectIcon}>
+                                    <ChevronDown size={18} />
+                                </div>
+                            </div>
                         </div>
                         {facultySections.length > 1 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>Section Filter:</span>
-                                <select
-                                    className={styles.deptSelect}
-                                    value={selectedSection}
-                                    onChange={(e) => setSelectedSection(e.target.value)}
-                                    style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}
-                                >
-                                    <option value="All">All Sections</option>
-                                    {facultySections.map(sec => <option key={sec} value={sec}>Section {sec}</option>)}
-                                </select>
+                                <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>Section:</span>
+                                <div className={styles.cieSelectContainer} style={{ minWidth: '140px' }}>
+                                    <select
+                                        className={styles.cieSelect}
+                                        value={selectedSection}
+                                        onChange={(e) => setSelectedSection(e.target.value)}
+                                    >
+                                        <option value="All">All Sections</option>
+                                        {facultySections.map(sec => <option key={sec} value={sec}>Section {sec}</option>)}
+                                    </select>
+                                    <div className={styles.cieSelectIcon}>
+                                        <ChevronDown size={18} />
+                                    </div>
+                                </div>
                             </div>
                         )}
                         {/* CIE Lock Status Badges */}
@@ -2812,102 +2857,179 @@ const FacultyDashboard = () => {
                                         color: cieLockStatus[key] ? '#dc2626' : '#15803d',
                                         border: `1px solid ${cieLockStatus[key] ? '#fca5a5' : '#86efac'}`
                                     }}>
-                                        {cieLockStatus[key] ? '🔒' : '✏️'} {key.replace('cie', 'CIE-')}
+                                        {cieLockStatus[key] ? '🔒' : '✏️'} {{
+                                            cie1: 'CIE-1 (T)',
+                                            cie2: 'ST-1 (L)',
+                                            cie3: 'CIE-2 (T)',
+                                            cie4: 'ST-2 (L)',
+                                            cie5: 'Activity'
+                                        }[key]}
                                     </span>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    <div className={styles.headerActions}>
-                        <div className={styles.actionButtons}>
+                <div className={styles.headerActions}>
+                    <div className={styles.actionButtons}>
+                        {(() => {
+                            const isLabSub = selectedSubject.subjectRole?.toUpperCase() === 'LAB' || 
+                                           (selectedSubject.name?.toLowerCase().includes('lab'));
+                            const isTheorySub = !isLabSub;
+                            
+                            return (
+                                <>
+                                    <button className={`${styles.saveBtn} ${saving ? styles.saving : ''}`} onClick={handleSave} disabled={saving}>
+                                        <Save size={16} />
+                                        {saving ? 'Saving...' : 'Save Draft'}
+                                    </button>
 
+                                    <button className={styles.saveBtn} onClick={handleSubmitForApproval} disabled={saving} style={{ backgroundColor: '#059669' }}>
+                                        <CheckCircle size={16} /> Submit to HOD
+                                    </button>
 
-                            <button className={`${styles.saveBtn} ${saving ? styles.saving : ''}`} onClick={handleSave} disabled={saving}>
-                                <Save size={16} />
-                                {saving ? 'Saving...' : 'Save Draft'}
-                            </button>
+                                    {isLocked && (
+                                        <button
+                                            className={styles.saveBtn}
+                                            onClick={handleEditRequest}
+                                            style={{ backgroundColor: '#f59e0b', color: 'white' }}
+                                            title="Request HOD to unlock approved marks for editing"
+                                        >
+                                            <Lock size={16} /> Request Unlock
+                                        </button>
+                                    )}
 
-                            <button className={styles.saveBtn} onClick={handleSubmitForApproval} disabled={saving} style={{ backgroundColor: '#059669' }}>
-                                <CheckCircle size={16} /> Submit to HOD
-                            </button>
+                                    <button className={`${styles.saveBtn}`} onClick={downloadCSV} style={{ backgroundColor: '#4b5563' }}>
+                                        <Download size={16} /> Download
+                                    </button>
 
-                            {isLocked && (
-                                <button
-                                    className={styles.saveBtn}
-                                    onClick={handleEditRequest}
-                                    style={{ backgroundColor: '#f59e0b', color: 'white' }}
-                                    title="Request HOD to unlock approved marks for editing"
-                                >
-                                    <Lock size={16} /> Request Unlock
-                                </button>
-                            )}
-
-                            <button className={`${styles.saveBtn}`} onClick={downloadCSV} style={{ backgroundColor: '#4b5563' }}>
-                                <Download size={16} /> Download
-                            </button>
-
-                            <button className={`${styles.saveBtn}`} onClick={() => setShowUploadModal(true)} style={{ backgroundColor: '#7c3aed' }}>
-                                <Upload size={16} /> Bulk Upload
-                            </button>
-                        </div>
+                                    <button className={`${styles.saveBtn}`} onClick={() => setShowUploadModal(true)} style={{ backgroundColor: '#7c3aed' }}>
+                                        <Upload size={16} /> Bulk Upload
+                                    </button>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
-                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', borderLeft: '4px solid #3b82f6' }}>
-                    <strong>ℹ️ Max Marks Info:</strong> Each CIE is for <strong>50 marks</strong>. Total Internal marks: <strong>250</strong>. Attendance is recorded as percentage (<strong>0-100%</strong>).
-                </p>
+            </div>
+            {(() => {
+                const isLabSub = selectedSubject.subjectRole?.toUpperCase() === 'LAB' || 
+                               (selectedSubject.name?.toLowerCase().includes('lab'));
+                const isTheorySub = !isLabSub;
 
-                <div className={styles.card}>
-                    <div className={styles.tableContainer}>
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Sl No</th>
-                                        <th>Reg No</th>
-                                        <th>Student Name</th>
-                                        <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (50)</th>
-                                        {['cie1', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                        <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (50)</th>
-                                        {['cie2', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                        <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-3 (50)</th>
-                                        {['cie3', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                        <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-4 (50)</th>
-                                        {['cie4', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                        <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-5 (50)</th>
-                                        {['cie5', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
-                                        <th>Total (250)</th>
-                                        <th style={{ background: '#fefce8', color: '#a16207', width: '250px', minWidth: '250px' }}>Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {students
-                                        .filter(s => {
-                                            if (!selectedSubject) return false;
-                                            const subjectMatch = s.department === selectedSubject.department && String(s.semester) === String(selectedSubject.semester);
-                                            const sectionMatch = selectedSection === 'All' || s.section === selectedSection;
-                                            const facultySectionMatch = facultySections.length === 0 || facultySections.includes(s.section);
-                                            return subjectMatch && sectionMatch && facultySectionMatch;
-                                        })
-                                        .map((student, index) => (
-                                            <FacultyStudentRow
-                                                key={student.id}
-                                                student={student}
-                                                index={index}
-                                                marks={marks[student.id] || {}}
-                                                selectedCieType={selectedCieType}
-                                                setSelectedCieType={setSelectedCieType}
-                                                styles={styles}
-                                                handleMarkChange={handleMarkChange}
-                                                cieLockStatus={cieLockStatus}
-                                                calculateAverage={calculateAverage}
-                                            />
-                                        ))}
-                                </tbody>
-                            </table>
+                return (
+                    <>
+
+                        <div className={styles.card}>
+                            <div className={styles.tableContainer}>
+                                <div className={styles.tableWrapper}>
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>Sl No</th>
+                                                <th>Reg No</th>
+                                                <th>Student Name</th>
+                                                <th style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-1 (Theory) (50)</th>
+                                                {['cie1', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                                <th style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Skill Test 1 (Lab) (50)</th>
+                                                {['cie2', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                                <th style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>CIE-2 (Theory) (50)</th>
+                                                {['cie3', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                                <th style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Skill Test 2 (Lab) (50)</th>
+                                                {['cie4', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                                <th style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>Activity (50)</th>
+                                                {['cie5', 'all'].includes(selectedCieType) && <th style={{ background: '#f0fdf4', color: '#15803d' }}>Att (%)</th>}
+                                                <th>Total (250)</th>
+                                                <th style={{ background: '#fefce8', color: '#854d0e' }}>Average (%)</th>
+                                                <th style={{ background: '#fefce8', color: '#a16207', width: '250px', minWidth: '250px' }}>Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const filteredStudents = students.filter(s => {
+                                                    if (!selectedSubject) return false;
+                                                    const subjectMatch = s.department === selectedSubject.department && String(s.semester) === String(selectedSubject.semester);
+                                                    const sectionMatch = selectedSection === 'All' || s.section === selectedSection;
+                                                    const facultySectionMatch = facultySections.length === 0 || facultySections.includes(s.section);
+                                                    return subjectMatch && sectionMatch && facultySectionMatch;
+                                                });
+
+                                                const calculateColumnAverage = (key) => {
+                                                    if (filteredStudents.length === 0) return 0;
+                                                    let sum = 0;
+                                                    let count = 0;
+                                                    filteredStudents.forEach(s => {
+                                                        const sMarks = marks[s.id] || {};
+                                                        let val = sMarks[key];
+                                                        if (val === 'Ab' || val === 'A' || val === 'AB') val = 0;
+                                                        if (val != null && val !== '') {
+                                                            sum += parseFloat(val);
+                                                            count++;
+                                                        }
+                                                    });
+                                                    return count > 0 ? (sum / count).toFixed(1) : "0.0";
+                                                };
+
+                                                const calculateTotalAverage = () => {
+                                                    if (filteredStudents.length === 0) return 0;
+                                                    let sum = 0;
+                                                    let count = 0;
+                                                    filteredStudents.forEach(s => {
+                                                        const total = calculateAverage(s);
+                                                        if (total !== "-") {
+                                                            sum += total;
+                                                            count++;
+                                                        }
+                                                    });
+                                                    return count > 0 ? (sum / count).toFixed(1) : "0.0";
+                                                };
+
+                                                return (
+                                                    <>
+                                                        {filteredStudents.map((student, index) => (
+                                                            <FacultyStudentRow
+                                                                key={student.id}
+                                                                student={student}
+                                                                index={index}
+                                                                marks={marks[student.id] || {}}
+                                                                selectedCieType={selectedCieType}
+                                                                setSelectedCieType={setSelectedCieType}
+                                                                styles={styles}
+                                                                handleMarkChange={handleMarkChange}
+                                                                cieLockStatus={cieLockStatus}
+                                                                calculateAverage={calculateAverage}
+                                                                subjectRole={isTheorySub ? 'THEORY' : 'LAB'}
+                                                            />
+                                                        ))}
+                                                        {filteredStudents.length > 0 && (
+                                                            <tr style={{ background: '#f8fafc', fontWeight: 'bold', borderTop: '2px solid #e2e8f0' }}>
+                                                                <td colSpan="3" style={{ textAlign: 'right', paddingRight: '20px' }}>Class Average:</td>
+                                                                <td style={['cie1', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>{calculateColumnAverage('cie1')}</td>
+                                                                {['cie1', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}>-</td>}
+                                                                <td style={['cie2', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>{calculateColumnAverage('cie2')}</td>
+                                                                {['cie2', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}>-</td>}
+                                                                <td style={['cie3', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>{calculateColumnAverage('cie3')}</td>
+                                                                {['cie3', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}>-</td>}
+                                                                <td style={['cie4', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>{calculateColumnAverage('cie4')}</td>
+                                                                {['cie4', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}>-</td>}
+                                                                <td style={['cie5', 'all'].includes(selectedCieType) ? { background: '#eff6ff', color: '#1d4ed8' } : {}}>{calculateColumnAverage('cie5')}</td>
+                                                                {['cie5', 'all'].includes(selectedCieType) && <td style={{ background: '#f0fdf4' }}>-</td>}
+                                                                <td style={{ color: '#1d4ed8' }}>{calculateTotalAverage()}</td>
+                                                                <td style={{ background: '#fefce8', color: '#854d0e' }}>{(calculateTotalAverage() / 2.5).toFixed(1)}%</td>
+                                                                <td style={{ background: '#fefce8' }}>-</td>
+                                                            </tr>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                );
+            })()}
             </div>
         );
     };
@@ -3703,9 +3825,15 @@ const FacultyDashboard = () => {
                             value={filterCIE}
                             onChange={(e) => setFilterCIE(e.target.value)}
                         >
-                            <option value="All">All CIE</option>
-                            {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => (
-                                <option key={cie} value={cie}>{cie}</option>
+                            <option value="All">All Assessments</option>
+                            {[
+                                { val: 'CIE1', label: 'CIE-1 (Theory)' },
+                                { val: 'CIE2', label: 'Skill Test 1 (Lab)' },
+                                { val: 'CIE3', label: 'CIE-2 (Theory)' },
+                                { val: 'CIE4', label: 'Skill Test 2 (Lab)' },
+                                { val: 'CIE5', label: 'Activity' }
+                            ].map(cie => (
+                                <option key={cie.val} value={cie.val}>{cie.label}</option>
                             ))}
                         </select>
                     </div>
@@ -4509,6 +4637,7 @@ const FacultyDashboard = () => {
             {activeSection === 'Student Performance' && renderPerformanceSection()}
             {activeSection === 'Notifications' && renderNotifications()}
             {activeSection === 'Dept Assignment' && renderDeptAssignment()}
+            {activeSection === 'My Profile' && <ProfileModal inline={true} />}
 
             {/* MODALS */}
             {renderStudentProfileModal()}
@@ -4729,6 +4858,13 @@ const FacultyDashboard = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
                                 {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => {
                                     const isLocked = cieLockStatus[cie.toLowerCase()];
+                                    const label = {
+                                        CIE1: 'CIE-1 (Theory)',
+                                        CIE2: 'Skill Test 1 (Lab)',
+                                        CIE3: 'CIE-2 (Theory)',
+                                        CIE4: 'Skill Test 2 (Lab)',
+                                        CIE5: 'Activity'
+                                    }[cie];
                                     return (
                                         <div key={cie} style={{ 
                                             padding: '0.75rem', 
@@ -4750,7 +4886,7 @@ const FacultyDashboard = () => {
                                                 style={{ width: '16px', height: '16px', cursor: isLocked ? 'pointer' : 'not-allowed' }}
                                             />
                                             <label htmlFor={`unlock-${cie}`} style={{ cursor: isLocked ? 'pointer' : 'not-allowed', margin: 0, fontWeight: 500 }}>
-                                                {cie.replace('CIE', 'CIE-')}
+                                                {label}
                                                 {!isLocked && <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginLeft: '6px' }}>(Editable)</span>}
                                             </label>
                                         </div>

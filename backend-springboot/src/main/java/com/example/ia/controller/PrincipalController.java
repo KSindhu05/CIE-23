@@ -89,6 +89,18 @@ public class PrincipalController {
         if ("All".equalsIgnoreCase(targetSemester)) {
             cieMarkRepository.deleteAll();
             attendanceRepository.deleteAll();
+
+            // Notify all faculties
+            List<User> faculties = userRepository.findByRole("FACULTY");
+            for (User f : faculties) {
+                Notification notif = new Notification();
+                notif.setUser(f);
+                notif.setMessage("Principal has performed a FULL RESET of all CIE marks and attendance in the system.");
+                notif.setType("ALERT");
+                notif.setCategory("System Reset");
+                notificationRepository.save(notif);
+            }
+
             return ResponseEntity.ok(Map.of("message", "All CIE marks and attendance have been permanently wiped."));
         } else {
             Integer sem = Integer.parseInt(targetSemester);
@@ -101,6 +113,20 @@ public class PrincipalController {
                 .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
                 .collect(Collectors.toList());
             attendanceRepository.deleteAll(atts);
+
+            // Notify affected faculties
+            List<User> faculties = userRepository.findByRole("FACULTY");
+            for (User f : faculties) {
+                if (f.getSemester() != null && f.getSemester().contains(targetSemester)) {
+                    Notification notif = new Notification();
+                    notif.setUser(f);
+                    notif.setMessage("Principal has RESET all CIE marks and attendance for Semester " + sem + ".");
+                    notif.setType("ALERT");
+                    notif.setCategory("Semester Reset");
+                    notificationRepository.save(notif);
+                }
+            }
+
             return ResponseEntity.ok(Map.of("message", "CIE marks and attendance for Semester " + sem + " have been wiped."));
         }
     }
@@ -113,6 +139,19 @@ public class PrincipalController {
         boolean isAll = "All".equalsIgnoreCase(targetSemester);
 
         List<User> faculty = userRepository.findByRole("FACULTY");
+        
+        Set<String> semesterSubjectNames = new HashSet<>();
+        if (!isAll) {
+            try {
+                Integer sem = Integer.parseInt(targetSemester);
+                semesterSubjectNames = subjectRepository.findBySemester(sem).stream()
+                        .map(Subject::getName)
+                        .collect(Collectors.toSet());
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+        }
+
         for (User f : faculty) {
             if (isAll) {
                 f.setSubjects(null);
@@ -121,11 +160,31 @@ public class PrincipalController {
                 userRepository.save(f);
             } else {
                 if (f.getSemester() != null && f.getSemester().contains(targetSemester)) {
-                    String newSem = Arrays.stream(f.getSemester().split(","))
+                    // 1. Remove targeted semester from comma-separated list
+                    String[] sems = f.getSemester().split(",");
+                    String newSem = Arrays.stream(sems)
                             .map(String::trim)
                             .filter(s -> !s.equals(targetSemester))
                             .collect(Collectors.joining(", "));
                     f.setSemester(newSem.isEmpty() ? null : newSem);
+
+                    // 2. Remove subjects belonging to that semester from faculty profile
+                    if (f.getSubjects() != null && !semesterSubjectNames.isEmpty()) {
+                        final Set<String> targetSubs = semesterSubjectNames;
+                        String newSubs = Arrays.stream(f.getSubjects().split(","))
+                                .map(String::trim)
+                                .filter(s -> !targetSubs.contains(s))
+                                .collect(Collectors.joining(", "));
+                        f.setSubjects(newSubs.isEmpty() ? null : newSubs);
+                    }
+                    
+                    // 3. Clear sections if they are largely tied to the subjects being removed
+                    // (Simplification: if semester is removed, we clear sections for that faculty if no other semester remains,
+                    // or clear it entirely to be safe as sections are usually per assignment)
+                    if (f.getSemester() == null) {
+                        f.setSection(null);
+                    }
+                    
                     userRepository.save(f);
                 }
             }
@@ -142,6 +201,7 @@ public class PrincipalController {
         if (isAll) {
             assignmentRequestRepository.deleteAll();
         } else {
+            // Delete ALL requests for this semester, including APPROVED/REJECTED history
             List<com.example.ia.entity.FacultyAssignmentRequest> requests = assignmentRequestRepository.findAll().stream()
                     .filter(r -> targetSemester.equals(r.getSemester()))
                     .collect(Collectors.toList());
@@ -163,21 +223,40 @@ public class PrincipalController {
             notificationRepository.deleteAll();
             announcementRepository.deleteAll();
             attendanceRepository.deleteAll();
-            return ResponseEntity.ok(Map.of("message", "Notifications, CIE schedules, and attendance records have been cleaned up."));
+            cieMarkRepository.deleteAll();
+            return ResponseEntity.ok(Map.of("message", "All notifications, CIE schedules, marks, and attendance records have been cleaned up."));
         } else {
-            Integer sem = Integer.parseInt(targetSemester);
-            
-            List<Attendance> atts = attendanceRepository.findAll().stream()
-                .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
-                .collect(Collectors.toList());
-            attendanceRepository.deleteAll(atts);
-            
-            List<Announcement> anns = announcementRepository.findAll().stream()
-                .filter(a -> a.getSubject() != null && sem.equals(a.getSubject().getSemester()))
-                .collect(Collectors.toList());
-            announcementRepository.deleteAll(anns);
-            
-            return ResponseEntity.ok(Map.of("message", "CIE schedules and attendance for Semester " + sem + " have been cleaned up."));
+            try {
+                Integer sem = Integer.parseInt(targetSemester);
+                
+                // 1. Wipe Marks
+                List<CieMark> marks = cieMarkRepository.findAll().stream()
+                    .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
+                    .collect(Collectors.toList());
+                cieMarkRepository.deleteAll(marks);
+
+                // 2. Wipe Attendance
+                List<Attendance> atts = attendanceRepository.findAll().stream()
+                    .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
+                    .collect(Collectors.toList());
+                attendanceRepository.deleteAll(atts);
+                
+                // 3. Wipe CIE Schedules (Announcements)
+                List<Announcement> anns = announcementRepository.findAll().stream()
+                    .filter(a -> a.getSubject() != null && sem.equals(a.getSubject().getSemester()))
+                    .collect(Collectors.toList());
+                announcementRepository.deleteAll(anns);
+                
+                // 4. Also clear orphaned announcements/records that might be lingering
+                List<Announcement> orphans = announcementRepository.findAll().stream()
+                    .filter(a -> a.getSubject() == null)
+                    .collect(Collectors.toList());
+                announcementRepository.deleteAll(orphans);
+
+                return ResponseEntity.ok(Map.of("message", "CIE schedules, marks, and attendance for Semester " + sem + " have been cleaned up."));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Failed to cleanup data: " + e.getMessage()));
+            }
         }
     }
 
@@ -772,6 +851,7 @@ public class PrincipalController {
         hod.setEmail(hodData.getEmail());
         hod.setDepartment(hodData.getDepartment());
         hod.setRole("HOD");
+        hod.setDesignation(hodData.getDesignation());
         hod.setPassword(passwordEncoder.encode(hodData.getPassword()));
         userRepository.save(hod);
         return ResponseEntity.ok(hod);
@@ -784,6 +864,7 @@ public class PrincipalController {
             hod.setFullName(hodData.getFullName());
             hod.setEmail(hodData.getEmail());
             hod.setDepartment(hodData.getDepartment());
+            hod.setDesignation(hodData.getDesignation());
 
             // Allow username update
             if (hodData.getUsername() != null && !hodData.getUsername().equals(hod.getUsername())) {

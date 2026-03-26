@@ -106,8 +106,8 @@ public class MarksController {
                     String name = subject.getName().toLowerCase();
                     String iaType = dto.getIaType().toUpperCase();
 
-                    boolean isLabType = iaType.equals("CIE3") || iaType.equals("CIE4");
-                    boolean isTheoryType = !isLabType; // CIE1, CIE2, CIE5 = theory
+                    boolean isLabType = iaType.equals("CIE2") || iaType.equals("CIE4");
+                    boolean isTheoryType = !isLabType; // CIE1, CIE3, CIE5 (Activity) = non-lab (Theory)
 
                     if (name.contains("(lab)") && isTheoryType) {
                         return ResponseEntity.status(403).body(
@@ -125,6 +125,7 @@ public class MarksController {
                 mark.setStudent(student);
                 mark.setSubject(subject);
                 mark.setCieType(dto.getIaType());
+                // Support -2.0 as "Absent"
                 mark.setMarks(dto.getCo1());
                 mark.setAttendancePercentage(dto.getAttendancePercentage());
                 marksToSave.add(mark);

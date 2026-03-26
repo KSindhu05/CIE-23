@@ -7,6 +7,7 @@ public class StudentResponse {
     private Long id;
     private String regNo;
     private String name;
+    private String nameKn;
     private String department;
     private Integer semester;
     private String section;
@@ -19,6 +20,8 @@ public class StudentResponse {
     private Double overallCie1Percentage;
     private String overallRemarks;
     private String mentor;
+    private String mentorKn;
+
 
     // Mocked fields for UI
     private String feesStatus = "Paid";
@@ -27,7 +30,8 @@ public class StudentResponse {
     public StudentResponse(Student student, Map<String, Double> marks,
             Map<String, Map<String, Object>> subjectMarks,
             Boolean isCie1Complete,
-            Double overallCie1Percentage) {
+            Double overallCie1Percentage,
+            String mentorKn) {
         this.id = student.getId();
         this.regNo = student.getRegNo();
         this.name = student.getName();
@@ -43,6 +47,8 @@ public class StudentResponse {
         this.overallCie1Percentage = overallCie1Percentage;
         this.overallRemarks = student.getOverallRemarks();
         this.mentor = student.getMentor();
+        this.mentorKn = mentorKn;
+        this.nameKn = student.getNameKn();
     }
 
     // Getters and Setters
@@ -56,6 +62,10 @@ public class StudentResponse {
 
     public String getName() {
         return name;
+    }
+
+    public String getNameKn() {
+        return nameKn;
     }
 
     public String getDepartment() {
@@ -116,6 +126,10 @@ public class StudentResponse {
 
     public String getMentor() {
         return mentor;
+    }
+
+    public String getMentorKn() {
+        return mentorKn;
     }
 
     public void setOverallRemarks(String overallRemarks) {

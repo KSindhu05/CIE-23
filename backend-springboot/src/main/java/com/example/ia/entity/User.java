@@ -21,6 +21,8 @@ public class User {
     private String email;
     private String designation;
     private String department;
+    private String fullNameKn;
+
 
     // Role: HOD, FACULTY, PRINCIPAL
     @Column(nullable = false)
@@ -67,6 +69,14 @@ public class User {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getFullNameKn() {
+        return fullNameKn;
+    }
+
+    public void setFullNameKn(String fullNameKn) {
+        this.fullNameKn = fullNameKn;
     }
 
     public String getEmail() {

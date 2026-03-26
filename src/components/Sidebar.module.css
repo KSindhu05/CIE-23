@@ -57,63 +57,6 @@
     color: var(--text-secondary);
 }
 
-.userInfo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    /* More breathing room */
-    padding: 0.5rem 0;
-    /* Adjusted padding */
-    border-radius: 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.avatar {
-    width: 48px;
-    /* Larger avatar */
-    height: 48px;
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-}
-
-.userDetails {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    /* Center text vertically with avatar */
-}
-
-.userName {
-    margin: 0;
-    font-size: 1rem;
-    /* Larger font */
-    font-weight: 700;
-    background: linear-gradient(to right, #2563eb, #9333ea, #db2777);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-}
-
-.userRole {
-    margin: 0;
-    font-size: 0.8rem;
-    /* Larger font */
-    color: var(--text-secondary);
-    letter-spacing: 0.5px;
-}
 
 .nav {
     display: flex;
@@ -376,10 +319,6 @@
         border-radius: 10px;
         white-space: normal;
         background: transparent;
-    }
-
-    .mobileSidebar .userInfo {
-        display: flex;
     }
 
     .mobileSidebar .logoutButton {

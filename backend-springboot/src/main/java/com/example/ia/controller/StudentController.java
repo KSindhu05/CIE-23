@@ -32,8 +32,8 @@ public class StudentController {
     public org.springframework.http.ResponseEntity<?> getProfile() {
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
                 .getAuthentication().getName();
-        return studentService.getStudentByRegNo(username)
-                .map(student -> org.springframework.http.ResponseEntity.ok((Object) student))
+        return studentService.getStudentProfile(username)
+                .map(org.springframework.http.ResponseEntity::ok)
                 .orElse(org.springframework.http.ResponseEntity.notFound().build());
     }
 

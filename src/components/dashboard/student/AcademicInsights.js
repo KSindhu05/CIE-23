@@ -24,7 +24,7 @@ const itemVariants = {
     },
 };
 
-const AcademicInsights = ({ realMarks, loading = false }) => {
+const AcademicInsights = ({ realMarks, loading = false, t }) => {
     if (!loading && (!realMarks || realMarks.length === 0)) return null;
 
     // Find latest CIE with data
@@ -34,12 +34,16 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
         if (realMarks.some(m => m[key] != null)) { latestCieKey = key; break; }
     }
 
-    // Get marks with latest CIE score
-    const marksWithScore = realMarks.filter(m => m[latestCieKey] != null).map(m => ({ ...m, latestScore: m[latestCieKey] }));
+    // Get marks with latest CIE score, treat -2.0 as 0 for sorting but remember it for display
+    const marksWithScore = realMarks.filter(m => m[latestCieKey] != null).map(m => ({ 
+        ...m, 
+        latestScore: m[latestCieKey],
+        sortScore: m[latestCieKey] === -2.0 ? 0 : m[latestCieKey]
+    }));
     if (marksWithScore.length === 0) return null;
 
-    const bestSubject = [...marksWithScore].sort((a, b) => b.latestScore - a.latestScore)[0];
-    const worstSubject = [...marksWithScore].sort((a, b) => a.latestScore - b.latestScore)[0];
+    const bestSubject = [...marksWithScore].sort((a, b) => b.sortScore - a.sortScore)[0];
+    const worstSubject = [...marksWithScore].sort((a, b) => a.sortScore - b.sortScore)[0];
 
     return (
         <motion.div
@@ -57,7 +61,7 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
                 >
                     <Lightbulb size={20} color="#F59E0B" />
                 </motion.div>
-                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>System Academic Analysis</h3>
+                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>{t('systemAnalysis')}</h3>
             </div>
 
             <motion.div
@@ -86,8 +90,8 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
                         >
                             <div className={styles.insightIndicator} style={{ background: 'var(--success)' }}></div>
                             <div className={styles.insightContent}>
-                                <h4>Strongest Subject</h4>
-                                <p>You are excelling in <strong>{bestSubject?.name}</strong> with a score of {bestSubject?.latestScore}/50.</p>
+                                <h4>{t('strongestSubject')}</h4>
+                                <p>{t('excellingIn')} <strong>{bestSubject?.name}</strong> {t('withScore')} {bestSubject?.latestScore === -2.0 ? 'AB' : (bestSubject?.latestScore + '/50')}.</p>
                             </div>
                             <ArrowUpRight size={18} color="var(--success)" />
                         </motion.div>
@@ -101,8 +105,8 @@ const AcademicInsights = ({ realMarks, loading = false }) => {
                             >
                                 <div className={styles.insightIndicator} style={{ background: 'var(--danger)' }}></div>
                                 <div className={styles.insightContent}>
-                                    <h4>Focus Area</h4>
-                                    <p>Consider reviewing <strong>{worstSubject?.name}</strong> to improve your score ({worstSubject?.latestScore}/50).</p>
+                                    <h4>{t('focusArea')}</h4>
+                                    <p>{t('considerReviewing')} <strong>{worstSubject?.name}</strong> {t('toImprove')} ({worstSubject?.latestScore === -2.0 ? 'AB' : (worstSubject?.latestScore + '/50')}).</p>
                                 </div>
                                 <ArrowDownRight size={18} color="var(--danger)" />
                             </motion.div>

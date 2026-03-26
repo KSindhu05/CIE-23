@@ -24,29 +24,31 @@ public class DataInitializer {
         return args -> {
             String defaultPassword = "password";
 
-            // MANUAL JAVA CLEANUP to ensure it runs regardless of JPQL quirks
-            java.util.List<com.example.ia.entity.CieMark> allMarks = cieMarkRepository.findAll();
-            int fixedCount = 0;
-            for (com.example.ia.entity.CieMark m : allMarks) {
-                boolean isZero = m.getMarks() != null && Math.abs(m.getMarks()) < 0.001;
-                if (!isZero)
-                    continue;
-
-                String status = m.getStatus();
-                if (status == null || "PENDING".equals(status) || "REJECTED".equals(status)) {
-                    // Zero placeholder or rejected zero — reset to null/PENDING so faculty can
-                    // re-enter
-                    m.setMarks(null);
-                    m.setStatus("PENDING");
-                    cieMarkRepository.save(m);
-                    fixedCount++;
-                } else if ("SUBMITTED".equals(status) || "APPROVED".equals(status)) {
-                    // Erroneously submitted/approved zero — delete
-                    cieMarkRepository.delete(m);
-                    fixedCount++;
-                }
-            }
-            System.out.println("✅ JAVA CLEANUP: Fixed/Deleted " + fixedCount + " zero-value marks.");
+            /* 
+17:             // MANUAL JAVA CLEANUP to ensure it runs regardless of JPQL quirks
+18:             java.util.List<com.example.ia.entity.CieMark> allMarks = cieMarkRepository.findAll();
+19:             int fixedCount = 0;
+20:             for (com.example.ia.entity.CieMark m : allMarks) {
+21:                 boolean isZero = m.getMarks() != null && Math.abs(m.getMarks()) < 0.001;
+22:                 if (!isZero)
+23:                     continue;
+24: 
+25:                 String status = m.getStatus();
+26:                 if (status == null || "PENDING".equals(status) || "REJECTED".equals(status)) {
+27:                     // Zero placeholder or rejected zero — reset to null/PENDING so faculty can
+28:                     // re-enter
+29:                     m.setMarks(null);
+30:                     m.setStatus("PENDING");
+31:                     cieMarkRepository.save(m);
+32:                     fixedCount++;
+33:                 } else if ("SUBMITTED".equals(status) || "APPROVED".equals(status)) {
+34:                     // Erroneously submitted/approved zero — delete
+35:                     cieMarkRepository.delete(m);
+36:                     fixedCount++;
+37:                 }
+38:             }
+39:             System.out.println("✅ JAVA CLEANUP: Fixed/Deleted " + fixedCount + " zero-value marks.");
+40:             */
 
             // CLEANUP: Remove Advanced Java if it exists
             subjectRepository.findFirstByName("Advanced Java").ifPresent(subject -> {

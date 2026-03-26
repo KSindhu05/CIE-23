@@ -355,7 +355,11 @@ export const CIEScheduleSection = memo(({ schedules = [], onDownload, loading })
                                         {t.subject ? t.subject.name : 'Unknown Subject'}
                                     </h3>
                                     <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
-                                        {t.cieNumber} | {t.subject?.code}
+                                        {(() => {
+                                            const labelMap = { 'CIE-1': 'CIE-1 (Theory)', 'CIE-2': 'Skill Test 1 (Lab)', 'CIE-3': 'CIE-2 (Theory)', 'CIE-4': 'Skill Test 2 (Lab)', 'CIE-5': 'Activity' };
+                                            const num = t.cieNumber;
+                                            return labelMap[num] || (labelMap[`CIE-${num}`] || num);
+                                        })()} | {t.subject?.code}
                                     </p>
                                 </div>
                                 <span style={{
@@ -735,6 +739,25 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
     const [editingHod, setEditingHod] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const [formError, setFormError] = useState('');
+    const [designation, setDesignation] = useState('');
+    const [customDesignations, setCustomDesignations] = useState([]);
+    const [showAddDesignationInput, setShowAddDesignationInput] = useState(false);
+    const [newDesignationName, setNewDesignationName] = useState('');
+
+    const FIXED_DESIGNATIONS = ['HOD/Dean', 'Asst. HOD', 'HOD'];
+    const allDesignations = [...FIXED_DESIGNATIONS, ...customDesignations];
+
+    const handleAddDesignation = () => {
+        const d = newDesignationName.trim();
+        if (!d) { setFormError('Please enter a designation name.'); setTimeout(() => setFormError(''), 3000); return; }
+        if (allDesignations.some(existing => existing.toLowerCase() === d.toLowerCase())) {
+            setFormError('Designation already exists.'); setTimeout(() => setFormError(''), 3000); return;
+        }
+        setCustomDesignations(prev => [...prev, d]);
+        setNewDesignationName('');
+        setShowAddDesignationInput(false);
+        setDesignation(d);
+    };
 
     // Fixed 5 departments + ability to add more
     const FIXED_DEPTS = [
@@ -776,10 +799,10 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
         setUsername(hod.username);
         setEmail(hod.email || '');
         setDepartment(hod.department);
+        setDesignation(hod.designation || '');
         // Scroll to form
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-
     const handleCancelEdit = () => {
         setEditingHod(null);
         setName('');
@@ -787,12 +810,13 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
         setEmail('');
         setPassword('');
         setDepartment('');
+        setDesignation('');
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!name || (!editingHod && !username) || !department) {
-            setFormError('Name and Department are required.'); setTimeout(() => setFormError(''), 3000);
+        if (!name || (!editingHod && !username) || !department || !designation) {
+            setFormError('Name, Department and Designation are required.'); setTimeout(() => setFormError(''), 3000);
             return;
         }
         if (!editingHod && !password) {
@@ -801,10 +825,10 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
         }
 
         if (editingHod) {
-            await onUpdate(editingHod.id, { fullName: name, username, email, password, department });
+            await onUpdate(editingHod.id, { fullName: name, username, email, password, department, designation });
             setEditingHod(null);
         } else {
-            await onCreate({ fullName: name, username, email, password, department });
+            await onCreate({ fullName: name, username, email, password, department, designation });
         }
 
         // Reset form
@@ -813,6 +837,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
         setEmail('');
         setPassword('');
         setDepartment('');
+        setDesignation('');
     };
 
     return (
@@ -963,6 +988,41 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                 </div>
                             )}
                         </div>
+                        <div className={styles.formGroup}>
+                            <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.6rem', color: '#475569', fontSize: '0.9rem' }}>Designation *</label>
+                            <select
+                                className={styles.filterSelect}
+                                style={{ width: '100%' }}
+                                value={designation}
+                                onChange={(e) => setDesignation(e.target.value)}
+                                required
+                            >
+                                <option value="">Select Designation</option>
+                                {allDesignations.map(d => (
+                                    <option key={d} value={d}>{d}</option>
+                                ))}
+                            </select>
+                            {!showAddDesignationInput ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddDesignationInput(true)}
+                                    style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#2563eb', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                                >
+                                    + Add New Designation
+                                </button>
+                            ) : (
+                                <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        placeholder="Designation Name"
+                                        value={newDesignationName}
+                                        onChange={e => setNewDesignationName(e.target.value)}
+                                        style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', flex: 1 }}
+                                    />
+                                    <button type="button" onClick={handleAddDesignation} style={{ padding: '0.4rem 0.9rem', borderRadius: '6px', background: '#2563eb', color: 'white', border: 'none', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Add</button>
+                                    <button type="button" onClick={() => { setShowAddDesignationInput(false); setNewDesignationName(''); }} style={{ padding: '0.4rem 0.9rem', borderRadius: '6px', background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Cancel</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {formError && (
@@ -999,6 +1059,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                             <th style={{ paddingLeft: '2rem' }}>Sl. No</th>
                             <th>Employee ID</th>
                             <th>Name</th>
+                            <th>Designation</th>
                             <th>Department</th>
                             <th>Email</th>
                             <th style={{ paddingRight: '2rem', textAlign: 'right' }}>Actions</th>
@@ -1016,6 +1077,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                             <Skeleton width="100px" height="14px" />
                                         </div>
                                     </td>
+                                    <td><Skeleton width="80px" height="14px" /></td>
                                     <td><Skeleton width="60px" height="24px" /></td>
                                     <td><Skeleton width="150px" height="14px" /></td>
                                     <td style={{ paddingRight: '2rem', textAlign: 'right' }}>
@@ -1037,6 +1099,11 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                         </div>
                                         <span style={{ fontWeight: 600, color: '#1e293b' }}>{h.fullName}</span>
                                     </div>
+                                </td>
+                                <td>
+                                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
+                                        {h.designation || <span style={{ opacity: 0.5 }}>Not Set</span>}
+                                    </span>
                                 </td>
                                 <td>
                                     <span style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.8rem' }}>

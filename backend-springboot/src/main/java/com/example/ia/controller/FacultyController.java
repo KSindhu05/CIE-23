@@ -224,7 +224,10 @@ public class FacultyController {
         if (faculty == null) {
             return ResponseEntity.ok(List.of());
         }
-        List<FacultyAssignmentRequest> requests = assignmentRequestRepository.findByFacultyId(faculty.getId());
+        List<FacultyAssignmentRequest> requests = assignmentRequestRepository.findByFacultyId(faculty.getId())
+                .stream()
+                .filter(r -> !r.isHidden())
+                .collect(Collectors.toList());
         return ResponseEntity.ok(requests);
     }
 

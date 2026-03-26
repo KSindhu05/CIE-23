@@ -16,6 +16,7 @@ import com.example.ia.service.FacultyService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.example.ia.security.UserDetailsImpl;
+import com.example.ia.entity.Notification;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -457,6 +458,16 @@ public class HodController {
                     }
                 });
 
+                // Notify faculty
+                userRepository.findById(request.getFacultyId()).ifPresent(faculty -> {
+                    Notification notif = new Notification();
+                    notif.setUser(faculty);
+                    notif.setMessage("Your assignment request for " + request.getTargetDepartment() + " (" + request.getSubjects() + ") has been APPROVED.");
+                    notif.setType("ASSIGNMENT_APPROVED");
+                    notif.setCategory("Assignment Approved");
+                    notificationRepository.save(notif);
+                });
+
                 return ResponseEntity.ok(Map.of("message", "Assignment request approved successfully"));
             }).orElse(ResponseEntity.status(404).<Object>body(Map.of("message", "Assignment request not found")));
         } catch (Exception e) {
@@ -480,6 +491,16 @@ public class HodController {
                 request.setStatus("REJECTED");
                 request.setResponseDate(LocalDateTime.now());
                 assignmentRequestRepository.save(request);
+
+                // Notify faculty
+                userRepository.findById(request.getFacultyId()).ifPresent(faculty -> {
+                    Notification notif = new Notification();
+                    notif.setUser(faculty);
+                    notif.setMessage("Your assignment request for " + request.getTargetDepartment() + " (" + request.getSubjects() + ") has been REJECTED.");
+                    notif.setType("ALERT");
+                    notif.setCategory("Assignment Rejected");
+                    notificationRepository.save(notif);
+                });
 
                 return ResponseEntity.ok(Map.of("message", "Assignment request rejected"));
             }).orElse(ResponseEntity.status(404).<Object>body(Map.of("message", "Assignment request not found")));

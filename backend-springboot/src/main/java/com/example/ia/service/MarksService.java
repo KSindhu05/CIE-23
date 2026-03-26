@@ -218,23 +218,63 @@ public class MarksService {
     @Transactional
     public void approveMarks(Long subjectId, String cieType) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
+        
+        // Find faculty teaching this subject to notify them
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
+
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
                 mark.setStatus("APPROVED");
             }
         });
         cieMarkRepository.saveAll(marks);
+
+        // Notify Faculty
+        if (subject != null) {
+            List<User> faculties = userRepository.findByRole("FACULTY");
+            for (User faculty : faculties) {
+                if (facultyService.isFacultyAssignedToSubjectAndStudent(faculty.getUsername(), subjectId, null)) {
+                    Notification notif = new Notification();
+                    notif.setUser(faculty);
+                    notif.setMessage("HOD has APPROVED your " + cieType + " marks for " + subjectInfo + ".");
+                    notif.setType("SUCCESS");
+                    notif.setCategory("Marks Approved");
+                    notificationRepository.save(notif);
+                }
+            }
+        }
     }
 
     @Transactional
     public void rejectMarks(Long subjectId, String cieType) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
+
+        // Find faculty teaching this subject to notify them
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
+
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
                 mark.setStatus("REJECTED");
             }
         });
         cieMarkRepository.saveAll(marks);
+
+        // Notify Faculty
+        if (subject != null) {
+            List<User> faculties = userRepository.findByRole("FACULTY");
+            for (User faculty : faculties) {
+                if (facultyService.isFacultyAssignedToSubjectAndStudent(faculty.getUsername(), subjectId, null)) {
+                    Notification notif = new Notification();
+                    notif.setUser(faculty);
+                    notif.setMessage("HOD has REJECTED your " + cieType + " marks for " + subjectInfo + ". Please review and update.");
+                    notif.setType("ALERT");
+                    notif.setCategory("Marks Rejected");
+                    notificationRepository.save(notif);
+                }
+            }
+        }
     }
 
     @Transactional(readOnly = true)

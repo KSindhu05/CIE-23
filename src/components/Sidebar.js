@@ -4,11 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import styles from './Sidebar.module.css';
 import { LogOut, Menu, X } from 'lucide-react';
 import collegeLogo from '../assets/header_logo.png';
-import ProfileModal from './ProfileModal';
 
 const Sidebar = ({ menuItems }) => {
     const { user, logout } = useAuth();
-    const [showProfile, setShowProfile] = useState(false);
+
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -94,26 +93,14 @@ const Sidebar = ({ menuItems }) => {
                     })}
                 </nav>
 
-                {/* Profile Card */}
-                {user?.role?.toUpperCase() !== 'STUDENT' && (
-                    <div className={styles.userInfo} onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }} title="View Profile">
-                        <div className={styles.avatar}>
-                            {(user?.fullName || user?.username || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div className={styles.userDetails}>
-                            <p className={styles.userName}>{user?.fullName || user?.username || 'User'}</p>
-                            <p className={styles.userRole}>{user?.role || 'Staff'}{user?.department ? ` • ${user.department}` : ''}</p>
-                        </div>
-                    </div>
-                )}
+
 
                 <button onClick={() => { logout(); if (isMobile) setMobileOpen(false); }} className={styles.logoutButton}>
                     <LogOut size={20} />
                     <span>Logout</span>
                 </button>
 
-                {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
-            </aside>
+    </aside>
         </>
     );
 };
