@@ -207,6 +207,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
 
             Object.entries(m).forEach(([subjName, sm]) => {
                 ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cieType => {
+                    const score = sm[cieType];
                     if (score !== undefined && score !== null && score !== '') {
                         const scoreNum = score === -2 ? 0 : parseFloat(score);
                         const attVal = sm[cieType + '_att'] != null ? parseFloat(sm[cieType + '_att']) : null;

@@ -380,7 +380,7 @@ const PrincipalDashboard = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                     <div>
                         <h1 className={styles.welcomeText}>Hello, Dr. Gowri Shankar</h1>
-                        <p className={styles.subtitle}>Principal | Sanjay Gandhi Polytechnic</p>
+                        <p className={styles.subtitle}>Principal | Sanjay Gandhi Polytechnic CIE Management System</p>
                     </div>
                     <div className={styles.headerActions}>
                         <StudentSentinel students={deptStudents} />

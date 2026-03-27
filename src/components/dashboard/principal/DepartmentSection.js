@@ -235,40 +235,31 @@ const DepartmentDetails = ({ dept, onBack, allFaculty }) => {
             </div>
 
             {/* Content Sections */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                <div>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#334155' }}>Faculty Members</h3>
-                    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                <tr>
-                                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Name</th>
-                                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Designation</th>
-                                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Subjects</th>
+            <div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#334155' }}>Faculty Members</h3>
+                <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <tr>
+                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Name</th>
+                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Designation</th>
+                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.85rem', color: '#64748b' }}>Subjects</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {deptFaculty.length > 0 ? deptFaculty.map((f, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '1rem', color: '#334155', fontWeight: 500 }}>{f.fullName} ({f.username})</td>
+                                    <td style={{ padding: '1rem', color: '#64748b' }}>{f.designation || 'Faculty'}</td>
+                                    <td style={{ padding: '1rem', color: '#64748b' }}>{f.subjects || '-'}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {deptFaculty.length > 0 ? deptFaculty.map((f, i) => (
-                                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '1rem', color: '#334155', fontWeight: 500 }}>{f.fullName} ({f.username})</td>
-                                        <td style={{ padding: '1rem', color: '#64748b' }}>{f.designation || 'Faculty'}</td>
-                                        <td style={{ padding: '1rem', color: '#64748b' }}>{f.subjects || '-'}</td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>No faculty found for this department.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#334155' }}>Performance Trend</h3>
-                    <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #cbd5e1' }}>
-                        <span style={{ color: '#94a3b8' }}>Chart Placeholder</span>
-                    </div>
+                            )) : (
+                                <tr>
+                                    <td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>No faculty found for this department.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

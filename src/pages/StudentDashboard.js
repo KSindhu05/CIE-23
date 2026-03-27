@@ -285,31 +285,40 @@ const StudentDashboard = () => {
         if (nameKn) return nameKn;
         if (mentorKn) return mentorKn;
 
-        // Comprehensive phonetic map for initials, sounds and titles
-        const phoneticMap = {
-            'MR': 'ಶ್ರೀ', 'MRS': 'ಶ್ರೀಮತಿ', 'MISS': 'ಕುಮಾರಿ', 'DR': 'ಡಾ.',
-            'A': 'ಎ', 'B': 'ಬಿ', 'C': 'ಸಿ', 'D': 'ಡಿ', 'E': 'ಇ', 'F': 'ಎಫ್', 'G': 'ಜಿ', 'H': 'ಹೆಚ್', 'I': 'ಐ', 'J': 'ಜೆ', 'K': 'ಕೆ', 'L': 'ಎಲ್', 'M': 'ಎಂ', 'N': 'ಎನ್', 'O': 'ಓ', 'P': 'ಪಿ', 'Q': 'ಕ್ಯೂ', 'R': 'ಆರ್', 'S': 'ಎಸ್', 'T': 'ಟಿ', 'U': 'ಯು', 'V': 'ವಿ', 'W': 'ಡಬ್ಲ್ಯೂ', 'X': 'ಎಕ್ಸ್', 'Y': 'ವೈ', 'Z': 'ಜೆಡ್',
-            'SH': 'ಶ', 'CH': 'ಚ', 'TH': 'ಥ', 'KH': 'ಖ', 'GH': 'ಘ', 'BH': 'ಭ', 'DH': 'ಧ', 'EE': 'ೀ', 'OO': 'ೂ', 'AI': 'ೈ', 'OU': 'ೌ'
-        };
-
-        const parts = name.toUpperCase().split(/\s+/);
+        const parts = name.toUpperCase().replace(/\./g, ' ').split(/\s+/);
         const translatedParts = parts.map(part => {
-            if (part.length === 1 && phoneticMap[part]) {
-                return phoneticMap[part];
+            // Explicit Overrides for common names and titles
+            const overrides = {
+                'DR': 'ಡಾ.', 'PROF': 'ಪ್ರೊ.', 'MR': 'ಶ್ರೀ', 'MRS': 'ಶ್ರೀಮತಿ', 'MISS': 'ಕುಮಾರಿ',
+                'RAMESH': 'ರಮೇಶ್', 'KAVITHA': 'ಕವಿತಾ', 'ABHISHEKA': 'ಅಭಿಷೇಕ', 'SANJAY': 'ಸಂಜಯ್',
+                'GOUDA': 'ಗೌಡ', 'GOWDA': 'ಗೌಡ', 'KUMAR': 'ಕುಮಾರ್', 'PATIL': 'ಪಾಟೀಲ್', 'NAIK': 'ನಾಯಕ್', 'RAO': 'ರಾವ್',
+                'SANTHOSH': 'ಸಂತೋಷ್', 'MANJUNATH': 'ಮಂಜುನಾಥ್', 'SATEESH': 'ಸತೀಶ್', 'MAHALAKSHMI': 'ಮಹಾಲಕ್ಷ್ಮಿ',
+                'VIJAY': 'ವಿಜಯ್', 'ANNAPURNA': 'ಅನ್ನಪೂರ್ಣ', 'SAVITHA': 'ಸವಿತಾ', 'BHAGYA': 'ಭಾಗ್ಯ', 'REKHA': 'ರೇಖಾ',
+                'MAHESH': 'ಮಹೇಶ್', 'SHIVU': 'ಶಿವಪ್ಪ', 'BASAVARAJ': 'ಬಸವರಾಜ್', 'SIDDAPPA': 'ಸಿದ್ದಪ್ಪ',
+                'LATHA': 'ಲತಾ', 'GIRIJA': 'ಗಿರಿಜಾ', 'ROOPA': 'ರೂಪಾ', 'DEEPA': 'ದೀಪಾ', 'SHASHIKALA': 'ಶಶಿಕಲಾ',
+                'PADMA': 'ಪದ್ಮಾ', 'RADHA': 'ರಾಧಾ', 'SARASWATHI': 'ಸರಸ್ವತಿ', 'LAKSHMI': 'ಲಕ್ಷ್ಮಿ',
+                'PRAKASH': 'ಪ್ರಕಾಶ್', 'MOHAN': 'ಮೋಹನ್', 'KIRAN': 'ಕಿರಣ್', 'ARUN': 'ಅರುಣ್', 'GURU': 'ಗುರು',
+                'RAVI': 'ರವಿ', 'ANAND': 'ಆನಂದ್', 'VINAY': 'ವಿನಯ್', 'SUJAY': 'ಸುಜಯ್', 'PRASHANTH': 'ಪ್ರಶಾಂತ್',
+                'SANDEEP': 'ಸಂದೀಪ್', 'NAVEEN': 'ನವೀನ್', 'RAGHU': 'ರಘು', 'VISHWA': 'ವಿಶ್ವ', 'CHETAN': 'ಚೇತನ್',
+                'PUNEETH': 'ಪುನೀತ್', 'DARSHAN': 'ದರ್ಶನ್', 'SUDEEP': 'ಸುದೀಪ್', 'YASH': 'ಯಶ್',
+                'SHETTY': 'ಶೆಟ್ಟಿ', 'HEGDE': 'ಹೆಗಡೆ', 'BHAT': 'ಭಟ್', 'PRABHU': 'ಪ್ರಭು', 'MURTHY': 'ಮೂರ್ತಿ'
+            };
+            if (overrides[part]) return overrides[part];
+            if (part.length === 1) {
+                const initialMap = { 'A':'ಎ','B':'ಬಿ','C':'ಸಿ','D':'ಡಿ','E':'ಇ','F':'ಎಫ್','G':'ಜಿ','H':'ಹೆಚ್','I':'ಐ','J':'ಜೆ','K':'ಕೆ','L':'ಎಲ್','M':'ಎಂ','N':'ಎನ್','O':'ಓ','P':'ಪಿ','Q':'ಕ್ಯೂ','R':'ಆರ್','S':'ಎಸ್','T':'ಟಿ','U':'ಯು','V':'ವಿ','W':'ಡಬ್ಲ್ಯೂ','X':'ಎಕ್ಸ್','Y':'ವೈ','Z':'ಜೆಡ್' };
+                return initialMap[part] || part;
             }
-            if (part === 'ABHISHEKA') return 'ಅಭಿಷೇಕ';
-            if (part === 'KAVITHA') return 'ಕವಿತಾ';
-            if (part === 'SANJAY') return 'ಸಂಜಯ್';
 
             let result = part;
-            Object.keys(phoneticMap).filter(k => k.length > 1).sort((a, b) => b.length - a.length).forEach(key => {
+            // Vowel combination logic (simplified)
+            const mappings = [
+                ['SH', 'ಶ'], ['CH', 'ಚ'], ['TH', 'ಥ'], ['KH', 'ಖ'], ['GH', 'ಘ'], ['BH', 'ಭ'], ['DH', 'ಧ'],
+                ['EE', 'ೀ'], ['OO', 'ೂ'], ['AI', 'ೈ'], ['OU', 'ೌ'],
+                ['A', 'ಅ'], ['B', 'ಬ'], ['C', 'ಕ'], ['D', 'ದ'], ['E', 'ಎ'], ['F', 'ಫ'], ['G', 'ಗ'], ['H', 'ಹ'], ['I', 'ಇ'], ['J', 'ಜ'], ['K', 'ಕ'], ['L', 'ಲ'], ['M', 'ಮ'], ['N', 'ನ'], ['O', 'ಒ'], ['P', 'ಪ'], ['Q', 'ಕ'], ['R', 'ರ'], ['S', 'ಸ'], ['T', 'ಟ'], ['U', 'ಉ'], ['V', 'ವ'], ['W', 'ವ'], ['X', 'ಕ್ಷ'], ['Y', 'ಯ',], ['Z', 'ಜ']
+            ];
+            mappings.forEach(([key, val]) => {
                 const regex = new RegExp(key, 'g');
-                result = result.replace(regex, phoneticMap[key]);
-            });
-            // Final pass for single letters in complex names (basic)
-            Object.keys(phoneticMap).filter(k => k.length === 1).forEach(key => {
-                const regex = new RegExp(key, 'g');
-                result = result.replace(regex, phoneticMap[key].toLowerCase());
+                result = result.replace(regex, val);
             });
             return result;
         });
@@ -523,7 +532,7 @@ const StudentDashboard = () => {
 
         doc.setFontSize(14);
         doc.setTextColor(30, 41, 59);
-        doc.text('Sanjay Gandhi Polytechnic', 105, 22, { align: 'center' });
+        doc.text('Sanjay Gandhi Polytechnic CIE Management System', 105, 22, { align: 'center' });
 
         // Add Student Info
         doc.setFontSize(10);
@@ -883,8 +892,8 @@ const StudentDashboard = () => {
                 ) : facultyList.length > 0 ? facultyList.map((fac, idx) => (
                     <div key={idx} className={styles.facultyCard} style={{ animation: `fadeIn 0.5s ease-out ${idx * 0.1}s backwards` }}>
                         <div style={{ width: '64px', height: '64px', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#3b82f6', border: '1px solid #bfdbfe' }}><User size={32} /></div>
-                        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', fontWeight: '700' }}>{transliterateName(fac.name, lang)}</h3>
-                        <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem', opacity: 0.8 }}>{fac.department} {t('branch')}</p>
+                        <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', fontWeight: '700' }}>{transliterateName(fac.name, lang, fac.nameKn || fac.name_kn)}</h3>
+                        <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem', opacity: 0.8 }}>{lang === 'KN' ? (fac.department === 'CSE' ? 'ಸಿಎಸ್‌ಇ' : fac.department === 'ISE' ? 'ಐಎಸ್‌ಇ' : fac.department === 'ECE' ? 'ಇಸಿಇ' : fac.department === 'ME' ? 'ಮೆಕ್' : fac.department) : fac.department} {t('branch')}</p>
                         <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', margin: '0.75rem 0' }}></div>
                         <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', opacity: 0.9 }}><span style={{ fontWeight: 600 }}>{t('teaches')}:</span> {fac.subjects}</p>
                         {fac.email && <a href={`mailto:${fac.email}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontSize: '0.85rem', textDecoration: 'none', marginTop: 'auto', fontWeight: '500' }}><Mail size={14} /> {t('contact')}</a>}
@@ -1100,22 +1109,61 @@ const StudentDashboard = () => {
                     </div>
                 </header>
 
-                {activeSection === 'Overview' && (
-                    <AcademicSummary
-                        studentInfo={{
-                            ...studentInfo,
-                            mentor: lang === 'KN' ? (studentInfo.mentorKn || transliterateName(studentInfo.mentor, lang)) : studentInfo.mentor
-                        }}
-                        cieStatus={cieStatus}
-                        loading={loading}
-                        t={t}
-                        // Risk Logic: High if Aggregate < 40 OR Attendance < 75. Moderate if Aggregate < 60. Else Low.
-                        riskLevel={
-                            (parseFloat(studentInfo.cgpa) < 40 || (studentInfo.avgAttendance && studentInfo.avgAttendance < 75)) ? 'High' :
-                                parseFloat(studentInfo.cgpa) < 60 ? 'Moderate' : 'Low'
+                {activeSection === 'Overview' && (() => {
+                    const cieKeysArr = [
+                        { id: '5', key: 'cie5Score', label: 'Activity' },
+                        { id: '4', key: 'cie4Score', label: 'Skill Test 2 (Lab)' },
+                        { id: '3', key: 'cie3Score', label: 'CIE-2 (Theory)' },
+                        { id: '2', key: 'cie2Score', label: 'Skill Test 1 (Lab)' },
+                        { id: '1', key: 'cie1Score', label: 'CIE-1 (Theory)' },
+                    ];
+                    let latestCieKey = { id: '1', key: 'cie1Score', label: 'CIE-1' };
+                    for (const cie of cieKeysArr) {
+                        if (realMarks.some(m => m[cie.key] != null)) {
+                            latestCieKey = cie;
+                            break;
                         }
-                    />
-                )}
+                    }
+
+                    const cieTargetTotalPossible = realSubjects.length * 50;
+                    let cieTargetObtained = 0;
+                    let pendingUploadsCount = 0;
+
+                    realSubjects.forEach(sub => {
+                        const m = realMarks.find(mark => mark.name === sub.name);
+                        const score = m ? m[latestCieKey.key] : null;
+                        
+                        if (score === null || score === undefined) {
+                            pendingUploadsCount++;
+                        } else if (score !== -2.0) {
+                            cieTargetObtained += (parseFloat(score) || 0);
+                        }
+                    });
+
+                    const cieOverview = {
+                        obtained: cieTargetObtained,
+                        total: cieTargetTotalPossible,
+                        pending: pendingUploadsCount,
+                        label: latestCieKey.label
+                    };
+
+                    return (
+                        <AcademicSummary
+                            studentInfo={{
+                                ...studentInfo,
+                                mentor: lang === 'KN' ? (studentInfo.mentorKn || transliterateName(studentInfo.mentor, lang)) : studentInfo.mentor
+                            }}
+                            cieStatus={cieStatus}
+                            loading={loading}
+                            t={t}
+                            cieOverview={cieOverview}
+                            riskLevel={
+                                (parseFloat(studentInfo.cgpa) < 40 || (studentInfo.avgAttendance && studentInfo.avgAttendance < 75)) ? 'High' :
+                                    parseFloat(studentInfo.cgpa) < 60 ? 'Moderate' : 'Low'
+                            }
+                        />
+                    );
+                })()}
 
                 {activeSection === 'Overview' && renderOverview()}
                 {activeSection === 'CIE Marks' && renderCIEMarks()}

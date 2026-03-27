@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 public class ProfileController {
 
     @Autowired
+    private com.example.ia.repository.FacultyAssignmentRequestRepository assignmentRequestRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -57,33 +60,69 @@ public class ProfileController {
             });
         }
 
-        // For faculty, derive semester from assigned subjects if not set on user record
+        // For faculty, aggregate semesters, sections AND departments from User record AND all APPROVED assignment requests
+        String section = user.getSection();
         String semester = user.getSemester();
-        if ("FACULTY".equalsIgnoreCase(user.getRole()) && (semester == null || semester.isBlank())) {
-            String subjectsStr = user.getSubjects();
-            if (subjectsStr != null && !subjectsStr.isBlank()) {
-                List<String> subjectNames = Arrays.stream(subjectsStr.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .collect(Collectors.toList());
-                if (!subjectNames.isEmpty()) {
-                    List<Subject> subjects = subjectRepository.findByNameInAndDepartment(subjectNames, user.getDepartment());
-                    if (subjects.isEmpty()) {
-                        subjects = subjectRepository.findByNameIn(subjectNames);
-                    }
-                    String derivedSemesters = subjects.stream()
-                            .map(Subject::getSemester)
-                            .filter(Objects::nonNull)
-                            .distinct()
-                            .sorted()
-                            .map(String::valueOf)
-                            .collect(Collectors.joining(", "));
-                    semester = derivedSemesters.isEmpty() ? null : derivedSemesters;
+        String department = user.getDepartment();
+
+        if ("FACULTY".equalsIgnoreCase(user.getRole())) {
+            List<com.example.ia.entity.FacultyAssignmentRequest> approvedRequests = 
+                assignmentRequestRepository.findByFacultyIdAndStatus(user.getId(), "APPROVED");
+
+            Set<String> allSemesters = new TreeSet<>();
+            Set<String> allSections = new TreeSet<>();
+            Set<String> allDepartments = new TreeSet<>();
+
+            // 1. Existing data from User
+            if (semester != null && !semester.isBlank()) {
+                Arrays.stream(semester.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+                    .forEach(allSemesters::add);
+            }
+            if (section != null && !section.isBlank()) {
+                Arrays.stream(section.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+                    .forEach(allSections::add);
+            }
+            if (department != null && !department.isBlank()) {
+                allDepartments.add(department.trim());
+            }
+
+            // 2. Data from cross-department requests
+            for (com.example.ia.entity.FacultyAssignmentRequest req : approvedRequests) {
+                if (req.getSemester() != null && !req.getSemester().isBlank()) {
+                    Arrays.stream(req.getSemester().split(",")).map(String::trim).filter(s -> !s.isEmpty())
+                        .forEach(allSemesters::add);
+                }
+                if (req.getSections() != null && !req.getSections().isBlank()) {
+                    Arrays.stream(req.getSections().split(",")).map(String::trim).filter(s -> !s.isEmpty())
+                        .forEach(allSections::add);
+                }
+                if (req.getTargetDepartment() != null && !req.getTargetDepartment().isBlank()) {
+                    allDepartments.add(req.getTargetDepartment().trim());
                 }
             }
+
+            // 3. Fallback derivation for semester if still empty
+            if (allSemesters.isEmpty()) {
+                String subjectsStr = user.getSubjects();
+                if (subjectsStr != null && !subjectsStr.isBlank()) {
+                    List<String> subjectNames = Arrays.stream(subjectsStr.split(","))
+                            .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+                    if (!subjectNames.isEmpty()) {
+                        List<com.example.ia.entity.Subject> subjects = subjectRepository.findByNameIn(subjectNames);
+                        subjects.stream().map(com.example.ia.entity.Subject::getSemester)
+                            .filter(Objects::nonNull).distinct().map(String::valueOf).forEach(allSemesters::add);
+                    }
+                }
+            }
+
+            semester = allSemesters.isEmpty() ? null : String.join(", ", allSemesters);
+            section = allSections.isEmpty() ? null : String.join(", ", allSections);
+            department = allDepartments.isEmpty() ? user.getDepartment() : String.join(", ", allDepartments);
         }
+
         profile.put("semester", semester);
-        profile.put("section", user.getSection());
+        profile.put("section", section);
+        profile.put("department", department);
         return ResponseEntity.ok(profile);
     }
 

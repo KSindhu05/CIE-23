@@ -172,9 +172,9 @@ export const FocusListWidget = memo(({ branches = [], branchPerformance = [], ho
         .map((dept, i) => ({
             name: dept,
             score: branchPerformance[i] || 0,
-            status: hodSubmissionStatus.find(h => h.id === dept)?.punctuality
+            status: hodSubmissionStatus.find(h => h.id === dept)?.status
         }))
-        .filter(d => d.score < 70 || d.status === 'Delayed');
+        .filter(d => d.score < 70 || d.status === 'Pending');
 
     return (
         <div className={styles.glassCard} style={{ background: '#fff', borderRadius: '24px', border: '1px solid #fee2e2' }}>
@@ -194,7 +194,7 @@ export const FocusListWidget = memo(({ branches = [], branchPerformance = [], ho
                         <span style={{ fontWeight: 600, color: '#7f1d1d', fontSize: '0.9rem' }}>{d.name}</span>
                         <div style={{ textAlign: 'right' }}>
                             {d.score < 70 && <span style={{ display: 'block', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600 }}>Low Perf. ({d.score}%)</span>}
-                            {d.status === 'Delayed' && <span style={{ display: 'block', color: '#ca8a04', fontSize: '0.75rem', fontWeight: 600 }}>Delayed</span>}
+                            {d.status === 'Pending' && <span style={{ display: 'block', color: '#ca8a04', fontSize: '0.75rem', fontWeight: 600 }}>Pending</span>}
                         </div>
                     </div>
                 )) : (

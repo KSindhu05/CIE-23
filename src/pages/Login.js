@@ -289,7 +289,7 @@ const Login = () => {
                                 🔒 Secure Role-Based Authentication
                             </div>
                             <div className={styles.copyRight}>
-                                © 2026 Sanjay Gandhi Polytechnic | CIA Management System
+                                © 2026 Sanjay Gandhi Polytechnic | CIE Management System
                             </div>
                         </div>
                     </div>
@@ -320,7 +320,7 @@ const Login = () => {
                 textShadow: '0 2px 4px rgba(0,0,0,0.8)'
             }}>
                 Developed by <strong>Team Crafters</strong> | Contact: +91 8951366931 | Email: <a href="mailto:praveenkumarch062006@gmail.com" style={{ color: 'inherit', textDecoration: 'underline' }}>praveenkumarch062006@gmail.com</a><br />
-                © 2026 Sanjay Gandhi Polytechnic. All Rights Reserved.
+                © 2026 Sanjay Gandhi Polytechnic CIE Management System. All Rights Reserved.
             </div>
         </div>
     );

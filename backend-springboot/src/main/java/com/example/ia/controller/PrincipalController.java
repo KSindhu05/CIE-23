@@ -105,13 +105,13 @@ public class PrincipalController {
         } else {
             Integer sem = Integer.parseInt(targetSemester);
             List<CieMark> marks = cieMarkRepository.findAll().stream()
-                .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
-                .collect(Collectors.toList());
+                    .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
+                    .collect(Collectors.toList());
             cieMarkRepository.deleteAll(marks);
-            
+
             List<Attendance> atts = attendanceRepository.findAll().stream()
-                .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
-                .collect(Collectors.toList());
+                    .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
+                    .collect(Collectors.toList());
             attendanceRepository.deleteAll(atts);
 
             // Notify affected faculties
@@ -127,7 +127,8 @@ public class PrincipalController {
                 }
             }
 
-            return ResponseEntity.ok(Map.of("message", "CIE marks and attendance for Semester " + sem + " have been wiped."));
+            return ResponseEntity
+                    .ok(Map.of("message", "CIE marks and attendance for Semester " + sem + " have been wiped."));
         }
     }
 
@@ -139,7 +140,7 @@ public class PrincipalController {
         boolean isAll = "All".equalsIgnoreCase(targetSemester);
 
         List<User> faculty = userRepository.findByRole("FACULTY");
-        
+
         Set<String> semesterSubjectNames = new HashSet<>();
         if (!isAll) {
             try {
@@ -177,14 +178,15 @@ public class PrincipalController {
                                 .collect(Collectors.joining(", "));
                         f.setSubjects(newSubs.isEmpty() ? null : newSubs);
                     }
-                    
+
                     // 3. Clear sections if they are largely tied to the subjects being removed
-                    // (Simplification: if semester is removed, we clear sections for that faculty if no other semester remains,
+                    // (Simplification: if semester is removed, we clear sections for that faculty
+                    // if no other semester remains,
                     // or clear it entirely to be safe as sections are usually per assignment)
                     if (f.getSemester() == null) {
                         f.setSection(null);
                     }
-                    
+
                     userRepository.save(f);
                 }
             }
@@ -202,14 +204,16 @@ public class PrincipalController {
             assignmentRequestRepository.deleteAll();
         } else {
             // Delete ALL requests for this semester, including APPROVED/REJECTED history
-            List<com.example.ia.entity.FacultyAssignmentRequest> requests = assignmentRequestRepository.findAll().stream()
+            List<com.example.ia.entity.FacultyAssignmentRequest> requests = assignmentRequestRepository.findAll()
+                    .stream()
                     .filter(r -> targetSemester.equals(r.getSemester()))
                     .collect(Collectors.toList());
             assignmentRequestRepository.deleteAll(requests);
         }
 
         return ResponseEntity.ok(
-                Map.of("message", "Faculty workloads, subject assignments, and assignment requests have been reset" + (isAll ? "." : " for Semester " + targetSemester + ".")));
+                Map.of("message", "Faculty workloads, subject assignments, and assignment requests have been reset"
+                        + (isAll ? "." : " for Semester " + targetSemester + ".")));
     }
 
     @PostMapping("/semester/cleanup-data")
@@ -224,36 +228,38 @@ public class PrincipalController {
             announcementRepository.deleteAll();
             attendanceRepository.deleteAll();
             cieMarkRepository.deleteAll();
-            return ResponseEntity.ok(Map.of("message", "All notifications, CIE schedules, marks, and attendance records have been cleaned up."));
+            return ResponseEntity.ok(Map.of("message",
+                    "All notifications, CIE schedules, marks, and attendance records have been cleaned up."));
         } else {
             try {
                 Integer sem = Integer.parseInt(targetSemester);
-                
+
                 // 1. Wipe Marks
                 List<CieMark> marks = cieMarkRepository.findAll().stream()
-                    .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
-                    .collect(Collectors.toList());
+                        .filter(m -> m.getStudent() != null && sem.equals(m.getStudent().getSemester()))
+                        .collect(Collectors.toList());
                 cieMarkRepository.deleteAll(marks);
 
                 // 2. Wipe Attendance
                 List<Attendance> atts = attendanceRepository.findAll().stream()
-                    .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
-                    .collect(Collectors.toList());
+                        .filter(a -> a.getStudent() != null && sem.equals(a.getStudent().getSemester()))
+                        .collect(Collectors.toList());
                 attendanceRepository.deleteAll(atts);
-                
+
                 // 3. Wipe CIE Schedules (Announcements)
                 List<Announcement> anns = announcementRepository.findAll().stream()
-                    .filter(a -> a.getSubject() != null && sem.equals(a.getSubject().getSemester()))
-                    .collect(Collectors.toList());
+                        .filter(a -> a.getSubject() != null && sem.equals(a.getSubject().getSemester()))
+                        .collect(Collectors.toList());
                 announcementRepository.deleteAll(anns);
-                
+
                 // 4. Also clear orphaned announcements/records that might be lingering
                 List<Announcement> orphans = announcementRepository.findAll().stream()
-                    .filter(a -> a.getSubject() == null)
-                    .collect(Collectors.toList());
+                        .filter(a -> a.getSubject() == null)
+                        .collect(Collectors.toList());
                 announcementRepository.deleteAll(orphans);
 
-                return ResponseEntity.ok(Map.of("message", "CIE schedules, marks, and attendance for Semester " + sem + " have been cleaned up."));
+                return ResponseEntity.ok(Map.of("message",
+                        "CIE schedules, marks, and attendance for Semester " + sem + " have been cleaned up."));
             } catch (Exception e) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Failed to cleanup data: " + e.getMessage()));
             }
@@ -268,28 +274,28 @@ public class PrincipalController {
         String toSemStr = (String) request.get("toSemester");
         String targetSemester = (String) request.getOrDefault("semester", "All");
         boolean isAll = "All".equalsIgnoreCase(targetSemester);
-        
+
         Boolean deleteGraduating = (Boolean) request.getOrDefault("deleteGraduating", false);
 
         if (Boolean.TRUE.equals(deleteGraduating)) {
             // Delete students in 6th semester (and their marks/attendance)
             List<Student> graduatingStudents = studentRepository.findAll().stream()
-                .filter(s -> Integer.valueOf(6).equals(s.getSemester()))
-                .collect(Collectors.toList());
-            
+                    .filter(s -> Integer.valueOf(6).equals(s.getSemester()))
+                    .collect(Collectors.toList());
+
             if (!graduatingStudents.isEmpty()) {
                 Set<Long> studentIds = graduatingStudents.stream().map(Student::getId).collect(Collectors.toSet());
-                
+
                 // 1. Delete Marks
                 List<CieMark> marks = cieMarkRepository.findAll().stream()
-                    .filter(m -> m.getStudent() != null && studentIds.contains(m.getStudent().getId()))
-                    .collect(Collectors.toList());
+                        .filter(m -> m.getStudent() != null && studentIds.contains(m.getStudent().getId()))
+                        .collect(Collectors.toList());
                 cieMarkRepository.deleteAll(marks);
 
                 // 2. Delete Attendance
                 List<Attendance> atts = attendanceRepository.findAll().stream()
-                    .filter(a -> a.getStudent() != null && studentIds.contains(a.getStudent().getId()))
-                    .collect(Collectors.toList());
+                        .filter(a -> a.getStudent() != null && studentIds.contains(a.getStudent().getId()))
+                        .collect(Collectors.toList());
                 attendanceRepository.deleteAll(atts);
 
                 // 3. Delete Students
@@ -303,7 +309,8 @@ public class PrincipalController {
             Integer fromSem = Integer.parseInt(fromSemStr);
             Integer toSem = Integer.parseInt(toSemStr);
             int count = studentRepository.updateSemester(fromSem, toSem);
-            return ResponseEntity.ok(Map.of("message", "Shifted " + count + " students from Semester " + fromSem + " to " + toSem + "."));
+            return ResponseEntity.ok(Map.of("message",
+                    "Shifted " + count + " students from Semester " + fromSem + " to " + toSem + "."));
         } else {
             // Sequential Shift: All or Target -> Target+1 (Atomic)
             int count;
@@ -336,12 +343,14 @@ public class PrincipalController {
 
         Map<String, Object> response = new HashMap<>();
 
+        // Fetch all marks once for calculations
+        List<CieMark> allMarks = cieMarkRepository.findAll();
+
         // 1. Stats
         long totalStudents = studentRepository.count();
         long totalFaculty = userRepository.countByRoleAndDepartment("FACULTY", null); // Assuming role, generic count
         if (totalFaculty == 0) {
-            // Fallback if countByRoleAndDepartment needs explicit null handling or isn't
-            // built for it
+            // Fallback if countByRoleAndDepartment needs explicit null handling or isn't built for it
             totalFaculty = userRepository.findByRole("FACULTY").size();
         }
 
@@ -390,49 +399,87 @@ public class PrincipalController {
         List<Double> branchPerformance = new ArrayList<>();
         List<Map<String, Object>> hodSubmissionStatus = new ArrayList<>();
         Map<String, Long> deptCompletedCounts = new HashMap<>();
-
         for (String dept : branchList) {
-            // Direct query: get all CIE marks for students in this department
+            final String currentDept = dept;
             List<Student> deptStudentsList = studentRepository.findByDepartment(dept);
-            Set<Long> deptStudentIds = deptStudentsList.stream()
-                    .map(Student::getId)
-                    .collect(Collectors.toSet());
+            List<CieMark> deptMarks = allMarks.stream()
+                .filter(m -> m.getStudent() != null && currentDept.equals(m.getStudent().getDepartment()))
+                .collect(Collectors.toList());
 
-            // Get all marks for students in this department
-            List<CieMark> deptMarks = cieMarkRepository.findAll().stream()
-                    .filter(m -> m.getStudent() != null && deptStudentIds.contains(m.getStudent().getId()))
-                    .filter(m -> m.getMarks() != null && m.getMarks() > 0)
-                    .collect(Collectors.toList());
+            // 1. Calculate Semester-wise student counts
+            Map<Integer, Long> semStudentCounts = deptStudentsList.stream()
+                .filter(s -> s.getSemester() != null)
+                .collect(Collectors.groupingBy(Student::getSemester, Collectors.counting()));
 
-            // Count distinct students who have any marks
-            long studentsWithMarks = deptMarks.stream()
-                    .map(m -> m.getStudent().getId())
-                    .distinct()
-                    .count();
-            deptCompletedCounts.put(dept, studentsWithMarks);
-
-            // Compute average as percentage of max (50)
-            double avgPercentage = 0.0;
-            if (!deptMarks.isEmpty()) {
-                double avgMarks = deptMarks.stream()
-                        .mapToDouble(CieMark::getMarks)
-                        .average()
-                        .orElse(0.0);
-                avgPercentage = (avgMarks / 50.0) * 100.0;
+            // 2. Map semester -> count of subjects
+            List<Subject> deptSubjects = subjectRepository.findByDepartment(dept);
+            Map<Integer, Long> semSubjectCounts = deptSubjects.stream()
+                .filter(s -> s.getSemester() != null)
+                .collect(Collectors.groupingBy(Subject::getSemester, Collectors.counting()));
+            
+            long totalExpectedMarks = 0;
+            for (Map.Entry<Integer, Long> entr : semStudentCounts.entrySet()) {
+                totalExpectedMarks += entr.getValue() * semSubjectCounts.getOrDefault(entr.getKey(), 0L) * 5; // 5 CIE types
+            }
+            if (totalExpectedMarks == 0) totalExpectedMarks = 1; // Avoid divide by zero
+            
+            long enteredMarksCount = deptMarks.size();
+            double completionRate = (double) enteredMarksCount / totalExpectedMarks * 100.0;
+            if (completionRate > 100) completionRate = 100.0;
+            
+            // Determine Status based on completion and approval
+            boolean allApproved = !deptMarks.isEmpty() && deptMarks.stream().allMatch(m -> "APPROVED".equals(m.getStatus()));
+            String finalStatus = "Pending";
+            if (completionRate >= 100) {
+                finalStatus = allApproved ? "Approved" : "Submitted";
+            } else if (completionRate > 0) {
+                finalStatus = "Pending";
             }
 
-            branchPerformance.add(Math.round(avgPercentage * 10.0) / 10.0);
+            long totalStudentsInDept = deptStudentsList.size();
+            long approvedMarksCount = deptMarks.stream().filter(m -> "APPROVED".equals(m.getStatus())).count();
+            long pendingMarksCount = totalExpectedMarks - approvedMarksCount;
 
-            // HOD Status (Mock logic based on performance/completion)
-            Map<String, Object> status = new HashMap<>();
-            status.put("id", dept);
-            status.put("dept", dept);
-            List<User> hods = userRepository.findByRoleAndDepartment("HOD", dept);
-            String hodName = hods.isEmpty() ? "Not Assigned" : hods.get(0).getFullName();
-            status.put("hod", hodName);
-            status.put("status", avgPercentage > 50 ? "Approved" : "Pending");
-            status.put("punctuality", "On Time");
-            hodSubmissionStatus.add(status);
+            Map<String, Object> statusMap = new HashMap<>();
+            statusMap.put("id", dept);
+            statusMap.put("dept", dept);
+            
+            List<User> hodListForDept = userRepository.findByRoleAndDepartment("HOD", dept);
+            String hodNameForDept = hodListForDept.isEmpty() ? "Not Assigned" : hodListForDept.get(0).getFullName();
+            
+            statusMap.put("hod", hodNameForDept);
+            statusMap.put("status", finalStatus);
+            statusMap.put("totalStudents", totalStudentsInDept);
+            statusMap.put("approvedMarks", approvedMarksCount);
+            statusMap.put("pendingMarks", pendingMarksCount);
+            statusMap.put("totalExpectedMarks", totalExpectedMarks);
+            statusMap.put("submissionDate", "-"); // Kept for UI compatibility but simplified
+            statusMap.put("completion", Math.round(completionRate));
+            
+            // Priority Logic: High if critically low completion (< 20%)
+            String finalPriority = completionRate < 20 ? "High Priority" : "Normal";
+            statusMap.put("priority", finalPriority);
+            
+            String remarks = "In Progress";
+            if (finalStatus.equals("Approved")) remarks = "All marks verified";
+            else if (finalStatus.equals("Submitted")) remarks = "Awaiting HOD verification";
+            else if (completionRate > 80) remarks = "Finalizing entries";
+            else if (completionRate > 0) remarks = "Data entry ongoing";
+            else remarks = "Not started yet";
+            
+            statusMap.put("remarks", remarks);
+            hodSubmissionStatus.add(statusMap);
+
+            double avgMark = deptMarks.stream()
+                .filter(m -> m.getMarks() != null)
+                .mapToDouble(CieMark::getMarks)
+                .average()
+                .orElse(0.0);
+            branchPerformance.add(Math.round((avgMark / 50.0 * 100.0) * 10.0) / 10.0);
+            
+            if (allApproved && completionRate >= 100) {
+                deptCompletedCounts.put(dept, totalStudentsInDept);
+            }
         }
 
         response.put("branches", branchList);
@@ -448,7 +495,6 @@ public class PrincipalController {
         response.put("deptStudentCounts", deptStudentCounts);
 
         // 3. Faculty Analytics (Aggregated)
-        List<CieMark> allMarks = cieMarkRepository.findAll();
         double globalAvg = allMarks.stream().filter(m -> m.getMarks() != null).mapToDouble(CieMark::getMarks).average()
                 .orElse(0.0);
         double globalPassRate = 0;

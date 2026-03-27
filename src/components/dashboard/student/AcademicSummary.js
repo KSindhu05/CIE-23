@@ -17,7 +17,7 @@ const cardVariants = {
     }),
 };
 
-const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = false, t }) => {
+const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = false, t, cieOverview }) => {
     const riskColor = riskLevel === 'High' ? 'var(--danger)' : riskLevel === 'Moderate' ? 'var(--warning)' : 'var(--success)';
     const riskLabel = riskLevel || 'Low';
     const isHighRisk = riskLevel === 'High';
@@ -30,6 +30,17 @@ const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = 
             label: t('avgCieScoreLabel'),
             value: studentInfo.avgCieScore || '0/50',
             subtext: t('currentSem'),
+        },
+        {
+            icon: <TrendingUp size={22} />,
+            iconBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)',
+            iconColor: 'var(--accent-indigo)',
+            label: cieOverview?.label || 'CIE',
+            value: `${cieOverview?.obtained || 0}/${cieOverview?.total || 0}`,
+            subtext: cieOverview?.pending > 0 
+                ? `${cieOverview.pending} ${t('pendingMarks')}` 
+                : t('allUploaded'),
+            isPending: cieOverview?.pending > 0
         },
         {
             icon: <CheckCircle size={22} />,
@@ -74,7 +85,12 @@ const AcademicSummary = ({ studentInfo, riskLevel, cieStatus = '0/5', loading = 
                         ) : (
                             <h3 className={styles.summaryValue}>{card.value}</h3>
                         )}
-                        <span className={styles.summarySubtext}>{card.subtext}</span>
+                        <span 
+                            className={styles.summarySubtext}
+                            style={card.isPending ? { color: 'var(--danger)', fontWeight: 600 } : {}}
+                        >
+                            {card.subtext}
+                        </span>
                     </div>
                 </motion.div>
             ))}

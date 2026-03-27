@@ -16,16 +16,14 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
 
     const filteredData = useMemo(() => hodSubmissionStatus.filter(item => {
         if (filter === 'All') return true;
-        if (filter === 'Delayed') return item.punctuality === 'Delayed';
         return item.status === filter;
-    }), [filter]);
+    }), [filter, hodSubmissionStatus]);
 
     const summary = useMemo(() => ({
         total: hodSubmissionStatus.length,
         approved: hodSubmissionStatus.filter(i => i.status === 'Approved').length,
-        pending: hodSubmissionStatus.filter(i => i.status === 'Pending').length,
-        delayed: hodSubmissionStatus.filter(i => i.punctuality === 'Delayed').length
-    }), []);
+        pending: hodSubmissionStatus.filter(i => i.status === 'Pending').length
+    }), [hodSubmissionStatus]);
 
     const handleViewDetails = useCallback((item) => {
         setSelectedDeptDetails(item);
@@ -37,7 +35,7 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h3 className={styles.chartTitle} style={{ margin: 0 }}>HOD CIE Submission Monitor</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {['All', 'Approved', 'Pending', 'Delayed'].map(f => (
+                    {['All', 'Approved', 'Pending'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
@@ -59,9 +57,7 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
                             <th>Department</th>
                             <th>HOD Name</th>
                             <th>Status</th>
-                            <th>Punctuality</th>
                             <th>Date</th>
-                            <th>Delay</th>
                             <th>Comp %</th>
                             <th>Priority</th>
                             <th>Remarks</th>
@@ -74,10 +70,13 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
                                 <tr key={i}>
                                     <td><Skeleton width="100px" height="14px" /></td>
                                     <td><Skeleton width="120px" height="14px" /></td>
-                                    <td><Skeleton width="80px" height="20px" style={{ borderRadius: '12px' }} /></td>
-                                    <td><Skeleton width="80px" height="14px" /></td>
+                                    <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <Skeleton width="80px" height="20px" style={{ borderRadius: '12px' }} />
+                                            <Skeleton width="60px" height="10px" />
+                                        </div>
+                                    </td>
                                     <td><Skeleton width="100px" height="14px" /></td>
-                                    <td><Skeleton width="60px" height="14px" /></td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Skeleton width="50px" height="6px" />
@@ -94,30 +93,11 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
                                 <td style={{ fontWeight: 600 }}>{item.dept}</td>
                                 <td>{item.hod}</td>
                                 <td>
-                                    <span className={`${styles.statusBadge} ${item.status === 'Approved' ? styles.statusApproved : item.status === 'Submitted' ? styles.statusSubmitted : styles.statusPending}`}>
+                                    <span className={`${styles.statusBadge} ${item.status === 'Approved' ? styles.statusApproved : item.status === 'Submitted' ? styles.statusSubmitted : styles.statusPending}`} style={{ width: 'fit-content' }}>
                                         {item.status}
                                     </span>
                                 </td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ color: item.punctuality === 'Delayed' ? '#ef4444' : '#16a34a', fontWeight: 600 }}>
-                                            {item.punctuality}
-                                        </span>
-                                        {item.punctuality === 'Delayed' && (
-                                            <div title="Auto-Reminder Sent">
-                                                <Bell size={14} color="#f59e0b" fill="#f59e0b" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </td>
                                 <td>{item.submissionDate}</td>
-                                <td>
-                                    {item.delayDays > 0 ? (
-                                        <span style={{ color: '#ef4444', fontWeight: 600 }}>{item.delayDays} days</span>
-                                    ) : (
-                                        <span style={{ color: '#94a3b8' }}>-</span>
-                                    )}
-                                </td>
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <div style={{ width: '50px', height: '6px', background: '#e2e8f0', borderRadius: '3px' }}>
@@ -154,7 +134,6 @@ const ComplianceSection = memo(({ hodSubmissionStatus = [], loading }) => {
                 <div style={{ fontWeight: 600, color: '#334155' }}>Total: {summary.total}</div>
                 <div style={{ fontWeight: 600, color: '#16a34a' }}>Approved: {summary.approved}</div>
                 <div style={{ fontWeight: 600, color: '#f59e0b' }}>Pending: {summary.pending}</div>
-                <div style={{ fontWeight: 600, color: '#ef4444' }}>Delayed: {summary.delayed}</div>
             </div>
 
             {/* Simple Detail Modal */}

@@ -6,7 +6,7 @@ import { X, User, Lock, Eye, EyeOff, Save, Shield, Mail, Building, Hash, Graduat
 import styles from './ProfileModal.module.css';
 
 const ProfileModal = ({ onClose, inline = false }) => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [activeTab, setActiveTab] = useState('details');
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -65,6 +65,7 @@ const ProfileModal = ({ onClose, inline = false }) => {
             if (res.ok) {
                 setSaveMsg({ text: 'Profile updated successfully!', type: 'success' });
                 setProfile(prev => ({ ...prev, ...editForm }));
+                if (updateUser) updateUser(editForm);
                 setEditing(false);
             } else {
                 setSaveMsg({ text: data.message || 'Update failed', type: 'error' });

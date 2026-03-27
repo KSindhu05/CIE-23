@@ -52,7 +52,8 @@ public class AuthService {
                 userDetails.getEmail(),
                 role,
                 userDetails.getFullName(),
-                userDetails.getDepartment());
+                userDetails.getDepartment(),
+                userDetails.getDesignation());
     }
 
     public void registerUser(SignupRequest signUpRequest) {

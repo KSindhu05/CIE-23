@@ -118,6 +118,9 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
     const renderAttendanceCell = (cieKey) => {
         if (selectedCieType !== cieKey && selectedCieType !== 'all') return null;
         const attField = cieKey + 'Att';
+        const isAttEmpty = sMarks[attField] === '' || sMarks[attField] === undefined || sMarks[attField] === null;
+        const isDisabled = cieLockStatus[cieKey] && !isAttEmpty;
+        
         return (
             <td style={{ background: '#f0fdf4' }}>
                 <DebouncedInput
@@ -125,8 +128,12 @@ const FacultyStudentRow = React.memo(({ student, index, marks, selectedCieType, 
                     value={sMarks[attField] !== undefined ? sMarks[attField] : ''}
                     onChange={(newVal) => handleMarkChange(student.id, attField, newVal)}
                     max={100}
-                    disabled={cieLockStatus[cieKey]}
-                    style={{ background: cieLockStatus[cieKey] ? '#e5e7eb' : '#f0fdf4', border: '1px solid #86efac' }}
+                    disabled={isDisabled}
+                    style={{ 
+                        background: isDisabled ? '#e5e7eb' : '#f0fdf4', 
+                        border: '1px solid #86efac',
+                        cursor: isDisabled ? 'not-allowed' : 'auto'
+                    }}
                 />
             </td>
         );
@@ -417,6 +424,10 @@ const FacultyDashboard = () => {
     // -- Edit Student State --
     const [editingStudent, setEditingStudent] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
+
+    // -- Mentorship Filter State --
+    const [selectedMenteeFilter, setSelectedMenteeFilter] = useState('All');
+    const [showMenteeFilterMenu, setShowMenteeFilterMenu] = useState(false);
 
     // -- Messaging/Feedback State --
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -1815,21 +1826,74 @@ const FacultyDashboard = () => {
             return;
         }
 
-        // Only update local marks state — user must click "Save Draft" to persist
-        const cieKey = csvCieType.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const isLabSub = selectedSubject.subjectRole?.toUpperCase() === 'LAB' || 
+                       (selectedSubject.name?.toLowerCase().includes('lab'));
+        const isTheorySub = !isLabSub;
+        
+        const cieKey = csvCieType.toLowerCase();
+        
+        // Final sanity checks
+        const isTheoryCie = ['cie1', 'cie3', 'cie5'].includes(cieKey);
+        const isLabCie = ['cie2', 'cie4'].includes(cieKey);
+        
+        if (isTheorySub && isLabCie) {
+            showToast(`Theory subjects cannot upload to ${csvCieType.replace('CIE', 'Skill Test ')}`, 'error');
+            return;
+        }
+        if (isLabSub && isTheoryCie) {
+            showToast(`Lab subjects cannot upload to ${csvCieType.replace('CIE', 'CIE-')}`, 'error');
+            return;
+        }
+
+        let updatedCount = 0;
+        let skippedCount = 0;
+        const isLocked = cieLockStatus[cieKey];
+
+        // Only update local marks state
         setMarks(prev => {
             const updated = { ...prev };
             validRows.forEach(r => {
                 if (!updated[r.studentId]) {
                     updated[r.studentId] = { cie1: '', cie2: '', cie3: '', cie4: '', cie5: '', cie1Att: '', cie2Att: '', cie3Att: '', cie4Att: '', cie5Att: '' };
                 }
-                if (r.marks !== null) updated[r.studentId][cieKey] = r.marks;
-                if (r.attendance !== null) updated[r.studentId][cieKey + 'Att'] = r.attendance;
+                
+                const currentMark = updated[r.studentId][cieKey];
+                const currentAtt = updated[r.studentId][cieKey + 'Att'];
+                
+                // If locked, only allow if current is empty
+                if (isLocked) {
+                    if (r.marks !== null) {
+                        if (currentMark === '' || currentMark === undefined || currentMark === null) {
+                            updated[r.studentId][cieKey] = r.marks;
+                            updatedCount++;
+                        } else {
+                            skippedCount++;
+                        }
+                    }
+                    if (r.attendance !== null) {
+                        if (currentAtt === '' || currentAtt === undefined || currentAtt === null) {
+                            updated[r.studentId][cieKey + 'Att'] = r.attendance;
+                        }
+                    }
+                } else {
+                    // Not locked, standard overwrite
+                    if (r.marks !== null) {
+                        updated[r.studentId][cieKey] = r.marks;
+                        updatedCount++;
+                    }
+                    if (r.attendance !== null) {
+                        updated[r.studentId][cieKey + 'Att'] = r.attendance;
+                    }
+                }
             });
             return updated;
         });
 
-        showToast(`${validRows.length} marks loaded for ${csvCieType}. Click "Save Draft" to save!`, 'success');
+        const msg = isLocked 
+            ? `Successfully loaded ${updatedCount} missing marks for ${csvCieType}. (Skipped ${skippedCount} existing marks in locked CIE). Click "Save Draft" to save!`
+            : `Successfully loaded ${updatedCount} marks for ${csvCieType}. Click "Save Draft" to persist changes.`;
+
+        showToast(msg, isLocked ? 'warning' : 'success');
         setShowUploadModal(false);
         setCsvData([]);
         setCsvErrors([]);
@@ -1857,15 +1921,32 @@ const FacultyDashboard = () => {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>Select CIE Type *</label>
                             <div className={styles.csvCieSelector}>
-                                {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => (
-                                    <button
-                                        key={cie}
-                                        className={`${styles.csvCieBtn} ${csvCieType === cie ? styles.csvCieBtnActive : ''}`}
-                                        onClick={() => setCsvCieType(cie)}
-                                    >
-                                        {cie.replace('CIE', 'CIE-')}
-                                    </button>
-                                ))}
+                                {['CIE1', 'CIE2', 'CIE3', 'CIE4', 'CIE5'].map(cie => {
+                                    const cieKeyStr = cie.toLowerCase();
+                                    const isLocked = cieLockStatus[cieKeyStr];
+                                    const isLabSub = selectedSubject.subjectRole?.toUpperCase() === 'LAB' || 
+                                                   (selectedSubject.name?.toLowerCase().includes('lab'));
+                                    const isTheorySub = !isLabSub;
+                                    
+                                    const isTheoryCie = ['cie1', 'cie3', 'cie5'].includes(cieKeyStr);
+                                    const isLabCie = ['cie2', 'cie4'].includes(cieKeyStr);
+                                    
+                                    const isBlockRole = (isTheorySub && isLabCie) || (isLabSub && isTheoryCie);
+                                    
+                                    if (isBlockRole) return null; // Hide mismatched CIE types
+
+                                    return (
+                                        <button
+                                            key={cie}
+                                            className={`${styles.csvCieBtn} ${csvCieType === cie ? styles.csvCieBtnActive : ''}`}
+                                            onClick={() => setCsvCieType(cie)}
+                                            style={{ position: 'relative' }}
+                                        >
+                                            {cie.replace('CIE', isLabCie ? 'ST-' : 'CIE-')}
+                                            {isLocked && <span style={{ marginLeft: '4px' }}>🔒</span>}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -2339,15 +2420,24 @@ const FacultyDashboard = () => {
 
                 // Proceeding with helper usage.
                 // Proceeding with helper usage.
+                // IMPROVED LOGIC: Filter by Grade OR Status
                 const { grade } = getStudentPerformance(s.id);
-                // Filter by Grade
-                const gradeMatch = selectedGradeFilter === 'All' || grade === selectedGradeFilter;
+                
+                // Determine status label same way as table
+                let statusLabel = 'Good Standing';
+                if (grade === 'F') statusLabel = 'Low Grade';
+                else if (grade === 'D') statusLabel = 'Average';
+
+                const matchesFilter = selectedGradeFilter === 'All' || 
+                                     grade === selectedGradeFilter || 
+                                     statusLabel === selectedGradeFilter;
+
                 // Filter by Section
                 const sectionMatch = selectedSection === 'All' || s.section === selectedSection;
                 // Also ensure student is in faculty's assigned sections generally if restricted
                 const facultySectionMatch = facultySections.length === 0 || facultySections.includes(s.section);
 
-                return gradeMatch && sectionMatch && facultySectionMatch;
+                return matchesFilter && sectionMatch && facultySectionMatch;
             })
             .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -2374,10 +2464,10 @@ const FacultyDashboard = () => {
                                 onClick={() => setShowFilterMenu(!showFilterMenu)}
                             >
                                 <Filter size={16} />
-                                <span>{selectedGradeFilter === 'All' ? 'Filter' : `Grade: ${selectedGradeFilter}`}</span>
+                                <span>{selectedGradeFilter === 'All' ? 'Filter' : selectedGradeFilter}</span>
                             </button>
 
-                            {/* Section Filter Dropdown */}
+                             {/* Section Filter Dropdown */}
                             {facultySections.length > 1 && (
                                 <select
                                     className={styles.filterSelect}
@@ -2391,18 +2481,18 @@ const FacultyDashboard = () => {
 
                             {showFilterMenu && (
                                 <div className={styles.filterMenu}>
-                                    <div className={styles.filterHeader}>Filter by Grade</div>
-                                    {['All', 'A', 'B', 'C', 'D'].map(grade => (
+                                    <div className={styles.filterHeader}>FILTER BY PERFORMANCE</div>
+                                    {['All', 'Good Standing', 'Average', 'Low Grade'].map(status => (
                                         <div
-                                            key={grade}
-                                            className={`${styles.filterOption} ${selectedGradeFilter === grade ? styles.selected : ''}`}
+                                            key={status}
+                                            className={`${styles.filterOption} ${selectedGradeFilter === status ? styles.selected : ''}`}
                                             onClick={() => {
-                                                setSelectedGradeFilter(grade);
+                                                setSelectedGradeFilter(status);
                                                 setShowFilterMenu(false);
                                             }}
                                         >
-                                            {selectedGradeFilter === grade && <CheckCircle size={14} color="#2563eb" />}
-                                            {grade}
+                                            {selectedGradeFilter === status && <CheckCircle size={14} color="#2563eb" />}
+                                            {status}
                                         </div>
                                     ))}
                                 </div>
@@ -2441,7 +2531,6 @@ const FacultyDashboard = () => {
                                     <th>Semester</th>
                                     <th>Section</th>
                                     <th>Status</th>
-                                    <th>Grade</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2460,7 +2549,6 @@ const FacultyDashboard = () => {
                                             <td><Skeleton width="80px" height="16px" /></td>
                                             <td><Skeleton width="40px" height="20px" /></td>
                                             <td><Skeleton width="100px" height="24px" /></td>
-                                            <td><Skeleton width="80px" height="24px" /></td>
                                             <td><Skeleton variant="circle" width="32px" height="32px" /></td>
                                         </tr>
                                     ))
@@ -2486,14 +2574,10 @@ const FacultyDashboard = () => {
                                     if (!hasData) {
                                         statusStyle = styles.statusAverage; // Neutral
                                         StatusIcon = AlertCircle;
-                                    } else if (grade === 'F') {
-                                        statusLabel = 'At Risk';
-                                        statusStyle = styles.statusRisk;
-                                        StatusIcon = AlertTriangle;
-                                    } else if (grade === 'D') {
-                                        statusLabel = 'Average';
-                                        statusStyle = styles.statusAverage;
-                                        StatusIcon = AlertCircle;
+                                    } else if (grade === 'F' || grade === 'D') {
+                                        statusLabel = grade === 'F' ? 'Low Grade' : 'Average';
+                                        statusStyle = grade === 'F' ? styles.statusRisk : styles.statusAverage;
+                                        StatusIcon = grade === 'F' ? AlertTriangle : AlertCircle;
                                     }
 
                                     return (
@@ -2520,18 +2604,6 @@ const FacultyDashboard = () => {
                                             <td>
                                                 <span className={`${styles.statusBadge} ${statusStyle}`}>
                                                     <StatusIcon size={14} /> {statusLabel}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span style={{
-                                                    padding: '4px 10px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: '600',
-                                                    background: gradeBg,
-                                                    color: gradeColor
-                                                }}>
-                                                    Grade {grade}
                                                 </span>
                                             </td>
                                             <td>
@@ -3039,18 +3111,48 @@ const FacultyDashboard = () => {
 
 
     const renderMentorship = () => {
-        // Filter real students from API
-        const realMentees = students.filter(s => menteeIds.includes(s.id));
-
-        // Combine with manually added mentees
-        const allMentees = [...realMentees, ...manualMentees];
-
-        // Calculate performance color
-        const getPerformanceColor = (avg) => {
-            if (avg < 40) return { bg: '#fee2e2', text: '#b91c1c', icon: <AlertTriangle size={14} /> };
-            if (avg < 75) return { bg: '#fef3c7', text: '#b45309', icon: <AlertCircle size={14} /> };
-            return { bg: '#dcfce7', text: '#15803d', icon: <CheckCircle size={14} /> };
+        // Filter and performance logic
+        const getPerformanceStatus = (avg) => {
+            if (avg <= 0) return 'No Data';
+            if (avg < 40) return 'Low Grade';
+            if (avg < 75) return 'Average';
+            return 'Good Standing';
         };
+
+        const getPerformanceColor = (status) => {
+            if (status === 'Low Grade') return { bg: '#fee2e2', text: '#b91c1c', icon: <AlertTriangle size={14} /> };
+            if (status === 'Average') return { bg: '#fef3c7', text: '#b45309', icon: <AlertCircle size={14} /> };
+            if (status === 'Good Standing') return { bg: '#dcfce7', text: '#15803d', icon: <CheckCircle size={14} /> };
+            return { bg: '#f3f4f6', text: '#6b7280', icon: <AlertCircle size={14} /> };
+        };
+
+        // Pre-calculate status for filtering
+        const menteesWithStatus = [...students.filter(s => menteeIds.includes(s.id)), ...manualMentees].map(student => {
+            const avgScore = student.isManual ? parseInt(student.avgMark) || 0 : (() => {
+                let totalScored = 0;
+                let count = 0;
+                if (allStudentMarks) {
+                    Object.keys(allStudentMarks).forEach(subId => {
+                        const m = allStudentMarks[subId][student.id];
+                        if (m) {
+                            ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'].forEach(cKey => {
+                                const val = m[cKey];
+                                if (val !== undefined && val !== null && val !== '') {
+                                    totalScored += (val === 'Ab' ? 0 : (parseInt(val) || 0));
+                                    count++;
+                                }
+                            });
+                        }
+                    });
+                }
+                return count > 0 ? Math.round((totalScored / (count * 50)) * 100) : 0;
+            })();
+            return { ...student, avgScore, performanceStatus: getPerformanceStatus(avgScore) };
+        });
+
+        const filteredMentees = menteesWithStatus.filter(m => 
+            selectedMenteeFilter === 'All' || m.performanceStatus === selectedMenteeFilter
+        ).sort((a, b) => a.name.localeCompare(b.name));
 
         return (
             <div className={styles.sectionContainer}>
@@ -3058,10 +3160,40 @@ const FacultyDashboard = () => {
                     <div>
                         <h2 className={styles.sectionTitle}>Mentorship / Proctoring</h2>
                         <p style={{ color: '#64748b', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                            Managing {allMentees.length} students under mentorship.
+                            {selectedMenteeFilter === 'All' 
+                                ? `Managing ${menteesWithStatus.length} students under mentorship.`
+                                : `Showing ${filteredMentees.length} students with ${selectedMenteeFilter} status.`}
                         </p>
                     </div>
                     <div className={styles.headerActions}>
+                        <div style={{ position: 'relative' }}>
+                            <button 
+                                className={`${styles.filterBtn} ${showMenteeFilterMenu ? styles.active : ''}`}
+                                onClick={() => setShowMenteeFilterMenu(!showMenteeFilterMenu)}
+                            >
+                                <Filter size={16} />
+                                <span>{selectedMenteeFilter === 'All' ? 'Filter' : selectedMenteeFilter}</span>
+                            </button>
+
+                            {showMenteeFilterMenu && (
+                                <div className={styles.filterMenu}>
+                                    <div className={styles.filterHeader}>FILTER BY STATUS</div>
+                                    {['All', 'Good Standing', 'Average', 'Low Grade'].map(status => (
+                                        <div 
+                                            key={status} 
+                                            className={`${styles.filterOption} ${selectedMenteeFilter === status ? styles.selected : ''}`}
+                                            onClick={() => {
+                                                setSelectedMenteeFilter(status);
+                                                setShowMenteeFilterMenu(false);
+                                            }}
+                                        >
+                                            {selectedMenteeFilter === status && <CheckCircle size={14} color="#2563eb" />}
+                                            {status}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <button className={styles.saveBtn} onClick={() => setShowMenteeModal(true)} style={{ background: '#2563eb' }}>
                             <FilePlus size={16} /> Add New Student
                         </button>
@@ -3083,30 +3215,9 @@ const FacultyDashboard = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {allMentees.length > 0 ? allMentees.map(student => {
-                                const avgScore = student.isManual ? parseInt(student.avgMark) || 0 : (() => {
-                                    let totalScored = 0;
-                                    let count = 0;
-                                    if (allStudentMarks) {
-                                        Object.keys(allStudentMarks).forEach(subId => {
-                                            const m = allStudentMarks[subId][student.id];
-                                            if (m) {
-                                                const cies = ['cie1', 'cie2', 'cie3', 'cie4', 'cie5'];
-                                                cies.forEach(cKey => {
-                                                    const val = m[cKey];
-                                                    if (val !== undefined && val !== null && val !== '') {
-                                                        totalScored += (val === 'Ab' ? 0 : (parseInt(val) || 0));
-                                                        count++;
-                                                    }
-                                                });
-                                            }
-                                        });
-                                    }
-                                    return count > 0 ? Math.round((totalScored / (count * 50)) * 100) : 0;
-                                })();
-
-
-                                const perf = getPerformanceColor(avgScore);
+                            {filteredMentees.length > 0 ? filteredMentees.map(student => {
+                                const avgScore = student.avgScore;
+                                const perf = getPerformanceColor(student.performanceStatus);
 
                                 return (
                                     <tr key={student.id}>
@@ -3788,6 +3899,16 @@ const FacultyDashboard = () => {
                 icon: <AlertTriangle size={20} />,
                 list: facultyClassAnalytics.lowPerformersList || [],
                 description: 'Students who scored below the passing threshold (At Risk).'
+            },
+            {
+                id: 'passed',
+                label: 'Passed Students',
+                color: '#3b82f6',
+                bg: '#eff6ff',
+                borderColor: '#bfdbfe',
+                icon: <CheckCircle size={20} />,
+                list: [...(facultyClassAnalytics.excellentPerformersList || []), ...(facultyClassAnalytics.averagePerformersList || [])],
+                description: 'Students who scored above the passing threshold.'
             }
         ];
 

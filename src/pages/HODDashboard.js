@@ -3377,7 +3377,20 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 {subjects.filter(sub => sub.name !== 'IC').map((subject, idx) => {
                                     const subjectMarks = subjectMarksData[subject.name] || [];
                                     const totalStudents = deptStudents.length;
-                                    const studentsWithMarks = subjectMarks.filter(mark => mark.cie1Score !== null || mark.cie2Score !== null || mark.cie3Score !== null).length;
+                                    
+                                    // Group marks by regNo to see which students have any marks submitted
+                                    const studentMarksMap = {};
+                                    subjectMarks.forEach(m => {
+                                        if (m.student?.regNo) {
+                                            if (!studentMarksMap[m.student.regNo]) studentMarksMap[m.student.regNo] = [];
+                                            studentMarksMap[m.student.regNo].push(m);
+                                        }
+                                    });
+                                    
+                                    const studentsWithMarks = Object.values(studentMarksMap).filter(marks => 
+                                        marks.some(m => m.marks !== null && m.marks !== undefined)
+                                    ).length;
+                                    
                                     const pendingCount = totalStudents - studentsWithMarks;
                                     let status = 'Pending';
                                     if (pendingCount === 0) {
@@ -3422,15 +3435,100 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     </div>
                     {viewingSubject && (
                         <div className={styles.modalOverlay} onClick={() => setViewingSubject(null)}>
-                            <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+                            <div className={styles.modalContent} style={{ maxWidth: '1200px', width: '95%' }} onClick={e => e.stopPropagation()}>
                                 <div className={styles.modalHeader}>
                                     <h2>{viewingSubject.name}</h2>
                                     <button className={styles.closeBtn} onClick={() => setViewingSubject(null)}><X size={24} /></button>
                                 </div>
                                 <div className={styles.modalBody}>
                                     <p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>
-                                        Status: <span className={`${styles.statusBadge} ${viewingSubject.status === 'Approved' ? styles.approved : viewingSubject.status === 'Submitted' ? styles.submitted : styles.pending}`} style={{ marginLeft: '10px' }}>{viewingSubject.status}</span>
-                                    </p><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Sl. No.</th><th>Reg No</th><th>Student Name</th><th>CIE-1 (T)</th><th>Att %</th><th>ST-1 (L)</th><th>CIE-2 (T)</th><th>ST-2 (L)</th><th>Activity</th><th>Total</th></tr></thead><tbody>{(() => { const subjectMarks = subjectMarksData[viewingSubject.name] || []; const studentsToShow = viewingSubject.status === 'Pending' ? deptStudents.filter(student => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); return !studentMark || (studentMark.cie1Score === null && studentMark.cie2Score === null && studentMark.cie3Score === null); }) : deptStudents; return studentsToShow.map((student, index) => { const studentMark = subjectMarks.find(m => m.student?.regNo === student.regNo); const cie1 = studentMark?.cie1Score ?? '-'; const cie2 = studentMark?.cie2Score ?? '-'; const cie3 = studentMark?.cie3Score ?? '-'; const cie4 = studentMark?.cie4Score ?? '-'; const cie5 = studentMark?.cie5Score ?? '-'; const att = studentMark?.attendancePercentage ?? '-'; const total = (studentMark?.cie1Score || 0) + (studentMark?.cie2Score || 0) + (studentMark?.cie3Score || 0) + (studentMark?.cie4Score || 0) + (studentMark?.cie5Score || 0); return (<tr key={student.id}><td>{index + 1}</td><td>{student.regNo}</td><td>{student.name}</td><td>{cie1}</td><td>{att !== '-' ? `${att}%` : '-'}</td><td>{cie2}</td><td>{cie3}</td><td>{cie4}</td><td>{cie5}</td><td style={{ fontWeight: 'bold' }}>{studentMark ? total : '-'}</td></tr>); }); })()}</tbody></table></div></div></div></div>)}</div>)}
+                                        Status: <span className={`${styles.statusBadge} ${viewingSubject.status === 'Approved' ? styles.approved : viewingSubject.status === 'Submitted' ? styles.submitted : viewingSubject.status === 'Pending' ? styles.pending : ''}`} style={{ marginLeft: '10px' }}>{viewingSubject.status}</span>
+                                    </p>
+                                    <div className={styles.tableWrapper}>
+                                        <table className={styles.table}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Sl. No.</th>
+                                                    <th>Reg No</th>
+                                                    <th>Student Name</th>
+                                                    <th>CIE-1 (T)</th>
+                                                    <th>Att %</th>
+                                                    <th>ST-1 (L)</th>
+                                                    <th>CIE-2 (T)</th>
+                                                    <th>ST-2 (L)</th>
+                                                    <th>Activity</th>
+                                                    <th>Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(() => { 
+                                                    const subjectMarks = subjectMarksData[viewingSubject.name] || [];
+                                                    
+                                                    // Group marks for the modal table
+                                                    const modalMarksMap = {};
+                                                    subjectMarks.forEach(m => {
+                                                        const regNo = m.student?.regNo;
+                                                        if (!regNo) return;
+                                                        if (!modalMarksMap[regNo]) {
+                                                            modalMarksMap[regNo] = {
+                                                                cie1: '-', cie2: '-', cie3: '-', cie4: '-', cie5: '-', att: '-'
+                                                            };
+                                                        }
+                                                        const score = m.marks ?? '-';
+                                                        if (m.cieType === 'CIE1') { 
+                                                            modalMarksMap[regNo].cie1 = score; 
+                                                            if (m.attendancePercentage != null) modalMarksMap[regNo].att = m.attendancePercentage;
+                                                        } else if (m.cieType === 'CIE2') {
+                                                            modalMarksMap[regNo].cie2 = score;
+                                                        } else if (m.cieType === 'CIE3') {
+                                                            modalMarksMap[regNo].cie3 = score;
+                                                        } else if (m.cieType === 'CIE4') {
+                                                            modalMarksMap[regNo].cie4 = score;
+                                                        } else if (m.cieType === 'CIE5') {
+                                                            modalMarksMap[regNo].cie5 = score;
+                                                        }
+                                                    });
+
+                                                    const studentsToShow = viewingSubject.status === 'Pending' 
+                                                        ? deptStudents.filter(student => (!modalMarksMap[student.regNo] || Object.values(modalMarksMap[student.regNo]).every(v => v === '-')))
+                                                        : deptStudents;
+
+                                                    return studentsToShow.map((student, index) => { 
+                                                        const sm = modalMarksMap[student.regNo] || { cie1: '-', cie2: '-', cie3: '-', cie4: '-', cie5: '-', att: '-' };
+                                                        
+                                                        const total = (sm.cie1 !== '-' ? Number(sm.cie1) : 0) + 
+                                                                    (sm.cie2 !== '-' ? Number(sm.cie2) : 0) + 
+                                                                    (sm.cie3 !== '-' ? Number(sm.cie3) : 0) + 
+                                                                    (sm.cie4 !== '-' ? Number(sm.cie4) : 0) + 
+                                                                    (sm.cie5 !== '-' ? Number(sm.cie5) : 0);
+                                                        
+                                                        const hasAnyMark = sm.cie1 !== '-' || sm.cie2 !== '-' || sm.cie3 !== '-' || sm.cie4 !== '-' || sm.cie5 !== '-';
+
+                                                        return (
+                                                            <tr key={student.id}>
+                                                                <td>{index + 1}</td>
+                                                                <td style={{ fontFamily: 'monospace' }}>{student.regNo}</td>
+                                                                <td>{student.name}</td>
+                                                                <td>{sm.cie1}</td>
+                                                                <td>{sm.att !== '-' ? `${sm.att}%` : '-'}</td>
+                                                                <td>{sm.cie2}</td>
+                                                                <td>{sm.cie3}</td>
+                                                                <td>{sm.cie4}</td>
+                                                                <td>{sm.cie5}</td>
+                                                                <td style={{ fontWeight: 'bold', color: '#1e40af' }}>{hasAnyMark ? total : '-'}</td>
+                                                            </tr>
+                                                        ); 
+                                                    }); 
+                                                })()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             {activeTab === 'performance' && (() => {
                 const applyFilters = (list) => list
                     .filter(item => hodFilterSubject === 'All' || item.subject === hodFilterSubject)
@@ -4887,7 +4985,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                     <div>
                         <h1 className={styles.welcomeTextBig}>Hello, {user?.fullName || user?.username}</h1>
-                        <p className={styles.subtitle}>HOD | {user?.username || 'HOD'}</p>
+                        <p className={styles.subtitle}>{user?.designation || 'HOD'} | {user?.username || 'HOD'}</p>
                     </div>
                 </div>
             </header>

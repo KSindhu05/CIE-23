@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }) => {
                     name: data.username,
                     fullName: data.fullName || data.username, // Use fullName if available
                     department: data.department, // Store department from backend
+                    designation: data.designation, // Store designation from backend
                     token: data.token
                 };
 
@@ -107,8 +108,17 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('principalActiveTab');
     };
 
+    const updateUser = (newData) => {
+        setUser(prev => {
+            const updated = { ...prev, ...newData };
+            if (newData.fullName) updated.fullName = newData.fullName; // Explicitly map if needed
+            localStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
