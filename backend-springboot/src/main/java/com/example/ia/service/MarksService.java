@@ -51,6 +51,7 @@ public class MarksService {
 
         // Find all marks for this subject and CIE type 
         // Only submit marks that belong to this faculty's students
+        User facultyUser = userRepository.findByUsername(facultyUsername).orElse(null);
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType)
@@ -58,6 +59,9 @@ public class MarksService {
                     && mark.getStudent() != null
                     && allowedStudentIds.contains(mark.getStudent().getId())) {
                 mark.setStatus("SUBMITTED");
+                if (facultyUser != null) {
+                    mark.setFaculty(facultyUser);
+                }
             }
         });
         cieMarkRepository.saveAll(marks);
@@ -72,6 +76,7 @@ public class MarksService {
         java.util.List<String> changeDetails = new java.util.ArrayList<>();
         String subjectName = "";
         String subjectDepartment = "";
+        User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
 
         if (marksPayload.isEmpty()) return;
 
@@ -97,6 +102,11 @@ public class MarksService {
 
             if (existing != null) {
                 CieMark mark = existing;
+
+                // Faculty cannot edit APPROVED marks
+                if (!isHod && "APPROVED".equals(mark.getStatus())) {
+                    continue;
+                }
 
                 if (isHod) {
                     boolean changed = false;
@@ -129,16 +139,21 @@ public class MarksService {
                 }
 
                 if (payload.getMarks() != null) {
-                    mark.setMarks(payload.getMarks() < 0 ? null : payload.getMarks());
+                    mark.setMarks(payload.getMarks() == -1.0 ? null : payload.getMarks());
                 }
                 if (payload.getAttendancePercentage() != null) {
-                    mark.setAttendancePercentage(payload.getAttendancePercentage() < 0 ? null : payload.getAttendancePercentage());
+                    mark.setAttendancePercentage(payload.getAttendancePercentage() == -1.0 ? null : payload.getAttendancePercentage());
+                }
+                
+                // Track who updated these marks (only if faculty)
+                if (!isHod && currentUser != null) {
+                    mark.setFaculty(currentUser);
                 }
 
                 toSave.add(mark);
             } else {
-                if (payload.getMarks() != null && payload.getMarks() < 0) payload.setMarks(null);
-                if (payload.getAttendancePercentage() != null && payload.getAttendancePercentage() < 0) payload.setAttendancePercentage(null);
+                if (payload.getMarks() != null && payload.getMarks() == -1.0) payload.setMarks(null);
+                if (payload.getAttendancePercentage() != null && payload.getAttendancePercentage() == -1.0) payload.setAttendancePercentage(null);
 
                 if (payload.getMarks() != null || payload.getAttendancePercentage() != null) {
                     if (isHod) {
@@ -155,6 +170,9 @@ public class MarksService {
                     }
 
                     if (payload.getStatus() == null) payload.setStatus("PENDING");
+                    if (!isHod && currentUser != null) {
+                        payload.setFaculty(currentUser);
+                    }
                     toSave.add(payload);
                 }
             }
@@ -216,28 +234,39 @@ public class MarksService {
     }
 
     @Transactional
-    public void approveMarks(Long subjectId, String cieType) {
+    public void approveMarks(Long subjectId, String cieType, Long facultyId) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
         
-        // Find faculty teaching this subject to notify them
-        Subject subject = subjectRepository.findById(subjectId).orElse(null);
-        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
-
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
-                mark.setStatus("APPROVED");
+                if (facultyId == null || (mark.getFaculty() != null && mark.getFaculty().getId().equals(facultyId))) {
+                    mark.setStatus("APPROVED");
+                }
             }
         });
         cieMarkRepository.saveAll(marks);
 
-        // Notify Faculty
-        if (subject != null) {
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
+
+        // Notify SPECIFIC Faculty or all assigned if legacy
+        if (facultyId != null) {
+            User faculty = userRepository.findById(facultyId).orElse(null);
+            if (faculty != null) {
+                Notification notif = new Notification();
+                notif.setUser(faculty);
+                notif.setMessage("HOD has APPROVED your " + cieType + " marks for " + subjectInfo + ".");
+                notif.setType("SUCCESS");
+                notif.setCategory("Marks Approved");
+                notificationRepository.save(notif);
+            }
+        } else if (subject != null) {
             List<User> faculties = userRepository.findByRole("FACULTY");
             for (User faculty : faculties) {
                 if (facultyService.isFacultyAssignedToSubjectAndStudent(faculty.getUsername(), subjectId, null)) {
                     Notification notif = new Notification();
                     notif.setUser(faculty);
-                    notif.setMessage("HOD has APPROVED your " + cieType + " marks for " + subjectInfo + ".");
+                    notif.setMessage("HOD has APPROVED " + cieType + " marks for " + subjectInfo + ".");
                     notif.setType("SUCCESS");
                     notif.setCategory("Marks Approved");
                     notificationRepository.save(notif);
@@ -247,28 +276,39 @@ public class MarksService {
     }
 
     @Transactional
-    public void rejectMarks(Long subjectId, String cieType) {
+    public void rejectMarks(Long subjectId, String cieType, Long facultyId) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
-
-        // Find faculty teaching this subject to notify them
-        Subject subject = subjectRepository.findById(subjectId).orElse(null);
-        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
 
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType) && "SUBMITTED".equals(mark.getStatus())) {
-                mark.setStatus("REJECTED");
+                if (facultyId == null || (mark.getFaculty() != null && mark.getFaculty().getId().equals(facultyId))) {
+                    mark.setStatus("REJECTED");
+                }
             }
         });
         cieMarkRepository.saveAll(marks);
 
-        // Notify Faculty
-        if (subject != null) {
+        Subject subject = subjectRepository.findById(subjectId).orElse(null);
+        String subjectInfo = subject != null ? (subject.getName() + " (" + subject.getCode() + ")") : "Subject ID: " + subjectId;
+
+        // Notify SPECIFIC Faculty or all assigned if legacy
+        if (facultyId != null) {
+            User faculty = userRepository.findById(facultyId).orElse(null);
+            if (faculty != null) {
+                Notification notif = new Notification();
+                notif.setUser(faculty);
+                notif.setMessage("HOD has REJECTED your " + cieType + " marks for " + subjectInfo + ". Please review and update.");
+                notif.setType("ALERT");
+                notif.setCategory("Marks Rejected");
+                notificationRepository.save(notif);
+            }
+        } else if (subject != null) {
             List<User> faculties = userRepository.findByRole("FACULTY");
             for (User faculty : faculties) {
                 if (facultyService.isFacultyAssignedToSubjectAndStudent(faculty.getUsername(), subjectId, null)) {
                     Notification notif = new Notification();
                     notif.setUser(faculty);
-                    notif.setMessage("HOD has REJECTED your " + cieType + " marks for " + subjectInfo + ". Please review and update.");
+                    notif.setMessage("HOD has REJECTED " + cieType + " marks for " + subjectInfo + ". Please review and update.");
                     notif.setType("ALERT");
                     notif.setCategory("Marks Rejected");
                     notificationRepository.save(notif);
@@ -296,26 +336,22 @@ public class MarksService {
     }
 
     @Transactional
-    public void unlockMarks(Long subjectId, String cieType) {
+    public void unlockMarks(Long subjectId, String cieType, Long facultyId) {
         List<CieMark> marks = cieMarkRepository.findBySubject_Id(subjectId);
-
-        // Get all students who already have marks for this CIE type
         java.util.Set<Long> studentsWithMarks = new java.util.HashSet<>();
 
-        // Update existing marks to PENDING so faculty can edit them
         marks.forEach(mark -> {
             if (mark.getCieType().equals(cieType)) {
-                mark.setStatus("PENDING");
-                if (mark.getStudent() != null) {
-                    studentsWithMarks.add(mark.getStudent().getId());
+                if (facultyId == null || (mark.getFaculty() != null && mark.getFaculty().getId().equals(facultyId))) {
+                    mark.setStatus("PENDING");
+                    if (mark.getStudent() != null) {
+                        studentsWithMarks.add(mark.getStudent().getId());
+                    }
                 }
             }
         });
         cieMarkRepository.saveAll(marks);
 
-        // For CIE types that don't have records yet (e.g. CIE-2 to CIE-5),
-        // create PENDING placeholders with NULL marks (not 0) so the frontend
-        // knows these CIE types are unlocked for editing
         java.util.Set<Long> allStudentIds = new java.util.HashSet<>();
         marks.forEach(mark -> {
             if (mark.getStudent() != null) {
@@ -389,10 +425,10 @@ public class MarksService {
             throw new RuntimeException("Request is not pending");
         }
 
-        // Unlock each requested CIE
+        // Unlock each requested CIE for the SPECIFIC REQUESTING FACULTY
         String[] types = request.getCieTypes().split(",");
         for (String type : types) {
-            unlockMarks(request.getSubject().getId(), type.trim());
+            unlockMarks(request.getSubject().getId(), type.trim(), request.getFaculty().getId());
         }
 
         request.setStatus("APPROVED");

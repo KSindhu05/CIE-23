@@ -7,12 +7,14 @@ import { useDialog } from '../components/GlobalDialogProvider';
 import {
     LayoutDashboard, Users, User, FileText, CheckCircle, TrendingUp, BarChart2,
     AlertTriangle, Briefcase, Bell, Activity, Clock, Award, ClipboardList, Phone,
-    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest, Eye, Send, Unlock, LockOpen
+    Edit, Save, LogOut, ShieldAlert, X, BookOpen, Layers, Megaphone, Calendar, MapPin, PenTool, Download, Mail, Trash2, Key, UserPlus, Upload, GitPullRequest, Eye, Send, Unlock, LockOpen, ShieldCheck, Search
 } from 'lucide-react';
 import {
-    departments, subjectsByDept, getStudentsByDept, englishMarks, mathsMarks,
+    departments as mockDepartments, subjectsByDept, getStudentsByDept, englishMarks, mathsMarks,
     departmentStats, facultySubjects, facultyProfiles
 } from '../utils/mockData';
+
+const departments = mockDepartments.length > 0 ? mockDepartments : ['CSE', 'EEE', 'MECH', 'CIVIL', 'MET'];
 import styles from './HODDashboard.module.css';
 import Skeleton from '../components/ui/Skeleton';
 import ProfileModal from '../components/ProfileModal';
@@ -136,12 +138,12 @@ const DebouncedInput = ({ value, onChange, max, style, className, disabled }) =>
 };
 
 const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, styles, handleMarkChange, perfConfig, subjectRole }) => {
-    const valCIE1 = (editMark.cie1 !== undefined && editMark.cie1 !== null) ? editMark.cie1 : '';
-    const valCIE2 = (editMark.cie2 !== undefined && editMark.cie2 !== null) ? editMark.cie2 : '';
-    const valCIE3 = (editMark.cie3 !== undefined && editMark.cie3 !== null) ? editMark.cie3 : '';
-    const valCIE4 = (editMark.cie4 !== undefined && editMark.cie4 !== null) ? editMark.cie4 : '';
-    const valCIE5 = (editMark.cie5 !== undefined && editMark.cie5 !== null) ? editMark.cie5 : '';
-    
+    const valCIE1 = (editMark.cie1 !== undefined && editMark.cie1 !== null) ? (editMark.cie1 === -2.0 ? 'AB' : editMark.cie1) : '';
+    const valCIE2 = (editMark.cie2 !== undefined && editMark.cie2 !== null) ? (editMark.cie2 === -2.0 ? 'AB' : editMark.cie2) : '';
+    const valCIE3 = (editMark.cie3 !== undefined && editMark.cie3 !== null) ? (editMark.cie3 === -2.0 ? 'AB' : editMark.cie3) : '';
+    const valCIE4 = (editMark.cie4 !== undefined && editMark.cie4 !== null) ? (editMark.cie4 === -2.0 ? 'AB' : editMark.cie4) : '';
+    const valCIE5 = (editMark.cie5 !== undefined && editMark.cie5 !== null) ? (editMark.cie5 === -2.0 ? 'AB' : editMark.cie5) : '';
+
     // Attendance
     const att1Val = (editMark.cie1Att !== undefined && editMark.cie1Att !== null) ? editMark.cie1Att : '';
     const att2Val = (editMark.cie2Att !== undefined && editMark.cie2Att !== null) ? editMark.cie2Att : '';
@@ -150,11 +152,11 @@ const HODStudentRow = React.memo(({ student, index, editMark, selectedCieType, s
     const att5Val = (editMark.cie5Att !== undefined && editMark.cie5Att !== null) ? editMark.cie5Att : '';
 
     // Total should treat -2.0 as 0
-    const total = 
-        (valCIE1 === -2.0 ? 0 : (Number(valCIE1) || 0)) + 
-        (valCIE2 === -2.0 ? 0 : (Number(valCIE2) || 0)) + 
-        (valCIE3 === -2.0 ? 0 : (Number(valCIE3) || 0)) + 
-        (valCIE4 === -2.0 ? 0 : (Number(valCIE4) || 0)) + 
+    const total =
+        (valCIE1 === -2.0 ? 0 : (Number(valCIE1) || 0)) +
+        (valCIE2 === -2.0 ? 0 : (Number(valCIE2) || 0)) +
+        (valCIE3 === -2.0 ? 0 : (Number(valCIE3) || 0)) +
+        (valCIE4 === -2.0 ? 0 : (Number(valCIE4) || 0)) +
         (valCIE5 === -2.0 ? 0 : (Number(valCIE5) || 0));
 
     const cieVals = [
@@ -324,10 +326,10 @@ const HODAllSubjectsStudentRow = React.memo(({ student, index, editMarks, validS
                         const valAtt = (subjectMarks[`${cieKey}Att`] !== undefined && subjectMarks[`${cieKey}Att`] !== null) ? subjectMarks[`${cieKey}Att`] : '';
                         const isTheoryOnly = (sub.role === 'THEORY' || (!sub.role && !sub.name.toLowerCase().includes('lab')));
                         const isLabOnly = (sub.role === 'LAB' || (!sub.role && sub.name.toLowerCase().includes('lab')));
-                        
+
                         const isTheoryCie = ['cie1', 'cie3', 'cie5'].includes(cieKey);
                         const isLabCie = ['cie2', 'cie4'].includes(cieKey);
-                        
+
                         const isDisabled = ((isTheoryOnly && isLabCie) || (isLabOnly && isTheoryCie)) && (valCIE !== '' && valCIE !== null);
                         const isAttDisabled = ((isTheoryOnly && isLabCie) || (isLabOnly && isTheoryCie)) && (valAtt !== '' && valAtt !== null);
 
@@ -537,6 +539,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const [showAddFacultyModal, setShowAddFacultyModal] = useState(false);
     const [showEditSelection, setShowEditSelection] = useState(false);
     const [editingFaculty, setEditingFaculty] = useState(null);
+    const [facultySearchQuery, setFacultySearchQuery] = useState('');
     const [facultyForm, setFacultyForm] = useState({
         fullName: '',
         username: '',
@@ -545,7 +548,8 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         designation: 'Sr. Lecturer',
         semester: '',
         section: '',
-        subjects: ''
+        subjects: '',
+        phoneNumber: ''
     });
 
     // Custom Designations for Faculty
@@ -598,6 +602,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     const [resetTarget, setResetTarget] = useState(null); // { username, fullName, role }
     const [newPassword, setNewPassword] = useState('');
 
+    // Faculty Transfer and Removal State
+    const [transferTargetDept, setTransferTargetDept] = useState('');
+    const [removingFaculty, setRemovingFaculty] = useState(null);
+    const [removalAction, setRemovalAction] = useState('delete'); // 'delete' or 'transfer'
+    const [removalTargetDept, setRemovalTargetDept] = useState('');
+    const [activeDepartmentsForTransfer, setActiveDepartmentsForTransfer] = useState([]);
+
     // Download Modal State
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [dlDataType, setDlDataType] = useState('marks');
@@ -627,11 +638,26 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     // Faculty Management State (Restored)
     const [viewingFaculty, setViewingFaculty] = useState(null);
+    const [viewingFacultyAssignments, setViewingFacultyAssignments] = useState([]);
+    const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
     const [messagingFaculty, setMessagingFaculty] = useState(null);
     const [messageText, setMessageText] = useState('');
 
-    const handleViewDashboard = (faculty) => {
+    const handleViewDashboard = async (faculty) => {
         setViewingFaculty(faculty);
+        setViewingFacultyAssignments([]);
+        setIsAssignmentsLoading(true);
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/hod/faculty/${faculty.id}/assignments`);
+            if (response.ok) {
+                const data = await response.json();
+                setViewingFacultyAssignments(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch faculty assignments", e);
+        } finally {
+            setIsAssignmentsLoading(false);
+        }
     };
 
     const handleMessage = (faculty) => {
@@ -742,13 +768,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'Overview', path: '#overview', icon: <LayoutDashboard size={20} />, isActive: activeTab === 'overview', onClick: () => setActiveTab('overview') },
         { label: 'CIE Schedule', path: '#cie-schedule', icon: <Calendar size={20} />, isActive: activeTab === 'cie-schedule', onClick: () => setActiveTab('cie-schedule') },
         { label: 'Add Subjects', path: '#syllabus', icon: <BookOpen size={20} />, isActive: activeTab === 'syllabus', onClick: () => setActiveTab('syllabus') },
-        { label: 'IA Monitoring', path: '#monitoring', icon: <Activity size={20} />, isActive: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
+        { label: 'CIA Monitoring', path: '#monitoring', icon: <Activity size={20} />, isActive: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
         { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, isActive: activeTab === 'performance', onClick: () => setActiveTab('performance') },
         { label: 'Faculty Management', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
         { label: 'Faculty Requests', path: '#faculty-requests', icon: <GitPullRequest size={20} />, isActive: activeTab === 'faculty-requests', onClick: () => setActiveTab('faculty-requests'), badge: pendingFacultyRequestsCount || null },
         { label: 'All Students', path: '#all-students', icon: <Users size={20} />, isActive: activeTab === 'all-students', onClick: () => setActiveTab('all-students') },
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
-        { label: 'IA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
+        { label: 'CIA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
         { label: 'Update Marks', path: '#marks', icon: <PenTool size={20} />, isActive: activeTab === 'update-marks', onClick: () => { setSelectedSubject(null); setSelectedSemester('all'); setActiveTab('update-marks'); } },
         { label: 'My Profile', category: 'Account', path: '#profile', icon: <User size={20} />, isActive: activeTab === 'profile', onClick: () => setActiveTab('profile') },
         {
@@ -777,10 +803,8 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             email: facultyForm.email,
             designation: facultyForm.designation,
             department: selectedDept,
-            semester: facultyForm.semester || null,
-            section: facultyForm.section || null,
-            subjects: facultyForm.subjects || null,
             cieRole: facultyForm.cieRole || null,
+            phoneNumber: facultyForm.phoneNumber || null,
         };
         if (!editingFaculty && facultyForm.password) {
             data.password = facultyForm.password;
@@ -801,7 +825,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 showToast(editingFaculty ? 'Faculty updated successfully!' : 'Faculty added successfully!');
                 setShowAddFacultyModal(false);
                 setEditingFaculty(null);
-                setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', semester: '', section: '', subjects: '', cieRole: '' });
+                setFacultyForm({ fullName: '', username: '', email: '', password: 'password123', designation: 'Assistant Professor', semester: '', section: '', subjects: '', cieRole: '', phoneNumber: '' });
                 fetchFaculty(); // Refresh the list
             } else {
                 const errData = await response.json().catch(() => ({ message: 'Error processing faculty' }));
@@ -822,36 +846,99 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             email: fac.email || '',
             password: '',
             designation: fac.designation || 'Sr. Lecturer',
-            semester: fac.semester || '',
-            section: fac.section || '',
-            subjects: fac.subjects || '',
-            cieRole: fac.cieRole || '' // Load existing cieRole
+            cieRole: fac.cieRole || '', // Load existing cieRole
+            phoneNumber: fac.phoneNumber || ''
         });
         setShowAddFacultyModal(true);
     };
 
-    const handleDeleteFaculty = async (facId) => {
+    const handleTransferHome = async (facId, targetDept) => {
+        if (!targetDept) {
+            showToast('Please select a target department', 'error');
+            return;
+        }
+
         const confirmed = await showConfirm({
-            title: 'Remove Faculty',
-            message: `Are you sure you want to remove this faculty from ${selectedDept} department? They will keep their assignments in other departments.`,
+            title: 'Transfer Home Department',
+            message: `Are you sure you want to transfer the primary 'Home' ownership of this faculty to ${targetDept}? You will lose management access once transferred.`,
             variant: 'warning',
-            confirmText: 'Remove'
+            confirmText: 'Transfer Ownership'
         });
         if (!confirmed) return;
 
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/hod/faculty/${facId}?department=${encodeURIComponent(selectedDept)}`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/hod/faculty/${facId}/transfer?targetDepartment=${encodeURIComponent(targetDept)}`, {
+                method: 'PUT'
+            });
+
+            if (response.ok) {
+                showToast(`Ownership transferred to ${targetDept} successfully`);
+                setViewingFaculty(null);
+                setViewingFacultyAssignments([]);
+                setTransferTargetDept(''); // Reset
+                fetchFaculty();
+            } else {
+                const err = await response.json().catch(() => ({ message: 'Error transferring ownership' }));
+                showToast(`Failed: ${err.message}`, 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Error transferring ownership', 'error');
+        }
+    };
+
+    const handleDeleteFaculty = (fac) => {
+        setRemovingFaculty(fac);
+        setRemovalAction('delete'); // Default to delete
+        setRemovalTargetDept('');
+        setActiveDepartmentsForTransfer([]);
+    };
+
+    const executeRemoval = async () => {
+        if (!removingFaculty) return;
+
+        if (removalAction === 'transfer') {
+            if (!removalTargetDept) {
+                showToast('Please select a target department for transfer', 'error');
+                return;
+            }
+            await handleTransferHome(removingFaculty.id, removalTargetDept);
+            setRemovingFaculty(null);
+            return;
+        }
+
+        // Hard Delete logic
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/hod/faculty/${removingFaculty.id}?department=${encodeURIComponent(selectedDept)}`, {
                 method: 'DELETE'
             });
 
             if (response.ok) {
-                showToast(`Faculty removed from ${selectedDept} successfully`);
+                const data = await response.json();
+                showToast(data.message || `Faculty removed successfully`);
+                setRemovingFaculty(null);
                 fetchFaculty();
             } else {
                 const err = await response.json().catch(() => ({ message: 'Error removing faculty' }));
-                const detailMsg = err.details ? ` Details: ${err.details}` : '';
-                const tableMsg = err.table ? ` Table: ${err.table}` : '';
-                showToast(`Failed to remove faculty: ${err.message}${detailMsg}${tableMsg}`, 'error');
+
+                if (response.status === 400 && err.requiresTransfer) {
+                    setActiveDepartmentsForTransfer(err.activeDepartments || []);
+                    if (err.activeDepartments && err.activeDepartments.length > 0) {
+                        setRemovalTargetDept(err.activeDepartments[0]);
+                    }
+                    
+                    await showConfirm({
+                        title: 'Ownership Transfer Required',
+                        message: `${err.message}`,
+                        variant: 'info',
+                        confirmText: 'Continue to Transfer',
+                        cancelText: null
+                    });
+                    setRemovalAction('transfer'); // Switch to transfer mode automatically
+                } else {
+                    const detailMsg = err.details ? ` Details: ${err.details}` : '';
+                    showToast(`Failed: ${err.message}${detailMsg}`, 'error');
+                }
             }
         } catch (error) {
             console.error(error);
@@ -1023,7 +1110,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     // Fetch pending approvals and unlock requests globally to display badges
     useEffect(() => {
-        if (isMyDept && selectedDept) {
+        if (isMyDept && selectedDept && user?.token) {
             const fetchPendingApprovals = async () => {
                 setApprovalLoading(true);
                 try {
@@ -1035,13 +1122,14 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                         rawMarks.forEach(mark => {
                             const subjectName = mark.subject?.name || 'Unknown Subject';
                             const cieType = mark.cieType || 'CIE1';
-                            const key = `${mark.subject?.id || 0}_${cieType}`;
+                            const faculty = mark.facultyName || mark.subject?.instructorName || 'Unknown';
+                            const key = `${mark.subject?.id || 0}_${cieType}_${faculty}`;
                             if (!grouped[key]) {
                                 grouped[key] = {
                                     subjectId: mark.subject?.id,
                                     subjectName: subjectName,
                                     iaType: cieType,
-                                    facultyName: mark.subject?.instructorName || 'Unknown',
+                                    facultyName: faculty,
                                     studentCount: 0,
                                     marks: []
                                 };
@@ -1090,6 +1178,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             try {
                 // Combined fetch from the stable overview endpoint
                 const response = await authenticatedFetch(`${API_BASE_URL}/hod/overview?department=${selectedDept}`);
+                if (!response.ok) return;
 
                 if (response.ok) {
                     const data = await response.json();
@@ -1127,14 +1216,14 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             }
         };
 
-        if (activeTab === 'performance' && isMyDept && selectedDept) {
+        if (activeTab === 'performance' && isMyDept && selectedDept && user?.token) {
             fetchPerformanceData();
         }
-    }, [activeTab, performanceSubjectId, isMyDept, selectedDept, user]);
+    }, [activeTab, performanceSubjectId, isMyDept, selectedDept, user?.token]);
 
     // Fetch performance config from backend
     useEffect(() => {
-        if (isMyDept && selectedDept) {
+        if (isMyDept && selectedDept && user?.token) {
             const fetchConfig = async () => {
                 try {
                     const response = await authenticatedFetch(`${API_BASE_URL}/hod/config?department=${selectedDept}`);
@@ -1146,7 +1235,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             };
             fetchConfig();
         }
-    }, [isMyDept, selectedDept]);
+    }, [isMyDept, selectedDept, user?.token]);
 
     // Compute Excellent/Average/Low performers from subjectMarksData for HOD performance tab
     // Backend returns individual CieMark records per subject with: cieType, marks, student, attendancePercentage
@@ -1315,7 +1404,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     }, [selectedSubject]);
 
     useEffect(() => {
-        if (isMyDept && selectedDept) {
+        if (isMyDept && selectedDept && user?.token) {
             const fetchAnnouncements = async () => {
                 try {
                     const response = await authenticatedFetch(`${API_BASE_URL}/cie/hod/announcements`);
@@ -1334,7 +1423,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             };
             fetchAnnouncements();
         }
-    }, [isMyDept, selectedDept]);
+    }, [isMyDept, selectedDept, user?.token]);
 
     const handleScheduleSubmit = async (e) => {
         e.preventDefault();
@@ -1429,7 +1518,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     };
 
     useEffect(() => {
-        if (isMyDept) {
+        if (isMyDept && selectedDept && user?.token) {
             const fetchSubjects = async () => {
                 try {
                     const response = await authenticatedFetch(`${API_BASE_URL}/subjects/department/${selectedDept}`);
@@ -1441,7 +1530,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             };
             fetchSubjects();
         }
-    }, [activeTab, isMyDept, selectedDept]);
+    }, [activeTab, isMyDept, selectedDept, user?.token]);
 
 
 
@@ -1452,7 +1541,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     const handleMarkChange = (studentId, field, value, subjectId = null) => {
         let finalValue = value;
-        if (value === 'AB') {
+        if (value === 'AB' || value === 'A' || value === 'Ab') {
             finalValue = -2.0;
         } else if (value !== '') {
             let numValue = parseInt(value, 10);
@@ -1555,7 +1644,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         }
     };
 
-    const handleApproveMarks = async (subjectId, iaType) => {
+    const handleApproveMarks = async (subjectId, iaType, facultyId) => {
         const confirmed = await showConfirm({
             title: 'Approve Marks',
             message: `Are you sure you want to APPROVE marks for ${iaType}? This will lock these marks.`,
@@ -1564,12 +1653,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         });
         if (!confirmed) return;
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/marks/approve?subjectId=${subjectId}&iaType=${iaType}`, {
+            const facultyParam = facultyId && facultyId !== 'Unknown' ? `&facultyId=${facultyId}` : '';
+            const response = await authenticatedFetch(`${API_BASE_URL}/marks/approve?subjectId=${subjectId}&iaType=${iaType}${facultyParam}`, {
                 method: 'POST'
             });
             if (response.ok) {
                 showToast('Marks approved successfully!');
-                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
+                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType && p.facultyId === facultyId)));
             } else {
                 const err = await response.text();
                 showToast('Failed to approve: ' + err, 'error');
@@ -1580,7 +1670,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         }
     };
 
-    const handleRejectMarks = async (subjectId, iaType) => {
+    const handleRejectMarks = async (subjectId, iaType, facultyId) => {
         const confirmed = await showConfirm({
             title: 'Reject Marks',
             message: `Are you sure you want to REJECT marks for ${iaType}? Faculty will need to resubmit.`,
@@ -1589,12 +1679,13 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         });
         if (!confirmed) return;
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/marks/reject?subjectId=${subjectId}&iaType=${iaType}`, {
+            const facultyParam = facultyId && facultyId !== 'Unknown' ? `&facultyId=${facultyId}` : '';
+            const response = await authenticatedFetch(`${API_BASE_URL}/marks/reject?subjectId=${subjectId}&iaType=${iaType}${facultyParam}`, {
                 method: 'POST'
             });
             if (response.ok) {
                 showToast('Marks rejected. Faculty has been notified.');
-                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType)));
+                setPendingApprovals(prev => prev.filter(p => !(p.subjectId === subjectId && p.iaType === iaType && p.facultyId === facultyId)));
             } else {
                 const err = await response.text();
                 showToast('Failed to reject: ' + err, 'error');
@@ -1661,7 +1752,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         }
     };
 
-    const handleUnlockMarks = async (subjectId, iaType, subjectName) => {
+    const handleUnlockMarks = async (subjectId, iaType, subjectName, facultyId) => {
         const reason = await showPrompt({
             title: 'Unlock Marks',
             message: `Why are you unlocking ${subjectName} ${iaType} marks?`,
@@ -1674,7 +1765,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
         const confirmed = await showConfirm({
             title: 'Confirm Unlock',
-            message: `Are you sure you want to UNLOCK ${subjectName} ${iaType} marks?\n\nThis will change the status from APPROVED to PENDING, allowing faculty to edit them again.`,
+            message: `Are you sure you want to UNLOCK ${subjectName} ${iaType} marks?${facultyId ? '\n(Specifically for the selected faculty member)' : ''}\n\nThis will change the status from APPROVED to PENDING, allowing faculty to edit them again.`,
             variant: 'warning',
             confirmText: 'Unlock'
         });
@@ -1686,6 +1777,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 body: JSON.stringify({
                     subjectId,
                     iaType,
+                    facultyId: facultyId || null,
                     reason: reason || null
                 })
             });
@@ -2769,7 +2861,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                     const cleanKey = key.toString().replace(/\[.*?\]/g, '').replace(/\s*\(Lab\)\s*|\s*\(Theory\)\s*|\s*-l\s*$|\s*-t\s*$/ig, '').trim().toLowerCase();
                                                     const targetName = gSub.strippedName.toLowerCase().trim();
                                                     const isNameMatch = cleanKey === targetName || cleanKey.includes(targetName) || targetName.includes(cleanKey);
-                                                    
+
                                                     if (isIdMatch || isNameMatch) {
                                                         const sm = mObj[key] || {};
                                                         if (sm[cie] !== undefined && sm[cie] !== '-' && sm[cie] !== '') {
@@ -3377,7 +3469,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 {subjects.filter(sub => sub.name !== 'IC').map((subject, idx) => {
                                     const subjectMarks = subjectMarksData[subject.name] || [];
                                     const totalStudents = deptStudents.length;
-                                    
+
                                     // Group marks by regNo to see which students have any marks submitted
                                     const studentMarksMap = {};
                                     subjectMarks.forEach(m => {
@@ -3386,11 +3478,11 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                             studentMarksMap[m.student.regNo].push(m);
                                         }
                                     });
-                                    
-                                    const studentsWithMarks = Object.values(studentMarksMap).filter(marks => 
+
+                                    const studentsWithMarks = Object.values(studentMarksMap).filter(marks =>
                                         marks.some(m => m.marks !== null && m.marks !== undefined)
                                     ).length;
-                                    
+
                                     const pendingCount = totalStudents - studentsWithMarks;
                                     let status = 'Pending';
                                     if (pendingCount === 0) {
@@ -3461,9 +3553,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(() => { 
+                                                {(() => {
                                                     const subjectMarks = subjectMarksData[viewingSubject.name] || [];
-                                                    
+
                                                     // Group marks for the modal table
                                                     const modalMarksMap = {};
                                                     subjectMarks.forEach(m => {
@@ -3475,8 +3567,8 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                             };
                                                         }
                                                         const score = m.marks ?? '-';
-                                                        if (m.cieType === 'CIE1') { 
-                                                            modalMarksMap[regNo].cie1 = score; 
+                                                        if (m.cieType === 'CIE1') {
+                                                            modalMarksMap[regNo].cie1 = score;
                                                             if (m.attendancePercentage != null) modalMarksMap[regNo].att = m.attendancePercentage;
                                                         } else if (m.cieType === 'CIE2') {
                                                             modalMarksMap[regNo].cie2 = score;
@@ -3489,19 +3581,19 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                         }
                                                     });
 
-                                                    const studentsToShow = viewingSubject.status === 'Pending' 
+                                                    const studentsToShow = viewingSubject.status === 'Pending'
                                                         ? deptStudents.filter(student => (!modalMarksMap[student.regNo] || Object.values(modalMarksMap[student.regNo]).every(v => v === '-')))
                                                         : deptStudents;
 
-                                                    return studentsToShow.map((student, index) => { 
+                                                    return studentsToShow.map((student, index) => {
                                                         const sm = modalMarksMap[student.regNo] || { cie1: '-', cie2: '-', cie3: '-', cie4: '-', cie5: '-', att: '-' };
-                                                        
-                                                        const total = (sm.cie1 !== '-' ? Number(sm.cie1) : 0) + 
-                                                                    (sm.cie2 !== '-' ? Number(sm.cie2) : 0) + 
-                                                                    (sm.cie3 !== '-' ? Number(sm.cie3) : 0) + 
-                                                                    (sm.cie4 !== '-' ? Number(sm.cie4) : 0) + 
-                                                                    (sm.cie5 !== '-' ? Number(sm.cie5) : 0);
-                                                        
+
+                                                        const total = (sm.cie1 !== '-' ? Number(sm.cie1) : 0) +
+                                                            (sm.cie2 !== '-' ? Number(sm.cie2) : 0) +
+                                                            (sm.cie3 !== '-' ? Number(sm.cie3) : 0) +
+                                                            (sm.cie4 !== '-' ? Number(sm.cie4) : 0) +
+                                                            (sm.cie5 !== '-' ? Number(sm.cie5) : 0);
+
                                                         const hasAnyMark = sm.cie1 !== '-' || sm.cie2 !== '-' || sm.cie3 !== '-' || sm.cie4 !== '-' || sm.cie5 !== '-';
 
                                                         return (
@@ -3517,8 +3609,8 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                                 <td>{sm.cie5}</td>
                                                                 <td style={{ fontWeight: 'bold', color: '#1e40af' }}>{hasAnyMark ? total : '-'}</td>
                                                             </tr>
-                                                        ); 
-                                                    }); 
+                                                        );
+                                                    });
                                                 })()}
                                             </tbody>
                                         </table>
@@ -3928,16 +4020,46 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 <div className={styles.facultyContainer}>
                     <div className={styles.card}>
                         <div className={styles.cardHeader}>
-                            <h3>Department Faculty ({facultyList.length})</h3>
-                            <div style={{ display: 'flex', gap: '1rem', position: 'relative' }}>
-                                <button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password', designation: 'Sr. Lecturer', subjects: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Add New Faculty</button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <h3>Department Faculty ({facultyList.length})</h3>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Manage and assign subjects to your department members</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', position: 'relative', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <Search size={18} style={{ position: 'absolute', left: '12px', color: '#94a3b8', pointerEvents: 'none' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, role or ID..."
+                                        value={facultySearchQuery}
+                                        onChange={(e) => setFacultySearchQuery(e.target.value)}
+                                        style={{
+                                            padding: '0.6rem 1rem 0.6rem 2.5rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid #e2e8f0',
+                                            fontSize: '0.9rem',
+                                            width: '300px',
+                                            background: '#f8fafc',
+                                            outline: 'none',
+                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                            color: '#1e293b'
+                                        }}
+                                        onFocus={(e) => { e.target.style.background = '#ffffff'; e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'; }}
+                                        onBlur={(e) => { e.target.style.background = '#f8fafc'; e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
+                                    />
+                                </div>
+                                <button className={styles.primaryBtn} onClick={() => { setEditingFaculty(null); setFacultyForm({ fullName: '', username: '', email: '', password: 'password', designation: 'Sr. Lecturer', subjects: '', phoneNumber: '' }); setShowAddFacultyModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}><Users size={16} /> Add New Faculty</button>
                                 <div style={{ position: 'relative' }}>
-                                    <button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}><Edit size={16} /> Edit Faculty</button>
+                                    <button className={styles.secondaryBtn} onClick={() => setShowEditSelection(!showEditSelection)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', height: '100%' }}><Edit size={16} /> Edit Faculty</button>
                                     {showEditSelection && (
                                         <div style={{ position: 'absolute', top: '110%', right: 0, width: '250px', background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', zIndex: 100, padding: '0.5rem' }}>
                                             <p style={{ padding: '0.5rem', fontSize: '0.85rem', color: '#64748b', borderBottom: '1px solid #f1f5f9', marginBottom: '0.5rem' }}>Select Faculty to Edit:</p>
                                             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                                {facultyList.map(fac => (
+                                                {facultyList.filter(f => 
+                                                    (f.fullName?.toLowerCase().includes(facultySearchQuery.toLowerCase())) || 
+                                                    (f.username?.toLowerCase().includes(facultySearchQuery.toLowerCase())) ||
+                                                    (f.designation?.toLowerCase().includes(facultySearchQuery.toLowerCase()))
+                                                ).map(fac => (
                                                     <button key={fac.id} onClick={() => { handleEditFaculty(fac); setShowEditSelection(false); }} style={{ width: '100%', textAlign: 'left', padding: '0.75rem', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'none'}><span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>{fac.fullName || fac.username}</span><small style={{ color: '#64748b' }}>{fac.designation || 'Faculty'}</small></button>
                                                 ))}
                                             </div>
@@ -3971,41 +4093,64 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                         </div>
                                     </div>
                                 ))
-                            ) : facultyList.length > 0 ? (
-                                facultyList.map(fac => (
-                                    <div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}>
-                                        <div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div>
-                                            <div style={{ flex: 1 }}>
-                                                <p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p>
-                                                <small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation || 'Faculty Member'}</small>
-                                                {(fac.semester || fac.section) && (<small style={{ color: '#2563eb', fontWeight: 500, fontSize: '0.8rem', marginTop: '2px', display: 'block' }}>Class Teacher: {fac.semester ? `${fac.semester} Sem` : ''} {fac.section ? `- Sec ${fac.section}` : ''}</small>)}
-                                            </div>
-                                        </div>
-                                        <div style={{ marginBottom: '1rem', flex: 1 }}>
-                                            <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects ({parseSubjects(fac.subjects).length})</span>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                {parseSubjects(fac.subjects).length > 0 ? parseSubjects(fac.subjects).map((sub, i) => (
-                                                    <span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>
-                                                )) : (
-                                                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects assigned</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                            <button className={styles.viewBtn} style={{ gridColumn: 'span 2' }} onClick={() => handleViewDashboard(fac)}><LayoutDashboard size={16} /> View Dashboard</button>
-                                            <button className={styles.msgBtn} onClick={() => handleMessage(fac)}><Mail size={16} /> Message</button>
-                                            <button className={styles.secondaryBtn} onClick={() => handleEditFaculty(fac)} style={{ border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}><Edit size={16} /> Edit</button>
-                                            <button className={styles.secondaryBtn} onClick={() => openResetPasswordModal(fac.username, fac.fullName || fac.username, 'FACULTY')} style={{ border: '1px solid #fde68a', background: '#fef3c7', color: '#d97706' }}><Key size={14} /> Reset</button>
-                                            <button className={styles.secondaryBtn} onClick={() => handleDeleteFaculty(fac.id)} style={{ border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626' }}><Trash2 size={16} /> Remove</button>
-                                        </div>
-                                    </div>
-                                ))
                             ) : (
-                                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                                    <Users size={48} style={{ marginBottom: '1rem', color: '#cbd5e1' }} />
-                                    <p>No faculty members found for this department.</p>
-                                </div>
+                                (() => {
+                                    const filtered = facultyList.filter(f => 
+                                        (f.fullName?.toLowerCase().includes(facultySearchQuery.toLowerCase())) || 
+                                        (f.username?.toLowerCase().includes(facultySearchQuery.toLowerCase())) ||
+                                        (f.designation?.toLowerCase().includes(facultySearchQuery.toLowerCase()))
+                                    );
+
+                                    if (filtered.length > 0) {
+                                        return filtered.map(fac => (
+                                            <div key={fac.id} className={styles.facultyItem} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', background: 'white', display: 'flex', flexDirection: 'column' }}>
+                                                <div className={styles.facProfile} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                                                    <div className={styles.avatarSm} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>{fac.fullName ? fac.fullName.charAt(0) : fac.username.charAt(0)}</div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <p className={styles.facName} style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1e293b', margin: 0 }}>{fac.fullName || fac.username}</p>
+                                                        <small className={styles.facStatus} style={{ color: '#64748b' }}>{fac.designation || 'Faculty Member'}</small>
+                                                        {(fac.semester || fac.section) && (<small style={{ color: '#2563eb', fontWeight: 500, fontSize: '0.8rem', marginTop: '2px', display: 'block' }}>Class Teacher: {fac.semester ? `${fac.semester} Sem` : ''} {fac.section ? `- Sec ${fac.section}` : ''}</small>)}
+                                                    </div>
+                                                </div>
+                                                <div style={{ marginBottom: '1rem', flex: 1 }}>
+                                                    <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Subjects ({parseSubjects(fac.subjects).length})</span>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                        {parseSubjects(fac.subjects).length > 0 ? parseSubjects(fac.subjects).map((sub, i) => (
+                                                            <span key={i} style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', color: '#475569' }}>{sub}</span>
+                                                        )) : (
+                                                            <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>No active subjects assigned</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className={styles.facActions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                                    <button className={styles.viewBtn} style={{ gridColumn: 'span 2' }} onClick={() => handleViewDashboard(fac)}><LayoutDashboard size={16} /> View Dashboard</button>
+                                                    <button className={styles.msgBtn} onClick={() => handleMessage(fac)}><Mail size={16} /> Message</button>
+                                                    <button className={styles.secondaryBtn} onClick={() => handleEditFaculty(fac)} style={{ border: '1px solid #e2e8f0', background: 'white', color: '#475569' }}><Edit size={16} /> Edit</button>
+                                                    <button className={styles.secondaryBtn} onClick={() => openResetPasswordModal(fac.username, fac.fullName || fac.username, 'FACULTY')} style={{ border: '1px solid #fde68a', background: '#fef3c7', color: '#d97706' }}><Key size={14} /> Reset</button>
+                                                    <button className={styles.secondaryBtn} onClick={() => handleDeleteFaculty(fac)} style={{ border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626' }}><Trash2 size={16} /> Remove</button>
+                                                </div>
+                                            </div>
+                                        ));
+                                    }
+
+                                    return (
+                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem 2rem', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #e2e8f0' }}>
+                                            <div style={{ background: '#ffffff', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                                                <Search size={32} style={{ color: '#94a3b8' }} />
+                                            </div>
+                                            <h4 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '0.5rem' }}>No matches found</h4>
+                                            <p style={{ color: '#64748b', maxWidth: '300px', margin: '0 auto 1.5rem' }}>
+                                                We couldn't find any faculty members matching "<strong>{facultySearchQuery}</strong>".
+                                            </p>
+                                            <button 
+                                                onClick={() => setFacultySearchQuery('')}
+                                                style={{ padding: '0.6rem 1.2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }}
+                                            >
+                                                Clear Search
+                                            </button>
+                                        </div>
+                                    );
+                                })()
                             )}
                         </div>
                     </div>
@@ -4021,6 +4166,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                         <div className={styles.formGroup}><label>Full Name</label><input value={facultyForm.fullName} onChange={e => setFacultyForm({ ...facultyForm, fullName: e.target.value })} required placeholder="e.g. Dr. John Doe" className={styles.input} /></div>
                                         <div className={styles.formGroup}><label>Username</label><input value={facultyForm.username} onChange={e => setFacultyForm({ ...facultyForm, username: e.target.value })} required placeholder="jdoe" className={styles.input} />{editingFaculty && <small style={{ color: '#64748b', fontSize: '0.75rem' }}>⚠️ Changing the username will update the faculty's login ID.</small>}</div>
                                         <div className={styles.formGroup}><label>Email</label><input value={facultyForm.email} onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })} type="email" required placeholder="john@college.edu" className={styles.input} /></div>
+                                        <div className={styles.formGroup}><label>Phone Number</label><input value={facultyForm.phoneNumber || ''} onChange={e => setFacultyForm({ ...facultyForm, phoneNumber: e.target.value })} placeholder="e.g. 9876543210" className={styles.input} /></div>
+
+
                                         {!editingFaculty && (<div className={styles.formGroup}><label>Password</label><input value={facultyForm.password} onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })} required placeholder="password" className={styles.input} /></div>)}
                                         <div className={styles.formGroup}>
                                             <label>Designation</label>
@@ -4096,555 +4244,896 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                             </div>
                         </div>
                     )}
-                </div>
+                </div >
             )}
-            {viewingFaculty && (<div className={styles.modalOverlay} onClick={() => setViewingFaculty(null)}><div className={styles.modalContent} style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}><div className={styles.modalHeader}><div><h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2><span className={styles.badge} style={{ position: 'static', padding: '2px 8px', borderRadius: '4px', background: '#eff6ff', color: '#2563eb', fontWeight: 500, fontSize: '0.85rem' }}>Dashboard Overview</span></div><button className={styles.closeBtn} onClick={() => setViewingFaculty(null)}><X size={24} /></button></div><div className={styles.modalBody}>{(() => {
-                let totalAvg = 0;
-                let evaluatedCount = 0;
-                const subStats = parseSubjects(viewingFaculty.subjects).map(subName => {
-                    const marks = subjectMarksData[subName] || [];
-                    const validMarks = marks.filter(m => m.cie1Score !== null || m.cie2Score !== null || m.cie3Score !== null || m.cie4Score !== null || m.cie5Score !== null);
-                    const avg = validMarks.length > 0 ? Math.round(validMarks.reduce((acc, m) => {
-                        const scores = [m.cie1Score, m.cie2Score, m.cie3Score, m.cie4Score, m.cie5Score].filter(x => x !== null && x !== undefined);
-                        const studentAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-                        return acc + studentAvg;
-                    }, 0) / validMarks.length) : 0;
-
-                    if (validMarks.length > 0) evaluatedCount += validMarks.length;
-                    totalAvg += avg;
-                    return { name: subName, avg, count: validMarks.length };
-                });
-                const overall = subStats.length > 0 ? Math.round(totalAvg / subStats.length) : 0;
-
-                return (<><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.blue}`}><TrendingUp size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Avg Class Score</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{overall > 0 ? overall : '-'}/50</h3></div></div><div className={styles.statCard} style={{ background: '#f8fafc', border: 'none' }}><div className={`${styles.iconBox} ${styles.green}`}><CheckCircle size={20} /></div><div><p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Students Evaluated</p><h3 style={{ margin: 0, fontSize: '1.25rem' }}>{evaluatedCount}</h3></div></div></div><div><h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Assigned Subjects Performance</h4><div className={styles.tableWrapper}><table className={styles.table}><thead><tr><th>Subject</th><th>Avg Score</th><th>Status</th></tr></thead><tbody>{subStats.length > 0 ? subStats.map((s, i) => (<tr key={i}><td style={{ fontWeight: 500 }}>{s.name}</td><td>{s.avg || '-'}</td><td><span style={{ color: s.avg >= 35 ? '#16a34a' : s.avg >= 20 ? '#ca8a04' : '#dc2626', fontWeight: 600 }}>{s.avg >= 35 ? 'Good' : s.avg >= 20 ? 'Average' : 'Need Improvement'}</span></td></tr>)) : (<tr><td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8' }}>No subjects found</td></tr>)}</tbody></table></div></div></>);
-            })()}</div></div></div>)}
-            {messagingFaculty && (
-                <div className={styles.modalOverlay} onClick={() => setMessagingFaculty(null)}>
-                    <div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
-                        <div className={styles.modalHeader}>
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={20} /> Message {messagingFaculty.username}</h3>
-                            <button className={styles.closeBtn} onClick={() => setMessagingFaculty(null)}><X size={24} /></button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <div className={styles.formGroup}>
-                                <label>Message Content</label>
-                                <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message here..." className={styles.input} style={{ minHeight: '120px', resize: 'vertical' }} autoFocus></textarea>
+            {
+                viewingFaculty && (
+                    <div className={styles.modalOverlay} onClick={() => { setViewingFaculty(null); setViewingFacultyAssignments([]); }}>
+                        <div className={styles.modalContent} style={{ maxWidth: '1100px' }} onClick={e => e.stopPropagation()}>
+                            <div className={styles.modalHeader}>
+                                <div>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>{viewingFaculty.fullName || viewingFaculty.username}</h2>
+                                    <span className={styles.badge} style={{ position: 'static', padding: '4px 12px', borderRadius: '6px', background: '#eff6ff', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', width: 'auto', height: 'auto', display: 'inline-flex', marginTop: '4px' }}>Detailed Faculty Dashboard</span>
+                                </div>
+                                <button className={styles.closeBtn} onClick={() => { setViewingFaculty(null); setViewingFacultyAssignments([]); }}><X size={24} /></button>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
-                                <button className={styles.secondaryBtn} onClick={() => setMessagingFaculty(null)}>Cancel</button>
-                                <button className={styles.primaryBtn} onClick={sendMessage} disabled={!messageText.trim()} style={{ opacity: !messageText.trim() ? 0.6 : 1 }}>Send Message</button>
+                            <div className={styles.modalBody}>
+                                {/* Ownership & Transfer Section */}
+                                <div style={{ marginBottom: '2rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h4 style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
+                                            <ShieldCheck size={18} color="#2563eb" /> Ownership & Home Transfer
+                                        </h4>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>
+                                            MANAGEMENT ACCESS
+                                        </span>
+                                    </div>
+
+                                    <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1.25rem' }}>
+                                        As the <strong>Home HOD</strong>, you are responsible for managing this faculty's primary details.
+                                        If this faculty is moving or you want another department HOD to manage them, you can transfer ownership below.
+                                    </p>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {/* Existing Active Assignments */}
+                                        {viewingFacultyAssignments.filter(a => a.type === 'CROSS').length > 0 && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Active Cross-Dept Assignments</p>
+                                                {viewingFacultyAssignments.filter(a => a.type === 'CROSS').map((asgn, idx) => (
+                                                    <div key={idx} style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        padding: '0.75rem 1rem',
+                                                        background: 'white',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #cbd5e1',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                    }}>
+                                                        <div>
+                                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{asgn.department} Department</span>
+                                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Currently assigned: {asgn.subjects}</div>
+                                                        </div>
+                                                        <button
+                                                            className={styles.secondaryBtn}
+                                                            style={{
+                                                                borderColor: '#2563eb',
+                                                                color: '#2563eb',
+                                                                fontSize: '0.8rem',
+                                                                padding: '6px 12px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px'
+                                                            }}
+                                                            onClick={() => handleTransferHome(viewingFaculty.id, asgn.department)}
+                                                        >
+                                                            <GitPullRequest size={14} /> Transfer Home
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* New Transfer Option */}
+                                        <div style={{ marginTop: viewingFacultyAssignments.filter(a => a.type === 'CROSS').length > 0 ? '0.5rem' : 0 }}>
+                                            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Transfer to Any Department</p>
+                                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: 'white', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                <select
+                                                    className={styles.deptSelect}
+                                                    style={{ flex: 1, padding: '0.5rem', background: '#f8fafc', fontSize: '0.85rem' }}
+                                                    value={transferTargetDept}
+                                                    onChange={(e) => setTransferTargetDept(e.target.value)}
+                                                >
+                                                    <option value="">-- Choose New Home Dept --</option>
+                                                    {departments.filter(d => d !== selectedDept).map(dept => (
+                                                        <option key={dept} value={dept}>{dept}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    className={styles.primaryBtn}
+                                                    style={{ padding: '0.5rem 1rem', fontSize: '0.82rem', background: '#2563eb', color: 'white' }}
+                                                    onClick={() => handleTransferHome(viewingFaculty.id, transferTargetDept)}
+                                                    disabled={!transferTargetDept}
+                                                >
+                                                    Initiate Transfer
+                                                </button>
+                                            </div>
+                                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                                * Note: If you transfer to a department without an active assignment, the new HOD will need to assign subjects.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Workload & Department Assignments Section */}
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <h4 style={{ marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
+                                        <Briefcase size={18} color="#2563eb" /> Current Workload Summary
+                                    </h4>
+                                    {isAssignmentsLoading ? (
+                                        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <Skeleton width="100%" height="40px" />
+                                            <Skeleton width="100%" height="40px" />
+                                        </div>
+                                    ) : viewingFacultyAssignments.length > 0 ? (
+                                        <div className={styles.tableWrapper} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <table className={styles.table}>
+                                                <thead style={{ background: '#f8fafc' }}>
+                                                    <tr>
+                                                        <th>Department</th>
+                                                        <th>Semester</th>
+                                                        <th>Section</th>
+                                                        <th>Subjects</th>
+                                                        <th>Type</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {viewingFacultyAssignments.map((asgn, i) => (
+                                                        <tr key={i}>
+                                                            <td style={{ fontWeight: 600, color: '#2563eb' }}>{asgn.department}</td>
+                                                            <td>{asgn.semester ? `Sem ${asgn.semester}` : '-'}</td>
+                                                            <td>{asgn.sections || '-'}</td>
+                                                            <td style={{ fontSize: '0.82rem', color: '#475569', lineHeight: '1.4' }}>{asgn.subjects}</td>
+                                                            <td>
+                                                                <span className={styles.badge} style={{
+                                                                    position: 'static',
+                                                                    background: asgn.type === 'HOME' ? '#f0fdf4' : '#fff7ed',
+                                                                    color: asgn.type === 'HOME' ? '#16a34a' : '#ea580c',
+                                                                    fontSize: '0.7rem',
+                                                                    padding: '2px 8px',
+                                                                    width: 'auto',
+                                                                    height: 'auto',
+                                                                    display: 'inline-flex',
+                                                                    border: `1px solid ${asgn.type === 'HOME' ? '#bcf0da' : '#ffedd5'}`,
+                                                                    fontWeight: 600
+                                                                }}>
+                                                                    {asgn.type}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '8px', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1' }}>
+                                            No active assignments found for this faculty.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Performance Stats */}
+                                <h4 style={{ marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b' }}>
+                                    <Activity size={18} color="#10b981" /> Performance Overview (Current Dept)
+                                </h4>
+                                {(() => {
+                                    let totalAvg = 0;
+                                    let evaluatedCount = 0;
+                                    const subStats = parseSubjects(viewingFaculty.subjects).map(subName => {
+                                        const marks = subjectMarksData[subName] || [];
+                                        const validMarks = marks.filter(m => m.cie1Score !== null || m.cie2Score !== null || m.cie3Score !== null || m.cie4Score !== null || m.cie5Score !== null);
+                                        const avg = validMarks.length > 0 ? Math.round(validMarks.reduce((acc, m) => {
+                                            const scores = [m.cie1Score, m.cie2Score, m.cie3Score, m.cie4Score, m.cie5Score].filter(x => x !== null && x !== undefined);
+                                            const studentAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+                                            return acc + studentAvg;
+                                        }, 0) / validMarks.length) : 0;
+
+                                        if (validMarks.length > 0) evaluatedCount += validMarks.length;
+                                        totalAvg += avg;
+                                        return { name: subName, avg, count: validMarks.length };
+                                    });
+                                    const overall = subStats.length > 0 ? Math.round(totalAvg / subStats.length) : 0;
+
+                                    return (
+                                        <>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                                <div className={styles.statCard} style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                                                    <div className={`${styles.iconBox} ${styles.blue}`}><TrendingUp size={20} /></div>
+                                                    <div>
+                                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Avg Class Score</p>
+                                                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{overall > 0 ? overall : '-'}/50</h3>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.statCard} style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                                                    <div className={`${styles.iconBox} ${styles.green}`}><CheckCircle size={20} /></div>
+                                                    <div>
+                                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Students Evaluated</p>
+                                                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{evaluatedCount}</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={styles.tableWrapper} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                                                <table className={styles.table}>
+                                                    <thead style={{ background: '#f8fafc' }}>
+                                                        <tr>
+                                                            <th>Subject</th>
+                                                            <th>Avg Score</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {subStats.length > 0 ? subStats.map((s, i) => (
+                                                            <tr key={i}>
+                                                                <td style={{ fontWeight: 500 }}>{s.name}</td>
+                                                                <td style={{ fontWeight: 600 }}>{s.avg || '-'}</td>
+                                                                <td>
+                                                                    <span style={{
+                                                                        color: s.avg >= 35 ? '#16a34a' : s.avg >= 20 ? '#ca8a04' : '#dc2626',
+                                                                        fontWeight: 600,
+                                                                        fontSize: '0.85rem'
+                                                                    }}>
+                                                                        {s.avg >= 35 ? 'Good' : s.avg >= 20 ? 'Average' : 'Need Improvement'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr>
+                                                                <td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No performance data found for this department</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-            {activeTab === 'approvals' && (
-                <div className={styles.approvalsContainer}>
-                    <div className={styles.infoBanner}>
-                        <CheckCircle size={20} />
-                        <p>You have <strong>{pendingApprovals.length}</strong> IA Bundles pending for final approval.</p>
+                )
+            }
+            {
+                removingFaculty && (
+                    <div className={styles.modalOverlay} onClick={() => setRemovingFaculty(null)}>
+                        <div className={styles.modalContent} style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                            <div className={styles.modalHeader} style={{ background: '#fef2f2', borderBottomColor: '#fecaca' }}>
+                                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#b91c1c', margin: 0 }}>
+                                    <ShieldAlert size={22} /> Remove Faculty Access
+                                </h3>
+                                <button className={styles.closeBtn} onClick={() => setRemovingFaculty(null)}><X size={24} /></button>
+                            </div>
+                            <div className={styles.modalBody}>
+                                <p style={{ fontSize: '0.95rem', color: '#475569', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                                    You are about to remove <strong>{removingFaculty.fullName || removingFaculty.username}</strong> from the <strong>{selectedDept}</strong> department. Please choose how you would like to proceed:
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                                    <div
+                                        className={`${styles.card} ${removalAction === 'delete' ? styles.active : ''}`}
+                                        style={{
+                                            cursor: 'pointer',
+                                            border: `2px solid ${removalAction === 'delete' ? '#ef4444' : '#e2e8f0'}`,
+                                            background: removalAction === 'delete' ? '#fef2f2' : 'white',
+                                            padding: '1.25rem',
+                                            textAlign: 'center'
+                                        }}
+                                        onClick={() => setRemovalAction('delete')}
+                                    >
+                                        <Trash2 size={24} color={removalAction === 'delete' ? '#ef4444' : '#94a3b8'} style={{ marginBottom: '0.75rem' }} />
+                                        <h4 style={{ margin: '0 0 0.5rem 0', color: removalAction === 'delete' ? '#b91c1c' : '#475569' }}>Hard Delete</h4>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Permanently remove account and access.</p>
+                                    </div>
+
+                                    <div
+                                        className={`${styles.card} ${removalAction === 'transfer' ? styles.active : ''}`}
+                                        style={{
+                                            cursor: 'pointer',
+                                            border: `2px solid ${removalAction === 'transfer' ? '#2563eb' : '#e2e8f0'}`,
+                                            background: removalAction === 'transfer' ? '#eff6ff' : 'white',
+                                            padding: '1.25rem',
+                                            textAlign: 'center'
+                                        }}
+                                        onClick={() => setRemovalAction('transfer')}
+                                    >
+                                        <GitPullRequest size={24} color={removalAction === 'transfer' ? '#2563eb' : '#94a3b8'} style={{ marginBottom: '0.75rem' }} />
+                                        <h4 style={{ margin: '0 0 0.5rem 0', color: removalAction === 'transfer' ? '#1e40af' : '#475569' }}>Transfer Home</h4>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Hand over management to another HOD.</p>
+                                    </div>
+                                </div>
+
+                                {removalAction === 'transfer' && (
+                                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>
+                                            Target Department for Ownership:
+                                        </label>
+                                        <select
+                                            className={styles.deptSelect}
+                                            style={{ width: '100%', padding: '0.75rem', background: 'white', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                            value={removalTargetDept}
+                                            onChange={(e) => setRemovalTargetDept(e.target.value)}
+                                        >
+                                            <option value="">-- Choose New Home Dept --</option>
+                                            {(activeDepartmentsForTransfer.length > 0 ? activeDepartmentsForTransfer : departments.filter(d => d !== selectedDept)).map(dept => (
+                                                <option key={dept} value={dept}>{dept}</option>
+                                            ))}
+                                        </select>
+                                        <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.75rem', fontStyle: 'italic' }}>
+                                            * The faculty's current subjects in {selectedDept} will be unassigned.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {removalAction === 'delete' && (
+                                    <div style={{ background: activeDepartmentsForTransfer.length > 0 ? '#fffbeb' : '#fff1f2', padding: '1rem', borderRadius: '8px', border: `1px solid ${activeDepartmentsForTransfer.length > 0 ? '#fde68a' : '#fecaca'}`, marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+                                        {activeDepartmentsForTransfer.length > 0 ? <ShieldAlert size={20} color="#d97706" style={{ flexShrink: 0 }} /> : <AlertTriangle size={20} color="#dc2626" style={{ flexShrink: 0 }} />}
+                                        <p style={{ fontSize: '0.82rem', color: activeDepartmentsForTransfer.length > 0 ? '#92400e' : '#991b1b', margin: 0, fontWeight: 500 }}>
+                                            {activeDepartmentsForTransfer.length > 0 
+                                                ? `This faculty member has active assignments in ${activeDepartmentsForTransfer.join(', ')}. Hard delete is disabled until ownership is transferred.`
+                                                : "Caution: If this faculty member has active assignments in other departments, the system will block the delete and suggest a transfer instead."
+                                            }
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                    <button className={styles.secondaryBtn} onClick={() => setRemovingFaculty(null)}>Cancel</button>
+                                    <button
+                                        className={styles.primaryBtn}
+                                        style={{
+                                            background: removalAction === 'delete' ? '#ef4444' : '#2563eb',
+                                            color: 'white'
+                                        }}
+                                        onClick={executeRemoval}
+                                    >
+                                        {removalAction === 'delete' ? 'Confirm Permanent Delete' : 'Process Transfer'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    {approvalLoading ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100%, 1fr))', gap: '1.5rem' }}>
-                            {[1, 2].map(i => (
-                                <div key={i} className={styles.approvalCard}>
+                )
+            }
+            {
+                messagingFaculty && (
+                    <div className={styles.modalOverlay} onClick={() => setMessagingFaculty(null)}>
+                        <div className={styles.modalContent} style={{ maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+                            <div className={styles.modalHeader}>
+                                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={20} /> Message {messagingFaculty.username}</h3>
+                                <button className={styles.closeBtn} onClick={() => setMessagingFaculty(null)}><X size={24} /></button>
+                            </div>
+                            <div className={styles.modalBody}>
+                                <div className={styles.formGroup}>
+                                    <label>Message Content</label>
+                                    <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message here..." className={styles.input} style={{ minHeight: '120px', resize: 'vertical' }} autoFocus></textarea>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                                    <button className={styles.secondaryBtn} onClick={() => setMessagingFaculty(null)}>Cancel</button>
+                                    <button className={styles.primaryBtn} onClick={sendMessage} disabled={!messageText.trim()} style={{ opacity: !messageText.trim() ? 0.6 : 1 }}>Send Message</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                activeTab === 'approvals' && (
+                    <div className={styles.approvalsContainer}>
+                        <div className={styles.infoBanner}>
+                            <CheckCircle size={20} />
+                            <p>You have <strong>{pendingApprovals.length}</strong> IA Bundles pending for final approval.</p>
+                        </div>
+                        {approvalLoading ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100%, 1fr))', gap: '1.5rem' }}>
+                                {[1, 2].map(i => (
+                                    <div key={i} className={styles.approvalCard}>
+                                        <div className={styles.approvalHeader}>
+                                            <div style={{ flex: 1 }}>
+                                                <Skeleton width="200px" height="20px" style={{ marginBottom: '8px' }} />
+                                                <Skeleton width="300px" height="14px" />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <Skeleton width="80px" height="36px" />
+                                                <Skeleton width="120px" height="36px" />
+                                            </div>
+                                        </div>
+                                        <div style={{ marginTop: '1rem' }}>
+                                            <Skeleton width="100%" height="150px" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : pendingApprovals.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+                                <CheckCircle size={48} style={{ marginBottom: '1rem', color: '#10b981' }} />
+                                <p>No pending submissions. All marks have been reviewed!</p>
+                            </div>
+                        ) : (
+                            pendingApprovals.map((approval, idx) => (
+                                <div key={idx} className={styles.approvalCard}>
                                     <div className={styles.approvalHeader}>
-                                        <div style={{ flex: 1 }}>
-                                            <Skeleton width="200px" height="20px" style={{ marginBottom: '8px' }} />
-                                            <Skeleton width="300px" height="14px" />
+                                        <div>
+                                            <h4>{approval.subjectName}</h4>
+                                            <span>{approval.iaType} Marks | Faculty: {approval.facultyName} | {approval.studentCount} students</span>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <Skeleton width="80px" height="36px" />
-                                            <Skeleton width="120px" height="36px" />
+                                        <div className={styles.approvlActions}>
+                                            <button className={styles.rejectBtn} onClick={() => handleRejectMarks(approval.subjectId, approval.iaType, approval.facultyId)}>Reject</button>
+                                            <button className={styles.approveBtn} onClick={() => handleApproveMarks(approval.subjectId, approval.iaType, approval.facultyId)}>Approve & Lock</button>
                                         </div>
                                     </div>
-                                    <div style={{ marginTop: '1rem' }}>
-                                        <Skeleton width="100%" height="150px" />
-                                    </div>
+                                    <table className={styles.miniTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>Reg No</th>
+                                                <th>Student</th>
+                                                <th>Marks</th>
+                                                <th>Att (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(Array.isArray(approval.marks) ? (expandedApprovals[idx] ? approval.marks : approval.marks.slice(0, 3)) : []).map(st => (
+                                                <tr key={st.studentId}>
+                                                    <td>{st.regNo}</td>
+                                                    <td>{st.studentName}</td>
+                                                    <td>{st.totalScore === -2.0 ? 'AB' : (st.totalScore || 0)}/50</td>
+                                                    <td style={{ color: st.attendancePercentage != null ? '#15803d' : '#94a3b8', fontWeight: 500 }}>{st.attendancePercentage != null ? `${st.attendancePercentage}%` : '-'}</td>
+                                                </tr>
+                                            ))}
+                                            {Array.isArray(approval.marks) && approval.marks.length > 3 && (
+                                                <tr onClick={() => toggleExpansion(idx)} style={{ cursor: 'pointer', background: '#f8fafc' }}>
+                                                    <td colSpan="3" style={{ textAlign: 'center', color: '#2563eb', fontWeight: 500 }}>
+                                                        {expandedApprovals[idx] ? 'Show Less' : `+ ${approval.marks.length - 3} more records (Click to expand)`}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            ))}
-                        </div>
-                    ) : pendingApprovals.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
-                            <CheckCircle size={48} style={{ marginBottom: '1rem', color: '#10b981' }} />
-                            <p>No pending submissions. All marks have been reviewed!</p>
-                        </div>
-                    ) : (
-                        pendingApprovals.map((approval, idx) => (
-                            <div key={idx} className={styles.approvalCard}>
-                                <div className={styles.approvalHeader}>
+                            ))
+                        )}
+                        {/* Unlock Requests Section */}
+                        {unlockRequests.length > 0 && (
+                            <>
+                                <div className={styles.infoBanner} style={{ marginTop: '2rem', background: '#fffbeb', color: '#b45309', borderLeftColor: '#f59e0b' }}>
+                                    <Unlock size={20} />
+                                    <p>You have <strong>{unlockRequests.length}</strong> pending <strong>Unlock Requests</strong> from Faculty.</p>
+                                </div>
+                                {unlockRequestsLoading ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem' }}><Skeleton width="100%" height="80px" /></div>
+                                ) : (
+                                    unlockRequests.map((req) => (
+                                        <div key={req.id} className={styles.approvalCard} style={{ background: '#fff8f1', border: '1px solid #fed7aa', marginTop: '1rem' }}>
+                                            <div className={styles.approvalHeader}>
+                                                <div>
+                                                    <h4>{req.subject?.name}</h4>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '4px' }}>
+                                                        <span style={{ background: '#fed7aa', color: '#9a3412', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>CIE Types: {req.cieTypes}</span>
+                                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Faculty: {req.faculty?.fullName || req.faculty?.username}</span>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.approvlActions}>
+                                                    <button className={styles.rejectBtn} onClick={() => handleRejectUnlockRequest(req.id)}>Reject</button>
+                                                    <button className={styles.approveBtn} style={{ background: '#f59e0b', color: 'white' }} onClick={() => handleApproveUnlockRequest(req.id)}>Approve Unlock</button>
+                                                </div>
+                                            </div>
+                                            <div style={{ marginTop: '1rem', background: 'white', padding: '1rem', borderRadius: '8px', border: '1px dashed #fdba74' }}>
+                                                <h5 style={{ margin: '0 0 0.5rem 0', color: '#9a3412', fontSize: '0.9rem' }}>Reason for Unlock:</h5>
+                                                <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', fontStyle: 'italic' }}>"{req.reason}"</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </>
+                        )}
+
+                        <div className={styles.card} style={{ marginTop: '2.5rem', border: '1px solid #fee2e2', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.05)', overflow: 'visible' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#b91c1c', margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                                        <div style={{ padding: '8px', background: '#fef2f2', borderRadius: '8px', display: 'flex', border: '1px solid #fecaca' }}>
+                                            <LockOpen size={18} color="#b91c1c" />
+                                        </div>
+                                        Unlock Approved Marks
+                                    </h3>
+                                    <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+                                        Revert approved marks to pending status to allow faculty modifications
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) auto', gap: '1.5rem', alignItems: 'flex-end' }}>
                                     <div>
-                                        <h4>{approval.subjectName}</h4>
-                                        <span>{approval.iaType} Marks | Faculty: {approval.facultyName} | {approval.studentCount} students</span>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Select Subject</label>
+                                        <select className={styles.select} id="unlockSubject" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
+                                            <option value="">-- Choose Subject --</option>
+                                            {subjects.filter(s => s.name !== 'IC').map(subject => (
+                                                <option key={subject.id} value={subject.id}>{subject.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
-                                    <div className={styles.approvlActions}>
-                                        <button className={styles.rejectBtn} onClick={() => handleRejectMarks(approval.subjectId, approval.iaType)}>Reject</button>
-                                        <button className={styles.approveBtn} onClick={() => handleApproveMarks(approval.subjectId, approval.iaType)}>Approve & Lock</button>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>CIE Type</label>
+                                        <select className={styles.select} id="unlockCIE" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
+                                            <option value="CIE1">CIE-1 (Theory)</option>
+                                            <option value="CIE2">Skill Test 1 (Lab)</option>
+                                            <option value="CIE3">CIE-2 (Theory)</option>
+                                            <option value="CIE4">Skill Test 2 (Lab)</option>
+                                            <option value="CIE5">Activity</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Faculty (Optional)</label>
+                                        <select className={styles.select} id="unlockFaculty" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
+                                            <option value="">All Faculty</option>
+                                            {facultyList.map(f => (
+                                                <option key={f.id} value={f.id}>{f.fullName || f.username}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={() => { 
+                                            const subjectId = document.getElementById('unlockSubject').value; 
+                                            const cieType = document.getElementById('unlockCIE').value; 
+                                            const facultyId = document.getElementById('unlockFaculty').value;
+                                            if (!subjectId) { showToast('Please select a subject', 'error'); return; } 
+                                            const subject = subjects.find(s => s.id === parseInt(subjectId)); 
+                                            handleUnlockMarks(subjectId, cieType, subject?.name || 'Selected Subject', facultyId); 
+                                        }}
+                                        style={{
+                                            padding: '0.75rem 1.5rem', background: '#ef4444', color: 'white', border: 'none',
+                                            borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                            transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                    >
+                                        <Unlock size={16} />
+                                        Unlock Marks
+                                    </button>
+                                </div>
+
+                                <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                    <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                    <div>
+                                        <p style={{ margin: 0, color: '#92400e', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                                            <strong style={{ color: '#b45309' }}>Warning:</strong> Unlocking marks will immediately change their status from <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>APPROVED</span> to <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>PENDING</span>, allowing the assigned faculty to edit them.
+                                        </p>
                                     </div>
                                 </div>
-                                <table className={styles.miniTable}>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {activeTab === 'analytics' && (<div className={styles.analyticsContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>IA Submission Status</h3><div className={styles.doughnutContainer}><Pie data={iaSubmissionStatus} options={doughnutOptions} /></div></div><div className={styles.card}><h3>Year-on-Year Improvement</h3><div className={styles.chartContainer}><Line data={hodTrendData} options={commonOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><h3>Download Reports</h3><div className={styles.downloadOptions}><button className={styles.downloadBtn}><FileText size={16} /> Department IA Report (PDF)</button><button className={styles.downloadBtn}><FileText size={16} /> Consolidated Marks Sheet (Excel)</button><button className={styles.downloadBtn}><FileText size={16} /> Low Performers List (CSV)</button></div></div></div>)}
+            {activeTab === 'lesson-plans' && (<div className={styles.lessonPlansContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Syllabus Progress</h3></div><div className={styles.gridContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(350px,1fr))', gap: '1.5rem', marginTop: '1rem' }}>{subjectsByDept[selectedDept]?.map((subName, idx) => { const subId = idx + 1; const realSub = subjects.find(s => s.name === subName); const idToUse = realSub ? realSub.id : subId; const savedTracker = localStorage.getItem('syllabusTracker'); const progress = savedTracker ? (JSON.parse(savedTracker)[idToUse] || {}) : {}; const savedStructure = localStorage.getItem('syllabusStructure'); const structure = savedStructure ? (JSON.parse(savedStructure)[idToUse] || []) : []; const savedCie = localStorage.getItem('cieSelector'); const cieSelector = savedCie ? (JSON.parse(savedCie)[idToUse] || {}) : {}; const units = structure.length > 0 ? structure : [{ id: 'u1', name: 'Unit 1: Introduction' }, { id: 'u2', name: 'Unit 2: Core Concepts' }, { id: 'u3', name: 'Unit 3: Advanced Topics' }, { id: 'u4', name: 'Unit 4: Application' }, { id: 'u5', name: 'Unit 5: Case Studies' }]; const completedCount = units.filter(u => progress[u.id]).length; const totalUnits = units.length; const percent = totalUnits > 0 ? Math.round((completedCount / totalUnits) * 100) : 0; return (<div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><div><h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', color: '#111827' }}>{subName}</h4><span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Faculty: {facultyWorkload[idx % facultyWorkload.length]?.name || 'Unknown'}</span></div><div style={{ textAlign: 'right' }}><span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: percent === 100 ? '#10b981' : '#3b82f6' }}>{percent}%</span></div></div><div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '1rem' }}><div style={{ width: `${percent}%`, height: '100%', background: percent === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }}></div></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{units.slice(0, 3).map(u => (<div key={u.id} style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', color: progress[u.id] ? '#374151' : '#9ca3af' }}><div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: progress[u.id] ? '#10b981' : '#d1d5db', background: progress[u.id] ? '#10b981' : 'transparent', marginRight: '8px', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{progress[u.id] && <CheckCircle size={10} color="white" />}</div><span style={{ textDecoration: progress[u.id] ? 'line-through' : 'none', marginRight: '8px' }}>{u.name}</span>{cieSelector[u.id] && (<span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #7c3aed', marginLeft: 'auto' }}>CIE</span>)}</div>))}{units.length > 3 && (<div style={{ fontSize: '0.8rem', color: '#6b7280', paddingLeft: '24px' }}>+ {units.length - 3} more topics</div>)}</div></div>); })}</div></div></div>)}
+            {
+                activeTab === 'syllabus' && (<div className={styles.sectionContainer}>
+                    {/* Add New Subject Section */}
+                    <div className={styles.card}>
+                        <div className={styles.cardHeader}><h3><Layers size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />{editingSubject ? 'Edit Subject' : 'Add New Subject'}</h3></div>
+                        <div style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div className={styles.formGroup}>
+                                    <label style={{ fontWeight: 600 }}>Subject Name *</label>
+                                    <input className={styles.input} id="newSubjectName" placeholder="e.g. Data Structures" defaultValue={editingSubject?.name || ''} key={editingSubject ? `edit-name-${editingSubject.id}` : 'add-name'} />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label style={{ fontWeight: 600 }}>Subject Code *</label>
+                                    <input className={styles.input} id="newSubjectCode" placeholder="e.g. 21CS32" defaultValue={editingSubject?.code || ''} key={editingSubject ? `edit-code-${editingSubject.id}` : 'add-code'} />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label style={{ fontWeight: 600 }}>Semester</label>
+                                    <select className={styles.deptSelect} id="newSubjectSemester" style={{ width: '100%', padding: '0.6rem' }} defaultValue={editingSubject?.semester || '1'} key={editingSubject ? `edit-sem-${editingSubject.id}` : 'add-sem'}>
+                                        {[1, 2, 3, 4, 5, 6].map(s => <option key={s} value={s}>Semester {s}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                                {editingSubject && (
+                                    <button className={styles.secondaryBtn} style={{ flex: 1, justifyContent: 'center', padding: '0.65rem' }} onClick={() => setEditingSubject(null)}>Cancel</button>
+                                )}
+                                <button className={styles.primaryBtn} style={{ flex: editingSubject ? 2 : 1, width: '100%', justifyContent: 'center', padding: '0.65rem' }} onClick={async () => {
+                                    const name = document.getElementById('newSubjectName').value.trim();
+                                    const code = document.getElementById('newSubjectCode').value.trim();
+                                    const semester = document.getElementById('newSubjectSemester').value;
+                                    if (!name || !code) { showToast('Subject name and code are required.', 'error'); return; }
+                                    try {
+                                        const token = user?.token;
+                                        const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+                                        const payload = { name, code, department: selectedDept, semester: parseInt(semester), credits: 0 };
+
+                                        const url = editingSubject ? `${API_BASE_URL}/subjects/${editingSubject.id}` : `${API_BASE_URL}/subjects`;
+                                        const method = editingSubject ? 'PUT' : 'POST';
+
+                                        const res = await authenticatedFetch(url, {
+                                            method,
+                                            body: JSON.stringify(payload)
+                                        });
+
+                                        if (res.ok) {
+                                            showToast(editingSubject ? 'Subject updated successfully!' : 'Subject added successfully!');
+                                            if (!editingSubject) {
+                                                document.getElementById('newSubjectName').value = '';
+                                                document.getElementById('newSubjectCode').value = '';
+                                            }
+                                            setEditingSubject(null);
+                                            // Refresh subjects list
+                                            const subRes = await authenticatedFetch(`${API_BASE_URL}/subjects/department/${selectedDept}`);
+                                            if (subRes.ok) setSubjects(await subRes.json());
+                                        } else {
+                                            const err = await res.json();
+                                            showToast(err.message || `Failed to ${editingSubject ? 'update' : 'add'} subject.`, 'error');
+                                        }
+                                    } catch (e) { console.error(e); showToast(`Error ${editingSubject ? 'updating' : 'adding'} subject.`, 'error'); }
+                                }}><Layers size={16} /> {editingSubject ? 'Update Subject' : 'Add Subject'}</button>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Existing Subjects Table */}
+                    <div className={styles.card} style={{ marginTop: '1.5rem' }}>
+                        <div className={styles.cardHeader}><h3>Department Subjects ({subjects.length})</h3></div>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.table}>
+                                <thead><tr><th>Name</th><th>Code</th><th>Semester</th><th>Action</th></tr></thead>
+                                <tbody>
+                                    {subjects.length > 0 ? subjects.map(sub => (
+                                        <tr key={sub.id}>
+                                            <td style={{ fontWeight: 500 }}>{sub.name}</td>
+                                            <td><span className={styles.statusBadge} style={{ background: '#f1f5f9', color: '#334155' }}>{sub.code}</span></td>
+                                            <td>Sem {sub.semester || '-'}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button className={styles.iconBtn} style={{ color: '#2563eb', background: '#dbeafe' }} title="Edit" onClick={() => {
+                                                        setEditingSubject(sub);
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }}><Edit size={14} /></button>
+                                                    <button className={styles.iconBtn} style={{ color: '#dc2626', background: '#fee2e2' }} title="Delete" onClick={async () => {
+                                                        const confirmed = await showConfirm({
+                                                            title: 'Delete Subject',
+                                                            message: `Delete subject "${sub.name}"? This cannot be undone.`,
+                                                            variant: 'danger',
+                                                            confirmText: 'Delete'
+                                                        });
+                                                        if (!confirmed) return;
+                                                        try {
+                                                            const res = await authenticatedFetch(`${API_BASE_URL}/subjects/${sub.id}`, { method: 'DELETE' });
+                                                            if (res.ok) {
+                                                                setSubjects(prev => prev.filter(s => s.id !== sub.id));
+                                                                if (editingSubject?.id === sub.id) setEditingSubject(null);
+                                                                showToast('Subject deleted.');
+                                                            } else { showToast('Failed to delete subject.', 'error'); }
+                                                        } catch (e) { showToast('Error deleting subject.', 'error'); }
+                                                    }}><Trash2 size={14} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr><td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No subjects found for this department.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>)
+            }
+            {
+                activeTab === 'cie-schedule' && (
+                    <div className={styles.cieScheduleContainer}>
+                        <div className={styles.gridTwo}>
+                            <div className={styles.card}>
+                                <h3>{editingScheduleId ? 'Edit CIE Exam Schedule' : 'Schedule New CIE Exam'}</h3>
+                                <form onSubmit={handleScheduleSubmit} id="scheduleFormSection" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div className={styles.formGroup}>
+                                        <label>Select Subject</label>
+                                        <select name="subjectId" required className={styles.deptSelect} style={{ width: '100%' }}>
+                                            <option value="">-- Choose Subject --</option>
+                                            {subjects.map(sub => (
+                                                <option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label>CIE Number</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {[1, 2, 3, 4, 5].map(num => (
+                                                <label key={num} style={{
+                                                    flex: 1,
+                                                    padding: '0.75rem',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '8px',
+                                                    textAlign: 'center',
+                                                    cursor: 'pointer',
+                                                    background: scheduleForm.cieNumber === num ? '#eff6ff' : 'white',
+                                                    borderColor: scheduleForm.cieNumber === num ? '#3b82f6' : '#cbd5e1',
+                                                    color: scheduleForm.cieNumber === num ? '#2563eb' : '#64748b',
+                                                    fontWeight: scheduleForm.cieNumber === num ? '600' : '400'
+                                                }}>
+                                                    <input type="radio" name="cieNumber" value={num} checked={scheduleForm.cieNumber === num} onChange={() => setScheduleForm({ ...scheduleForm, cieNumber: num })} style={{ display: 'none' }} />
+                                                    {num === 1 ? 'CIE-1 (T)' : num === 2 ? 'ST-1 (L)' : num === 3 ? 'CIE-2 (T)' : num === 4 ? 'ST-2 (L)' : 'Activity'}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className={styles.formGroup}>
+                                            <label>Date</label>
+                                            <input type="date" name="scheduledDate" required className={styles.input} />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label>Time</label>
+                                            <input type="time" name="startTime" required className={styles.input} />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className={styles.formGroup}>
+                                            <label>Duration (mins)</label>
+                                            <input type="number" name="durationMinutes" defaultValue="60" className={styles.input} />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label>Room / Hall</label>
+                                            <input name="examRoom" placeholder="e.g. LH-201" className={styles.input} />
+                                        </div>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label>Integration Instructions (Optional)</label>
+                                        <textarea name="instructions" placeholder="Special instructions for faculty/students..." className={styles.input} style={{ minHeight: '80px', resize: 'vertical' }}></textarea>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                                        {editingScheduleId && (
+                                            <button type="button" className={styles.secondaryBtn} onClick={cancelEdit} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                                        )}
+                                        <button type="submit" className={styles.primaryBtn} style={{ flex: 2, justifyContent: 'center' }}>
+                                            <Megaphone size={18} /> {editingScheduleId ? 'Update Schedule' : 'Publish Schedule'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div className={styles.card}>
+                                <h3>Upcoming Scheduled Exams</h3>
+                                <div className={styles.alertList}>
+                                    {departmentAnnouncements.length > 0 ? departmentAnnouncements.map(ann => (
+                                        <div key={ann.id} className={`${styles.alertItem} ${styles.info}`} style={{ alignItems: 'center' }}>
+                                            <div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px' }}>
+                                                <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 'bold', color: '#2563eb' }}>
+                                                    {new Date(ann.scheduledDate).getDate()}
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b' }}>
+                                                    {new Date(ann.scheduledDate).toLocaleString('default', { month: 'short' })}
+                                                </span>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', color: '#1e293b' }}>
+                                                        {ann.subject ? ann.subject.name : 'Unknown Subject'}
+                                                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}> ({ann.subject?.code})</span>
+                                                    </h4>
+                                                    <span className={styles.statusBadge} style={{ background: '#dbeafe', color: '#1e40af' }}>CIE-{ann.cieNumber}</span>
+                                                </div>
+                                                <p style={{ display: 'flex', gap: '1rem', alignItems: 'center', color: '#475569', fontSize: '0.85rem' }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {ann.startTime || '10:00 AM'} ({ann.durationMinutes}m)</span>
+                                                    {ann.examRoom && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> {ann.examRoom}</span>}
+                                                </p>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                {ann.questionPaperPath && (
+                                                    <>
+                                                        <button className={styles.iconBtn} onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}?view=true`, '_blank')} title="View Question Paper" style={{ color: '#2563eb', background: '#dbeafe' }}>
+                                                            <Eye size={16} />
+                                                        </button>
+                                                        <button className={styles.iconBtn} onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}`, '_blank')} title="Download Question Paper" style={{ color: '#16a34a', background: '#dcfce7' }}>
+                                                            <Download size={16} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                <button className={styles.iconBtn} onClick={() => handleEditSchedule(ann)} title="Edit" style={{ color: '#2563eb', background: '#dbeafe' }}>
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button className={styles.iconBtn} onClick={() => handleDeleteSchedule(ann.id)} title="Delete" style={{ color: '#dc2626', background: '#fee2e2' }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No exams scheduled yet.</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* NEW: Question Paper Repository Section */}
+                        <div className={styles.card} style={{ marginTop: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FileText size={24} color="#2563eb" /> 📁 Question Paper Repository (Faculty Uploads)
+                                </h3>
+                                <span style={{ fontSize: '0.85rem', color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px' }}>
+                                    {departmentAnnouncements.filter(a => a.questionPaperPath).length} Papers Uploaded
+                                </span>
+                            </div>
+                            <div className={styles.tableWrapper}>
+                                <table className={styles.table} style={{ width: '100%' }}>
                                     <thead>
                                         <tr>
-                                            <th>Reg No</th>
-                                            <th>Student</th>
-                                            <th>Marks</th>
-                                            <th>Att (%)</th>
+                                            <th>Subject</th>
+                                            <th>CIE</th>
+                                            <th>Uploaded By</th>
+                                            <th>Status</th>
+                                            <th style={{ textAlign: 'right' }}>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(Array.isArray(approval.marks) ? (expandedApprovals[idx] ? approval.marks : approval.marks.slice(0, 3)) : []).map(st => (
-                                            <tr key={st.studentId}>
-                                                <td>{st.regNo}</td>
-                                                <td>{st.studentName}</td>
-                                                <td>{st.totalScore}/50</td>
-                                                <td style={{ color: st.attendancePercentage != null ? '#15803d' : '#94a3b8', fontWeight: 500 }}>{st.attendancePercentage != null ? `${st.attendancePercentage}%` : '-'}</td>
-                                            </tr>
-                                        ))}
-                                        {Array.isArray(approval.marks) && approval.marks.length > 3 && (
-                                            <tr onClick={() => toggleExpansion(idx)} style={{ cursor: 'pointer', background: '#f8fafc' }}>
-                                                <td colSpan="3" style={{ textAlign: 'center', color: '#2563eb', fontWeight: 500 }}>
-                                                    {expandedApprovals[idx] ? 'Show Less' : `+ ${approval.marks.length - 3} more records (Click to expand)`}
+                                        {departmentAnnouncements.filter(a => a.questionPaperPath).length > 0 ? (
+                                            departmentAnnouncements
+                                                .filter(a => a.questionPaperPath)
+                                                .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate))
+                                                .map(ann => (
+                                                    <tr key={ann.id}>
+                                                        <td>
+                                                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{ann.subject?.name}</div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{ann.subject?.code}</div>
+                                                        </td>
+                                                        <td>
+                                                            <span className={styles.statusBadge} style={{ background: '#eff6ff', color: '#2563eb' }}>CIE-{ann.cieNumber}</span>
+                                                        </td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
+                                                                    {ann.faculty?.username?.substring(0, 2).toUpperCase() || 'F'}
+                                                                </div>
+                                                                <span style={{ fontSize: '0.9rem' }}>{ann.faculty?.username || 'Unknown Faculty'}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.85rem', fontWeight: 500 }}>
+                                                                <CheckCircle size={14} /> Ready for Review
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                                <button
+                                                                    className={styles.secondaryBtn}
+                                                                    style={{
+                                                                        padding: '0.5rem 1rem',
+                                                                        fontSize: '0.85rem',
+                                                                        background: '#f8fafc',
+                                                                        color: '#2563eb',
+                                                                        border: '1px solid #e2e8f0',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '6px'
+                                                                    }}
+                                                                    onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}?view=true`, '_blank')}
+                                                                    title="View in Browser"
+                                                                >
+                                                                    <Eye size={16} /> View
+                                                                </button>
+                                                                <button
+                                                                    className={styles.primaryBtn}
+                                                                    style={{
+                                                                        padding: '0.5rem 1rem',
+                                                                        fontSize: '0.85rem',
+                                                                        background: '#16a34a',
+                                                                        borderColor: '#16a34a',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '6px'
+                                                                    }}
+                                                                    onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}`, '_blank')}
+                                                                    title="Download File"
+                                                                >
+                                                                    <Download size={16} /> Download
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                                                    <FileText size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                                                    <p>No question papers have been uploaded by faculty yet.</p>
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
-                        ))
-                    )}
-                    {/* Unlock Requests Section */}
-                    {unlockRequests.length > 0 && (
-                        <>
-                            <div className={styles.infoBanner} style={{ marginTop: '2rem', background: '#fffbeb', color: '#b45309', borderLeftColor: '#f59e0b' }}>
-                                <Unlock size={20} />
-                                <p>You have <strong>{unlockRequests.length}</strong> pending <strong>Unlock Requests</strong> from Faculty.</p>
-                            </div>
-                            {unlockRequestsLoading ? (
-                                <div style={{ textAlign: 'center', padding: '2rem' }}><Skeleton width="100%" height="80px" /></div>
-                            ) : (
-                                unlockRequests.map((req) => (
-                                    <div key={req.id} className={styles.approvalCard} style={{ background: '#fff8f1', border: '1px solid #fed7aa', marginTop: '1rem' }}>
-                                        <div className={styles.approvalHeader}>
-                                            <div>
-                                                <h4>{req.subject?.name}</h4>
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '4px' }}>
-                                                    <span style={{ background: '#fed7aa', color: '#9a3412', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>CIE Types: {req.cieTypes}</span>
-                                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Faculty: {req.faculty?.fullName || req.faculty?.username}</span>
-                                                </div>
-                                            </div>
-                                            <div className={styles.approvlActions}>
-                                                <button className={styles.rejectBtn} onClick={() => handleRejectUnlockRequest(req.id)}>Reject</button>
-                                                <button className={styles.approveBtn} style={{ background: '#f59e0b', color: 'white' }} onClick={() => handleApproveUnlockRequest(req.id)}>Approve Unlock</button>
-                                            </div>
-                                        </div>
-                                        <div style={{ marginTop: '1rem', background: 'white', padding: '1rem', borderRadius: '8px', border: '1px dashed #fdba74' }}>
-                                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#9a3412', fontSize: '0.9rem' }}>Reason for Unlock:</h5>
-                                            <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', fontStyle: 'italic' }}>"{req.reason}"</p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </>
-                    )}
-
-                    <div className={styles.card} style={{ marginTop: '2.5rem', border: '1px solid #fee2e2', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.05)', overflow: 'visible' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
-                            <div>
-                                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#b91c1c', margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
-                                    <div style={{ padding: '8px', background: '#fef2f2', borderRadius: '8px', display: 'flex', border: '1px solid #fecaca' }}>
-                                        <LockOpen size={18} color="#b91c1c" />
-                                    </div>
-                                    Unlock Approved Marks
-                                </h3>
-                                <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-                                    Revert approved marks to pending status to allow faculty modifications
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(150px, 1fr) auto', gap: '1.5rem', alignItems: 'flex-end' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Select Subject</label>
-                                    <select className={styles.select} id="unlockSubject" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
-                                        <option value="">-- Choose Subject --</option>
-                                        {subjects.filter(s => s.name !== 'IC').map(subject => (
-                                            <option key={subject.id} value={subject.id}>{subject.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>CIE Type</label>
-                                    <select className={styles.select} id="unlockCIE" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', color: '#1e293b' }}>
-                                        <option value="CIE1">CIE-1 (Theory)</option>
-                                        <option value="CIE2">Skill Test 1 (Lab)</option>
-                                        <option value="CIE3">CIE-2 (Theory)</option>
-                                        <option value="CIE4">Skill Test 2 (Lab)</option>
-                                        <option value="CIE5">Activity</option>
-                                    </select>
-                                </div>
-                                <button
-                                    onClick={() => { const subjectId = document.getElementById('unlockSubject').value; const cieType = document.getElementById('unlockCIE').value; if (!subjectId) { showToast('Please select a subject', 'error'); return; } const subject = subjects.find(s => s.id === parseInt(subjectId)); handleUnlockMarks(subjectId, cieType, subject?.name || 'Selected Subject'); }}
-                                    style={{
-                                        padding: '0.75rem 1.5rem', background: '#ef4444', color: 'white', border: 'none',
-                                        borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem',
-                                        transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.2)'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                                >
-                                    <Unlock size={16} />
-                                    Unlock Marks
-                                </button>
-                            </div>
-
-                            <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                                <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                <div>
-                                    <p style={{ margin: 0, color: '#92400e', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                        <strong style={{ color: '#b45309' }}>Warning:</strong> Unlocking marks will immediately change their status from <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>APPROVED</span> to <span style={{ background: '#fef9c3', color: '#854d0e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>PENDING</span>, allowing the assigned faculty to edit them.
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-            {activeTab === 'analytics' && (<div className={styles.analyticsContainer}><div className={styles.gridTwo}><div className={styles.card}><h3>IA Submission Status</h3><div className={styles.doughnutContainer}><Pie data={iaSubmissionStatus} options={doughnutOptions} /></div></div><div className={styles.card}><h3>Year-on-Year Improvement</h3><div className={styles.chartContainer}><Line data={hodTrendData} options={commonOptions} /></div></div></div><div className={styles.card} style={{ marginTop: '1.5rem' }}><h3>Download Reports</h3><div className={styles.downloadOptions}><button className={styles.downloadBtn}><FileText size={16} /> Department IA Report (PDF)</button><button className={styles.downloadBtn}><FileText size={16} /> Consolidated Marks Sheet (Excel)</button><button className={styles.downloadBtn}><FileText size={16} /> Low Performers List (CSV)</button></div></div></div>)}
-            {activeTab === 'lesson-plans' && (<div className={styles.lessonPlansContainer}><div className={styles.card}><div className={styles.cardHeader}><h3>Department Syllabus Progress</h3></div><div className={styles.gridContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(350px,1fr))', gap: '1.5rem', marginTop: '1rem' }}>{subjectsByDept[selectedDept]?.map((subName, idx) => { const subId = idx + 1; const realSub = subjects.find(s => s.name === subName); const idToUse = realSub ? realSub.id : subId; const savedTracker = localStorage.getItem('syllabusTracker'); const progress = savedTracker ? (JSON.parse(savedTracker)[idToUse] || {}) : {}; const savedStructure = localStorage.getItem('syllabusStructure'); const structure = savedStructure ? (JSON.parse(savedStructure)[idToUse] || []) : []; const savedCie = localStorage.getItem('cieSelector'); const cieSelector = savedCie ? (JSON.parse(savedCie)[idToUse] || {}) : {}; const units = structure.length > 0 ? structure : [{ id: 'u1', name: 'Unit 1: Introduction' }, { id: 'u2', name: 'Unit 2: Core Concepts' }, { id: 'u3', name: 'Unit 3: Advanced Topics' }, { id: 'u4', name: 'Unit 4: Application' }, { id: 'u5', name: 'Unit 5: Case Studies' }]; const completedCount = units.filter(u => progress[u.id]).length; const totalUnits = units.length; const percent = totalUnits > 0 ? Math.round((completedCount / totalUnits) * 100) : 0; return (<div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><div><h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', color: '#111827' }}>{subName}</h4><span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Faculty: {facultyWorkload[idx % facultyWorkload.length]?.name || 'Unknown'}</span></div><div style={{ textAlign: 'right' }}><span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: percent === 100 ? '#10b981' : '#3b82f6' }}>{percent}%</span></div></div><div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '1rem' }}><div style={{ width: `${percent}%`, height: '100%', background: percent === 100 ? '#10b981' : '#3b82f6', transition: 'width 0.5s ease' }}></div></div><div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{units.slice(0, 3).map(u => (<div key={u.id} style={{ display: 'flex', alignItems: 'center', fontSize: '0.9rem', color: progress[u.id] ? '#374151' : '#9ca3af' }}><div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid', borderColor: progress[u.id] ? '#10b981' : '#d1d5db', background: progress[u.id] ? '#10b981' : 'transparent', marginRight: '8px', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{progress[u.id] && <CheckCircle size={10} color="white" />}</div><span style={{ textDecoration: progress[u.id] ? 'line-through' : 'none', marginRight: '8px' }}>{u.name}</span>{cieSelector[u.id] && (<span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #7c3aed', marginLeft: 'auto' }}>CIE</span>)}</div>))}{units.length > 3 && (<div style={{ fontSize: '0.8rem', color: '#6b7280', paddingLeft: '24px' }}>+ {units.length - 3} more topics</div>)}</div></div>); })}</div></div></div>)}
-            {activeTab === 'syllabus' && (<div className={styles.sectionContainer}>
-                {/* Add New Subject Section */}
-                <div className={styles.card}>
-                    <div className={styles.cardHeader}><h3><Layers size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />{editingSubject ? 'Edit Subject' : 'Add New Subject'}</h3></div>
-                    <div style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                            <div className={styles.formGroup}>
-                                <label style={{ fontWeight: 600 }}>Subject Name *</label>
-                                <input className={styles.input} id="newSubjectName" placeholder="e.g. Data Structures" defaultValue={editingSubject?.name || ''} key={editingSubject ? `edit-name-${editingSubject.id}` : 'add-name'} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label style={{ fontWeight: 600 }}>Subject Code *</label>
-                                <input className={styles.input} id="newSubjectCode" placeholder="e.g. 21CS32" defaultValue={editingSubject?.code || ''} key={editingSubject ? `edit-code-${editingSubject.id}` : 'add-code'} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label style={{ fontWeight: 600 }}>Semester</label>
-                                <select className={styles.deptSelect} id="newSubjectSemester" style={{ width: '100%', padding: '0.6rem' }} defaultValue={editingSubject?.semester || '1'} key={editingSubject ? `edit-sem-${editingSubject.id}` : 'add-sem'}>
-                                    {[1, 2, 3, 4, 5, 6].map(s => <option key={s} value={s}>Semester {s}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                            {editingSubject && (
-                                <button className={styles.secondaryBtn} style={{ flex: 1, justifyContent: 'center', padding: '0.65rem' }} onClick={() => setEditingSubject(null)}>Cancel</button>
-                            )}
-                            <button className={styles.primaryBtn} style={{ flex: editingSubject ? 2 : 1, width: '100%', justifyContent: 'center', padding: '0.65rem' }} onClick={async () => {
-                                const name = document.getElementById('newSubjectName').value.trim();
-                                const code = document.getElementById('newSubjectCode').value.trim();
-                                const semester = document.getElementById('newSubjectSemester').value;
-                                if (!name || !code) { showToast('Subject name and code are required.', 'error'); return; }
-                                try {
-                                    const token = user?.token;
-                                    const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
-                                    const payload = { name, code, department: selectedDept, semester: parseInt(semester), credits: 0 };
-
-                                    const url = editingSubject ? `${API_BASE_URL}/subjects/${editingSubject.id}` : `${API_BASE_URL}/subjects`;
-                                    const method = editingSubject ? 'PUT' : 'POST';
-
-                                    const res = await authenticatedFetch(url, {
-                                        method,
-                                        body: JSON.stringify(payload)
-                                    });
-
-                                    if (res.ok) {
-                                        showToast(editingSubject ? 'Subject updated successfully!' : 'Subject added successfully!');
-                                        if (!editingSubject) {
-                                            document.getElementById('newSubjectName').value = '';
-                                            document.getElementById('newSubjectCode').value = '';
-                                        }
-                                        setEditingSubject(null);
-                                        // Refresh subjects list
-                                        const subRes = await authenticatedFetch(`${API_BASE_URL}/subjects/department/${selectedDept}`);
-                                        if (subRes.ok) setSubjects(await subRes.json());
-                                    } else {
-                                        const err = await res.json();
-                                        showToast(err.message || `Failed to ${editingSubject ? 'update' : 'add'} subject.`, 'error');
-                                    }
-                                } catch (e) { console.error(e); showToast(`Error ${editingSubject ? 'updating' : 'adding'} subject.`, 'error'); }
-                            }}><Layers size={16} /> {editingSubject ? 'Update Subject' : 'Add Subject'}</button>
-                        </div>
-                    </div>
-                </div>
-                {/* Existing Subjects Table */}
-                <div className={styles.card} style={{ marginTop: '1.5rem' }}>
-                    <div className={styles.cardHeader}><h3>Department Subjects ({subjects.length})</h3></div>
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                            <thead><tr><th>Name</th><th>Code</th><th>Semester</th><th>Action</th></tr></thead>
-                            <tbody>
-                                {subjects.length > 0 ? subjects.map(sub => (
-                                    <tr key={sub.id}>
-                                        <td style={{ fontWeight: 500 }}>{sub.name}</td>
-                                        <td><span className={styles.statusBadge} style={{ background: '#f1f5f9', color: '#334155' }}>{sub.code}</span></td>
-                                        <td>Sem {sub.semester || '-'}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button className={styles.iconBtn} style={{ color: '#2563eb', background: '#dbeafe' }} title="Edit" onClick={() => {
-                                                    setEditingSubject(sub);
-                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                }}><Edit size={14} /></button>
-                                                <button className={styles.iconBtn} style={{ color: '#dc2626', background: '#fee2e2' }} title="Delete" onClick={async () => {
-                                                    const confirmed = await showConfirm({
-                                                        title: 'Delete Subject',
-                                                        message: `Delete subject "${sub.name}"? This cannot be undone.`,
-                                                        variant: 'danger',
-                                                        confirmText: 'Delete'
-                                                    });
-                                                    if (!confirmed) return;
-                                                    try {
-                                                        const res = await authenticatedFetch(`${API_BASE_URL}/subjects/${sub.id}`, { method: 'DELETE' });
-                                                        if (res.ok) {
-                                                            setSubjects(prev => prev.filter(s => s.id !== sub.id));
-                                                            if (editingSubject?.id === sub.id) setEditingSubject(null);
-                                                            showToast('Subject deleted.');
-                                                        } else { showToast('Failed to delete subject.', 'error'); }
-                                                    } catch (e) { showToast('Error deleting subject.', 'error'); }
-                                                }}><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No subjects found for this department.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>)}
-            {activeTab === 'cie-schedule' && (
-                <div className={styles.cieScheduleContainer}>
-                    <div className={styles.gridTwo}>
-                        <div className={styles.card}>
-                            <h3>{editingScheduleId ? 'Edit CIE Exam Schedule' : 'Schedule New CIE Exam'}</h3>
-                            <form onSubmit={handleScheduleSubmit} id="scheduleFormSection" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                                <div className={styles.formGroup}>
-                                    <label>Select Subject</label>
-                                    <select name="subjectId" required className={styles.deptSelect} style={{ width: '100%' }}>
-                                        <option value="">-- Choose Subject --</option>
-                                        {subjects.map(sub => (
-                                            <option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>CIE Number</label>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        {[1, 2, 3, 4, 5].map(num => (
-                                            <label key={num} style={{
-                                                flex: 1,
-                                                padding: '0.75rem',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '8px',
-                                                textAlign: 'center',
-                                                cursor: 'pointer',
-                                                background: scheduleForm.cieNumber === num ? '#eff6ff' : 'white',
-                                                borderColor: scheduleForm.cieNumber === num ? '#3b82f6' : '#cbd5e1',
-                                                color: scheduleForm.cieNumber === num ? '#2563eb' : '#64748b',
-                                                fontWeight: scheduleForm.cieNumber === num ? '600' : '400'
-                                            }}>
-                                                <input type="radio" name="cieNumber" value={num} checked={scheduleForm.cieNumber === num} onChange={() => setScheduleForm({ ...scheduleForm, cieNumber: num })} style={{ display: 'none' }} />
-                                                {num === 1 ? 'CIE-1 (T)' : num === 2 ? 'ST-1 (L)' : num === 3 ? 'CIE-2 (T)' : num === 4 ? 'ST-2 (L)' : 'Activity'}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div className={styles.formGroup}>
-                                        <label>Date</label>
-                                        <input type="date" name="scheduledDate" required className={styles.input} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Time</label>
-                                        <input type="time" name="startTime" required className={styles.input} />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div className={styles.formGroup}>
-                                        <label>Duration (mins)</label>
-                                        <input type="number" name="durationMinutes" defaultValue="60" className={styles.input} />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Room / Hall</label>
-                                        <input name="examRoom" placeholder="e.g. LH-201" className={styles.input} />
-                                    </div>
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Integration Instructions (Optional)</label>
-                                    <textarea name="instructions" placeholder="Special instructions for faculty/students..." className={styles.input} style={{ minHeight: '80px', resize: 'vertical' }}></textarea>
-                                </div>
-                                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                                    {editingScheduleId && (
-                                        <button type="button" className={styles.secondaryBtn} onClick={cancelEdit} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-                                    )}
-                                    <button type="submit" className={styles.primaryBtn} style={{ flex: 2, justifyContent: 'center' }}>
-                                        <Megaphone size={18} /> {editingScheduleId ? 'Update Schedule' : 'Publish Schedule'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className={styles.card}>
-                            <h3>Upcoming Scheduled Exams</h3>
-                            <div className={styles.alertList}>
-                                {departmentAnnouncements.length > 0 ? departmentAnnouncements.map(ann => (
-                                    <div key={ann.id} className={`${styles.alertItem} ${styles.info}`} style={{ alignItems: 'center' }}>
-                                        <div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', minWidth: '60px' }}>
-                                            <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 'bold', color: '#2563eb' }}>
-                                                {new Date(ann.scheduledDate).getDate()}
-                                            </span>
-                                            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b' }}>
-                                                {new Date(ann.scheduledDate).toLocaleString('default', { month: 'short' })}
-                                            </span>
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', color: '#1e293b' }}>
-                                                    {ann.subject ? ann.subject.name : 'Unknown Subject'}
-                                                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'normal' }}> ({ann.subject?.code})</span>
-                                                </h4>
-                                                <span className={styles.statusBadge} style={{ background: '#dbeafe', color: '#1e40af' }}>CIE-{ann.cieNumber}</span>
-                                            </div>
-                                            <p style={{ display: 'flex', gap: '1rem', alignItems: 'center', color: '#475569', fontSize: '0.85rem' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {ann.startTime || '10:00 AM'} ({ann.durationMinutes}m)</span>
-                                                {ann.examRoom && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> {ann.examRoom}</span>}
-                                            </p>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {ann.questionPaperPath && (
-                                                <>
-                                                    <button className={styles.iconBtn} onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}?view=true`, '_blank')} title="View Question Paper" style={{ color: '#2563eb', background: '#dbeafe' }}>
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    <button className={styles.iconBtn} onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}`, '_blank')} title="Download Question Paper" style={{ color: '#16a34a', background: '#dcfce7' }}>
-                                                        <Download size={16} />
-                                                    </button>
-                                                </>
-                                            )}
-                                            <button className={styles.iconBtn} onClick={() => handleEditSchedule(ann)} title="Edit" style={{ color: '#2563eb', background: '#dbeafe' }}>
-                                                <Edit size={16} />
-                                            </button>
-                                            <button className={styles.iconBtn} onClick={() => handleDeleteSchedule(ann.id)} title="Delete" style={{ color: '#dc2626', background: '#fee2e2' }}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No exams scheduled yet.</div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* NEW: Question Paper Repository Section */}
-                    <div className={styles.card} style={{ marginTop: '2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <FileText size={24} color="#2563eb" /> 📁 Question Paper Repository (Faculty Uploads)
-                            </h3>
-                            <span style={{ fontSize: '0.85rem', color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px' }}>
-                                {departmentAnnouncements.filter(a => a.questionPaperPath).length} Papers Uploaded
-                            </span>
-                        </div>
-                        <div className={styles.tableWrapper}>
-                            <table className={styles.table} style={{ width: '100%' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>CIE</th>
-                                        <th>Uploaded By</th>
-                                        <th>Status</th>
-                                        <th style={{ textAlign: 'right' }}>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {departmentAnnouncements.filter(a => a.questionPaperPath).length > 0 ? (
-                                        departmentAnnouncements
-                                            .filter(a => a.questionPaperPath)
-                                            .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate))
-                                            .map(ann => (
-                                                <tr key={ann.id}>
-                                                    <td>
-                                                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{ann.subject?.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{ann.subject?.code}</div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={styles.statusBadge} style={{ background: '#eff6ff', color: '#2563eb' }}>CIE-{ann.cieNumber}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
-                                                                {ann.faculty?.username?.substring(0, 2).toUpperCase() || 'F'}
-                                                            </div>
-                                                            <span style={{ fontSize: '0.9rem' }}>{ann.faculty?.username || 'Unknown Faculty'}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.85rem', fontWeight: 500 }}>
-                                                            <CheckCircle size={14} /> Ready for Review
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                            <button
-                                                                className={styles.secondaryBtn}
-                                                                style={{
-                                                                    padding: '0.5rem 1rem',
-                                                                    fontSize: '0.85rem',
-                                                                    background: '#f8fafc',
-                                                                    color: '#2563eb',
-                                                                    border: '1px solid #e2e8f0',
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '6px'
-                                                                }}
-                                                                onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}?view=true`, '_blank')}
-                                                                title="View in Browser"
-                                                            >
-                                                                <Eye size={16} /> View
-                                                            </button>
-                                                            <button
-                                                                className={styles.primaryBtn}
-                                                                style={{
-                                                                    padding: '0.5rem 1rem',
-                                                                    fontSize: '0.85rem',
-                                                                    background: '#16a34a',
-                                                                    borderColor: '#16a34a',
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '6px'
-                                                                }}
-                                                                onClick={() => window.open(`${API_BASE_URL}/cie/download/${ann.questionPaperPath}`, '_blank')}
-                                                                title="Download File"
-                                                            >
-                                                                <Download size={16} /> Download
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                                                <FileText size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                                                <p>No question papers have been uploaded by faculty yet.</p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
+                )
+            }
             {activeTab === 'reports' && (<div className={styles.sectionContainer}><h2 className={styles.sectionTitle}>Reports & Archives</h2><div className={styles.cardsGrid}><div className={styles.card}><div className={styles.cardHeader}><h3 className={styles.cardTitle}>IA Marks Report</h3></div><div style={{ padding: '1rem', color: '#666' }}><p>Download comprehensive PDF report of IA marks for all subjects in {selectedDept}.</p><button className={styles.primaryBtn} style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }} onClick={() => window.open(`${API_BASE_URL}/reports/marks/${selectedDept}/pdf`, '_blank')}><Download size={18} /> Download PDF</button></div></div></div></div>)}
             {activeTab === 'faculty-requests' && renderFacultyRequests()}
         </>

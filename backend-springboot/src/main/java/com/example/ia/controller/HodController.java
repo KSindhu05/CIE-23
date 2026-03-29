@@ -64,6 +64,9 @@ public class HodController {
     @Autowired
     FacultyAssignmentRequestRepository assignmentRequestRepository;
 
+    @Autowired
+    private com.example.ia.repository.UnlockRequestRepository unlockRequestRepository;
+
     private boolean isAuthorizedForDepartment(String department, UserDetailsImpl userDetails) {
         if (userDetails == null)
             return false;
@@ -395,6 +398,56 @@ public class HodController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/faculty/{id}/assignments")
+    @PreAuthorize("hasRole('HOD') or hasRole('PRINCIPAL')")
+    public ResponseEntity<?> getFacultyAssignments(@PathVariable Long id) {
+        return userRepository.findById(id).map(fac -> {
+            List<Map<String, Object>> assignments = new ArrayList<>();
+
+            // 2. Approved Assignment Requests (including home and cross-department)
+            List<FacultyAssignmentRequest> approved = assignmentRequestRepository
+                    .findByFacultyIdAndStatus(id, "APPROVED");
+            
+            boolean hasHomeRequest = false;
+            List<Map<String, Object>> requestAssignments = new ArrayList<>();
+
+            for (FacultyAssignmentRequest req : approved) {
+                Map<String, Object> asgn = new HashMap<>();
+                asgn.put("department", req.getTargetDepartment());
+                asgn.put("subjects", req.getSubjects());
+                asgn.put("sections", req.getSections());
+                asgn.put("semester", req.getSemester());
+                
+                // If it's the home department, mark as HOME, else CROSS
+                boolean isHome = (fac.getDepartment() == null || fac.getDepartment().isBlank()) || 
+                                 fac.getDepartment().equalsIgnoreCase(req.getTargetDepartment());
+                
+                if (isHome) hasHomeRequest = true;
+
+                asgn.put("type", isHome ? "HOME" : "CROSS");
+                requestAssignments.add(asgn);
+            }
+
+            // 1. Legacy Home Department Assignment (ONLY if no new HOME requests exist)
+            if (!hasHomeRequest && fac.getDepartment() != null && !fac.getDepartment().isBlank() && 
+                fac.getSubjects() != null && !fac.getSubjects().isBlank()) {
+                Map<String, Object> home = new HashMap<>();
+                home.put("department", fac.getDepartment());
+                home.put("subjects", fac.getSubjects());
+                home.put("sections", fac.getSection());
+                home.put("semester", fac.getSemester());
+                home.put("type", "HOME");
+                assignments.add(home);
+            }
+
+            // Add all request-based assignments
+            assignments.addAll(requestAssignments);
+
+            return ResponseEntity.ok(assignments);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+
     // ========== CROSS-DEPARTMENT ASSIGNMENT REQUEST MANAGEMENT ==========
 
     @GetMapping("/assignment-requests")
@@ -543,6 +596,7 @@ public class HodController {
 
     @PostMapping("/faculty")
     @PreAuthorize("hasRole('HOD')")
+    @Transactional
     public ResponseEntity<?> createFaculty(@RequestBody User facultyData,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         // Enforce HOD's department
@@ -572,11 +626,25 @@ public class HodController {
         if (facultyData.getCieRole() != null)
             faculty.setCieRole(facultyData.getCieRole());
         userRepository.save(faculty);
+
+        // Sync instructorName in Subject records for the home department
+        if (faculty.getSubjects() != null && !faculty.getSubjects().isBlank()) {
+            String[] subNames = faculty.getSubjects().split(",");
+            for (String sn : subNames) {
+                subjectRepository.findFirstByNameAndDepartment(sn.trim(), faculty.getDepartment())
+                        .ifPresent(s -> {
+                            s.setInstructorName(faculty.getFullName());
+                            subjectRepository.save(s);
+                        });
+            }
+        }
+
         return ResponseEntity.ok(faculty);
     }
 
     @PutMapping("/faculty/{id}")
     @PreAuthorize("hasRole('HOD')")
+    @Transactional
     public ResponseEntity<?> updateFaculty(@PathVariable Long id, @RequestBody User facultyData,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return userRepository.findById(id).map(faculty -> {
@@ -632,6 +700,28 @@ public class HodController {
             }
 
             userRepository.save(faculty);
+
+            // Sync instructorName in Subject records
+            // 1. Clear old assignments for this faculty in this department
+            List<com.example.ia.entity.Subject> deptSubs = subjectRepository.findByDepartment(faculty.getDepartment());
+            for (com.example.ia.entity.Subject s : deptSubs) {
+                if (faculty.getFullName() != null && faculty.getFullName().equals(s.getInstructorName())) {
+                    s.setInstructorName(null);
+                    subjectRepository.save(s);
+                }
+            }
+            // 2. Add new assignments
+            if (faculty.getSubjects() != null && !faculty.getSubjects().isBlank()) {
+                String[] newSubs = faculty.getSubjects().split(",");
+                for (String sn : newSubs) {
+                    subjectRepository.findFirstByNameAndDepartment(sn.trim(), faculty.getDepartment())
+                            .ifPresent(s -> {
+                                s.setInstructorName(faculty.getFullName());
+                                subjectRepository.save(s);
+                            });
+                }
+            }
+
             return ResponseEntity.ok(faculty);
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -646,53 +736,186 @@ public class HodController {
                     .body(Map.of("message", "Access denied: You are not authorized for this department."));
         }
         return userRepository.findById(id).map(faculty -> {
-            boolean isHomeDept = department.equals(faculty.getDepartment());
+            boolean isHomeDept = (faculty.getDepartment() == null || faculty.getDepartment().isBlank()) || 
+                                 department.equals(faculty.getDepartment());
 
-            // 1. Find subjects belonging to THIS department that the faculty teaches
-            List<com.example.ia.entity.Subject> deptSubjects = subjectRepository.findByDepartment(department);
-            Set<String> deptSubjectNames = deptSubjects.stream()
-                    .map(com.example.ia.entity.Subject::getName)
-                    .collect(Collectors.toSet());
+            if (isHomeDept) {
+                // Check if faculty has APPROVED assignments in other departments
+                List<FacultyAssignmentRequest> otherApprovedAssignments = assignmentRequestRepository.findByFacultyId(id).stream()
+                    .filter(req -> req.getStatus().equals("APPROVED") && !req.getTargetDepartment().equalsIgnoreCase(department))
+                    .collect(Collectors.toList());
 
-            // 2. Remove only this dept's subjects from faculty.subjects
-            if (faculty.getSubjects() != null && !faculty.getSubjects().isBlank()) {
-                List<String> currentSubjects = Arrays.stream(faculty.getSubjects().split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .collect(Collectors.toList());
+                if (!otherApprovedAssignments.isEmpty()) {
+                    String activeDepts = otherApprovedAssignments.stream()
+                        .map(FacultyAssignmentRequest::getTargetDepartment)
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+                    
+                    return ResponseEntity.status(400).body(Map.of(
+                        "message", "Deletion blocked: This faculty has active assignments in " + activeDepts + ". Please transfer ownership to one of these departments instead.",
+                        "requiresTransfer", true,
+                        "activeDepartments", otherApprovedAssignments.stream()
+                            .map(FacultyAssignmentRequest::getTargetDepartment)
+                            .distinct()
+                            .collect(Collectors.toList())
+                    ));
+                }
 
-                List<String> remaining = currentSubjects.stream()
-                        .filter(s -> !deptSubjectNames.contains(s))
-                        .collect(Collectors.toList());
+                // 1. Clean up instructorName on subjects in ALL departments
+                List<com.example.ia.entity.Subject> allSubs = subjectRepository.findAll();
+                if (faculty.getFullName() != null) {
+                    for (com.example.ia.entity.Subject sub : allSubs) {
+                        if (faculty.getFullName().equals(sub.getInstructorName())) {
+                            sub.setInstructorName(null);
+                        }
+                    }
+                    subjectRepository.saveAll(allSubs);
+                }
 
-                faculty.setSubjects(remaining.isEmpty() ? null : String.join(", ", remaining));
+                // 2. Clean up associated records
+                notificationRepository.deleteByUserId(id);
+                
+                List<com.example.ia.entity.UnlockRequest> facultyUnlockRequests = unlockRequestRepository.findAll().stream()
+                    .filter(ur -> ur.getFaculty() != null && ur.getFaculty().getId().equals(id))
+                    .collect(Collectors.toList());
+                unlockRequestRepository.deleteAll(facultyUnlockRequests);
+
+                List<com.example.ia.entity.Attendance> facultyAttendance = attendanceRepository.findAll().stream()
+                    .filter(a -> a.getFaculty() != null && a.getFaculty().getId().equals(id))
+                    .collect(Collectors.toList());
+                for (com.example.ia.entity.Attendance att : facultyAttendance) {
+                    att.setFaculty(null);
+                }
+                attendanceRepository.saveAll(facultyAttendance);
+
+                List<com.example.ia.entity.Student> mentees = studentRepository.findByDepartment(faculty.getDepartment());
+                for (com.example.ia.entity.Student st : mentees) {
+                    if (faculty.getFullName() != null && faculty.getFullName().equals(st.getMentor())) {
+                        st.setMentor(null);
+                    }
+                }
+                studentRepository.saveAll(mentees);
+
+                List<FacultyAssignmentRequest> allRequests = assignmentRequestRepository.findByFacultyId(id);
+                assignmentRequestRepository.deleteAll(allRequests);
+
+                // 3. Hard delete
+                userRepository.delete(faculty);
+
+                return ResponseEntity.ok(Map.of("message", "Faculty record and all associated access permanently removed from the system."));
+            } else {
+                // Cross-dept removal
+                List<com.example.ia.entity.Subject> deptSubjects = subjectRepository.findByDepartment(department);
+                Set<String> deptSubjectNames = deptSubjects.stream()
+                        .map(com.example.ia.entity.Subject::getName)
+                        .collect(Collectors.toSet());
+
+                if (faculty.getSubjects() != null && !faculty.getSubjects().isBlank()) {
+                    List<String> currentSubjects = Arrays.stream(faculty.getSubjects().split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(Collectors.toList());
+                    List<String> remaining = currentSubjects.stream()
+                            .filter(s -> !deptSubjectNames.contains(s))
+                            .collect(Collectors.toList());
+                    faculty.setSubjects(remaining.isEmpty() ? null : String.join(", ", remaining));
+                }
+
+                if (faculty.getFullName() != null) {
+                    for (com.example.ia.entity.Subject sub : deptSubjects) {
+                        if (faculty.getFullName().equals(sub.getInstructorName())) {
+                            sub.setInstructorName(null);
+                        }
+                    }
+                    subjectRepository.saveAll(deptSubjects);
+                }
+
+                List<FacultyAssignmentRequest> requests = assignmentRequestRepository
+                        .findByFacultyIdAndTargetDepartment(faculty.getId(), department);
+                assignmentRequestRepository.deleteAll(requests);
+                
+                userRepository.save(faculty);
+                return ResponseEntity.ok(Map.of("message", "Faculty removed from cross-department " + department + " successfully"));
+            }
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Transfers ownership (Home Department) of a faculty member to another department
+     * where they already have an approved assignment.
+     */
+    @PutMapping("/faculty/{id}/transfer")
+    @PreAuthorize("hasRole('HOD')")
+    @Transactional
+    public ResponseEntity<?> transferFacultyHome(@PathVariable Long id, @RequestParam String targetDepartment,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return userRepository.findById(id).map(faculty -> {
+            // Ensure requester is the current home HOD
+            String currentDept = faculty.getDepartment();
+            if (currentDept == null || !currentDept.equalsIgnoreCase(userDetails.getDepartment())) {
+                return ResponseEntity.status(403).body(Map.of("message", "Access denied: Only the home HOD can transfer ownership."));
             }
 
-            // 3. Clear instructorName only on this dept's subjects taught by this faculty
+            if (targetDepartment == null || targetDepartment.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Target department is required"));
+            }
+
+            // 1. Clean up instructorName on subjects in CURRENT home department
+            List<com.example.ia.entity.Subject> oldDeptSubjects = subjectRepository.findByDepartment(currentDept);
             if (faculty.getFullName() != null) {
-                for (com.example.ia.entity.Subject sub : deptSubjects) {
+                for (com.example.ia.entity.Subject sub : oldDeptSubjects) {
                     if (faculty.getFullName().equals(sub.getInstructorName())) {
                         sub.setInstructorName(null);
                     }
                 }
-                subjectRepository.saveAll(deptSubjects);
+                subjectRepository.saveAll(oldDeptSubjects);
             }
 
-            if (isHomeDept) {
-                // Home dept removal: clear section, keep user alive
-                faculty.setSection(null);
-                faculty.setDepartment(null); // Unassign from home dept
+            // 2. Find if there's an approved assignment request for the target department
+            List<FacultyAssignmentRequest> requests = assignmentRequestRepository
+                    .findByFacultyIdAndTargetDepartmentAndStatus(id, targetDepartment, "APPROVED");
+            
+            if (!requests.isEmpty()) {
+                // If an assignment exists, use its data
+                FacultyAssignmentRequest transferData = requests.get(0);
+                faculty.setDepartment(transferData.getTargetDepartment());
+                faculty.setSubjects(transferData.getSubjects());
+                faculty.setSection(transferData.getSections());
+                faculty.setSemester(transferData.getSemester());
+                faculty.setCieRole(transferData.getCieRole());
+                assignmentRequestRepository.delete(transferData);
             } else {
-                // Cross-dept removal: delete the approved assignment request
-                List<FacultyAssignmentRequest> requests = assignmentRequestRepository
-                        .findByFacultyIdAndTargetDepartment(faculty.getId(), department);
-                assignmentRequestRepository.deleteAll(requests);
+                // FALLBACK: If no assignment exists, just transfer the department and let the new HOD configure it
+                faculty.setDepartment(targetDepartment);
+                faculty.setSubjects(null);
+                faculty.setSection(null);
+                faculty.setSemester("1"); // Default
+                faculty.setCieRole(null);
             }
 
             userRepository.save(faculty);
 
-            return ResponseEntity.ok(Map.of("message",
-                    "Faculty removed from " + department + " department successfully"));
+            // Sync instructorName in Subject records for the new department
+            if (faculty.getSubjects() != null && !faculty.getSubjects().isBlank()) {
+                String[] transferSubs = faculty.getSubjects().split(",");
+                for (String sn : transferSubs) {
+                    subjectRepository.findFirstByNameAndDepartment(sn.trim(), faculty.getDepartment())
+                            .ifPresent(s -> {
+                                s.setInstructorName(faculty.getFullName());
+                                subjectRepository.save(s);
+                            });
+                }
+            }
+
+            // 3. Notify faculty
+            Notification notif = new Notification();
+            notif.setUser(faculty);
+            notif.setMessage("Your Home Department has been transferred to " + targetDepartment + " by HOD of " + userDetails.getDepartment());
+            notif.setType("INFO");
+            notif.setCategory("Transfer");
+            notificationRepository.save(notif);
+
+            return ResponseEntity.ok(Map.of("message", "Ownership transferred successfully to " + targetDepartment));
         }).orElse(ResponseEntity.notFound().build());
     }
 

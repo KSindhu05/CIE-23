@@ -220,12 +220,10 @@ const PrincipalDashboard = () => {
         // Known department code -> full name mappings
         const deptNames = {
             'CS': 'Computer Science', 'CSE': 'Computer Science',
-            'EC': 'Electronics', 'ECE': 'Electronics & Communication',
             'ME': 'Mechanical', 'MECH': 'Mechanical',
             'CV': 'Civil', 'CIVIL': 'Civil',
             'EE': 'Electrical', 'EEE': 'Electrical & Electronics',
-            'IS': 'Information Science', 'ISE': 'Information Science',
-            'AI': 'Artificial Intelligence', 'AIML': 'AI & Machine Learning',
+            'MET': 'Metallurgy',
         };
 
         return dashboardData.branches.map((branch, index) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API_BASE_URL from '../config/api';
 import authenticatedFetch from '../utils/authFetch';
-import { X, User, Lock, Eye, EyeOff, Save, Shield, Mail, Building, Hash, GraduationCap, Layers, Edit3, Check, Info, Calendar, Key } from 'lucide-react';
+import { X, User, Lock, Eye, EyeOff, Save, Shield, Mail, Phone, Building, Hash, GraduationCap, Layers, Edit3, Check, Info, Calendar, Key } from 'lucide-react';
 import styles from './ProfileModal.module.css';
 
 const ProfileModal = ({ onClose, inline = false }) => {
@@ -43,7 +43,8 @@ const ProfileModal = ({ onClose, inline = false }) => {
                     fullNameKn: data.fullNameKn || '',
                     email: data.email || '',
                     department: data.department || '',
-                    designation: data.designation || ''
+                    designation: data.designation || '',
+                    phoneNumber: data.phoneNumber || ''
                 });
             }
         } catch (e) {
@@ -84,7 +85,8 @@ const ProfileModal = ({ onClose, inline = false }) => {
             fullNameKn: profile?.fullNameKn || '',
             email: profile?.email || '',
             department: profile?.department || '',
-            designation: profile?.designation || ''
+            designation: profile?.designation || '',
+            phoneNumber: profile?.phoneNumber || ''
         });
         setSaveMsg({ text: '', type: '' });
     };
@@ -161,6 +163,7 @@ const ProfileModal = ({ onClose, inline = false }) => {
         { key: 'fullName', icon: <User size={24} />, label: 'Full Name', value: profile?.fullName, bg: '#eff6ff', iconColor: '#2563eb', editable: true, accentColor: '#2563eb' },
         { key: 'fullNameKn', icon: <User size={24} />, label: 'Full Name (Kannada)', value: profile?.fullNameKn, bg: '#f0fdf4', iconColor: '#059669', editable: true, accentColor: '#059669' },
         { key: 'email', icon: <Mail size={24} />, label: 'Email Address', value: profile?.email, bg: '#fef3c7', iconColor: '#d97706', editable: true, accentColor: '#d97706' },
+        { key: 'phoneNumber', icon: <Phone size={24} />, label: 'Phone Number', value: profile?.phoneNumber, bg: '#ecfdf5', iconColor: '#059669', editable: true, accentColor: '#059669' },
     ];
 
     const accountCards = [

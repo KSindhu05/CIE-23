@@ -1,9 +1,11 @@
 package com.example.ia.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "system_config")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SystemConfig {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

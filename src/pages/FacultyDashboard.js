@@ -1244,19 +1244,19 @@ const FacultyDashboard = () => {
                 }
 
                 setCieLockStatus({
-                    cie1: role === 'LAB' || cieStatuses.cie1.has('SUBMITTED') || cieStatuses.cie1.has('APPROVED'),
-                    cie2: role === 'THEORY' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
-                    cie3: role === 'LAB' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
-                    cie4: role === 'THEORY' || cieStatuses.cie4.has('SUBMITTED') || cieStatuses.cie4.has('APPROVED'),
-                    cie5: role === 'LAB' || cieStatuses.cie5.has('SUBMITTED') || cieStatuses.cie5.has('APPROVED'),
+                    cie1: role === 'LAB' || cieStatuses.cie1.has('APPROVED'),
+                    cie2: role === 'THEORY' || cieStatuses.cie2.has('APPROVED'),
+                    cie3: role === 'LAB' || cieStatuses.cie3.has('APPROVED'),
+                    cie4: role === 'THEORY' || cieStatuses.cie4.has('APPROVED'),
+                    cie5: role === 'LAB' || cieStatuses.cie5.has('APPROVED'),
                 });
                 // Compute overall lock status from individual CIE statuses
                 const anyCieLocked = Object.values({
-                    cie1: role === 'LAB' || cieStatuses.cie1.has('SUBMITTED') || cieStatuses.cie1.has('APPROVED'),
-                    cie2: role === 'THEORY' || cieStatuses.cie2.has('SUBMITTED') || cieStatuses.cie2.has('APPROVED'),
-                    cie3: role === 'LAB' || cieStatuses.cie3.has('SUBMITTED') || cieStatuses.cie3.has('APPROVED'),
-                    cie4: role === 'THEORY' || cieStatuses.cie4.has('SUBMITTED') || cieStatuses.cie4.has('APPROVED'),
-                    cie5: role === 'LAB' || cieStatuses.cie5.has('SUBMITTED') || cieStatuses.cie5.has('APPROVED'),
+                    cie1: role === 'LAB' || cieStatuses.cie1.has('APPROVED'),
+                    cie2: role === 'THEORY' || cieStatuses.cie2.has('APPROVED'),
+                    cie3: role === 'LAB' || cieStatuses.cie3.has('APPROVED'),
+                    cie4: role === 'THEORY' || cieStatuses.cie4.has('APPROVED'),
+                    cie5: role === 'LAB' || cieStatuses.cie5.has('APPROVED'),
                 }).some(v => v);
                 setIsLocked(anyCieLocked);
 
@@ -1309,11 +1309,11 @@ const FacultyDashboard = () => {
     const calculateAverage = (student) => {
         if (selectedSubject) {
             const sMarks = marks[student.id] || {};
-            const valCIE1 = Number((sMarks.cie1 === 'Ab' || sMarks.cie1 === 'A' || sMarks.cie1 === 'AB') ? 0 : sMarks.cie1) || 0;
-            const valCIE2 = Number((sMarks.cie2 === 'Ab' || sMarks.cie2 === 'A' || sMarks.cie2 === 'AB') ? 0 : sMarks.cie2) || 0;
-            const valCIE3 = Number((sMarks.cie3 === 'Ab' || sMarks.cie3 === 'A' || sMarks.cie3 === 'AB') ? 0 : sMarks.cie3) || 0;
-            const valCIE4 = Number((sMarks.cie4 === 'Ab' || sMarks.cie4 === 'A' || sMarks.cie4 === 'AB') ? 0 : sMarks.cie4) || 0;
-            const valCIE5 = Number((sMarks.cie5 === 'Ab' || sMarks.cie5 === 'A' || sMarks.cie5 === 'AB') ? 0 : sMarks.cie5) || 0;
+            const valCIE1 = Number((sMarks.cie1 === 'Ab' || sMarks.cie1 === 'A' || sMarks.cie1 === 'AB' || sMarks.cie1 === -2.0) ? 0 : sMarks.cie1) || 0;
+            const valCIE2 = Number((sMarks.cie2 === 'Ab' || sMarks.cie2 === 'A' || sMarks.cie2 === 'AB' || sMarks.cie2 === -2.0) ? 0 : sMarks.cie2) || 0;
+            const valCIE3 = Number((sMarks.cie3 === 'Ab' || sMarks.cie3 === 'A' || sMarks.cie3 === 'AB' || sMarks.cie3 === -2.0) ? 0 : sMarks.cie3) || 0;
+            const valCIE4 = Number((sMarks.cie4 === 'Ab' || sMarks.cie4 === 'A' || sMarks.cie4 === 'AB' || sMarks.cie4 === -2.0) ? 0 : sMarks.cie4) || 0;
+            const valCIE5 = Number((sMarks.cie5 === 'Ab' || sMarks.cie5 === 'A' || sMarks.cie5 === 'AB' || sMarks.cie5 === -2.0) ? 0 : sMarks.cie5) || 0;
             return valCIE1 + valCIE2 + valCIE3 + valCIE4 + valCIE5;
         }
         return "-";
@@ -1378,16 +1378,19 @@ const FacultyDashboard = () => {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (suppressToast = false) => {
         setSaving(true);
         const result = await prepareAndSaveMarks();
         setSaving(false);
 
         if (result.success) {
-            showToast('Draft saved successfully! (Not yet submitted to HOD)', 'success');
-            // Do NOT lock — this is just a draft save, not a submission
+            if (!suppressToast) {
+                showToast('Draft saved successfully! (Not yet submitted to HOD)', 'success');
+            }
+            return true;
         } else {
             showToast('Error saving marks: ' + result.message, 'error');
+            return false;
         }
     };
 
@@ -1410,14 +1413,15 @@ const FacultyDashboard = () => {
         setSaving(true);
 
         // AUTO-SAVE BEFORE SUBMITTING
-        const saveResult = await prepareAndSaveMarks();
-        if (!saveResult.success) {
-            showToast('Auto-save failed: ' + saveResult.message, 'error');
-            setSaving(false);
-            return;
-        }
-
         try {
+            // CRITICAL: Save current marks first to ensure Bulk Uploaded/Edited marks are persisted
+            // handleSave already shows its own error toasts if it fails
+            const saveSuccess = await handleSave(true);
+            if (!saveSuccess) {
+                setSaving(false);
+                return; // Stop if save failed
+            }
+
             // Call Submit Endpoint
             const res = await authenticatedFetch(`${API_BASE_URL}/marks/submit?subjectId=${selectedSubject.id}&cieType=${cieType}`, {
                 method: 'POST'
@@ -1425,7 +1429,7 @@ const FacultyDashboard = () => {
 
             if (res.ok) {
                 showToast(`Marks for ${cieType} submitted to HOD!`, 'success');
-                setCieLockStatus(prev => ({ ...prev, [selectedCieType]: true }));
+                // Removed immediate lock: faculty can still edit until HOD approves
             } else {
                 const err = await res.text();
                 showToast('Submission failed: ' + err, 'error');
@@ -1530,12 +1534,12 @@ const FacultyDashboard = () => {
                             {subjectStudents.map((student, index) => {
                                 const sMarks = marks[student.id] || {};
                                 const ia1Mark = sMarks['CIE1'] || {};
-                                const v1 = sMarks.cie1 !== undefined ? sMarks.cie1 : (ia1Mark.cie1Score != null ? ia1Mark.cie1Score : '-');
-                                const v2 = sMarks.cie2 !== undefined ? sMarks.cie2 : (ia1Mark.cie2Score != null ? ia1Mark.cie2Score : '-');
-                                const v3 = sMarks.cie3 !== undefined ? sMarks.cie3 : '-';
-                                const v4 = sMarks.cie4 !== undefined ? sMarks.cie4 : '-';
-                                const v5 = sMarks.cie5 !== undefined ? sMarks.cie5 : '-';
-                                const total = [v1, v2, v3, v4, v5].reduce((sum, v) => sum + (v !== '-' && v !== '' && v !== 'Ab' ? (Number(v) || 0) : 0), 0);
+                                const v1 = sMarks.cie1 !== undefined ? (sMarks.cie1 === -2.0 ? 'AB' : sMarks.cie1) : (ia1Mark.cie1Score != null ? (ia1Mark.cie1Score === -2.0 ? 'AB' : ia1Mark.cie1Score) : '-');
+                                const v2 = sMarks.cie2 !== undefined ? (sMarks.cie2 === -2.0 ? 'AB' : sMarks.cie2) : (ia1Mark.cie2Score != null ? (ia1Mark.cie2Score === -2.0 ? 'AB' : ia1Mark.cie2Score) : '-');
+                                const v3 = sMarks.cie3 !== undefined ? (sMarks.cie3 === -2.0 ? 'AB' : sMarks.cie3) : '-';
+                                const v4 = sMarks.cie4 !== undefined ? (sMarks.cie4 === -2.0 ? 'AB' : sMarks.cie4) : '-';
+                                const v5 = sMarks.cie5 !== undefined ? (sMarks.cie5 === -2.0 ? 'AB' : sMarks.cie5) : '-';
+                                const total = [v1, v2, v3, v4, v5].reduce((sum, v) => sum + (v !== '-' && v !== '' && v !== 'Ab' && v !== 'A' && v !== 'AB' ? (Number(v) || 0) : 0), 0);
                                 const hasAny = [v1, v2, v3, v4, v5].some(v => v !== '-' && v !== '');
                                 const cellStyle = (v) => ({ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', color: v === '-' || v === '' ? '#9ca3af' : '#111827', fontWeight: v !== '-' && v !== '' ? '500' : '400' });
                                 return (
@@ -1569,11 +1573,12 @@ const FacultyDashboard = () => {
             const sMarks = marks[s.id] || {};
             const ia1Mark = sMarks['CIE1'] || {};
 
-            const valCIE1 = sMarks.cie1 !== undefined ? sMarks.cie1 : (ia1Mark.cie1Score != null ? ia1Mark.cie1Score : 0);
-            const valCIE2 = sMarks.cie2 !== undefined ? sMarks.cie2 : (ia1Mark.cie2Score != null ? ia1Mark.cie2Score : 0);
-            const valCIE3 = sMarks.cie3 !== undefined ? sMarks.cie3 : 0;
-            const valCIE4 = sMarks.cie4 !== undefined ? sMarks.cie4 : 0;
-            const valCIE5 = sMarks.cie5 !== undefined ? sMarks.cie5 : 0;
+            const formatMark = (m) => (m === -2.0 ? 'AB' : (m != null ? m : 0));
+            const valCIE1 = sMarks.cie1 !== undefined ? formatMark(sMarks.cie1) : (ia1Mark.cie1Score != null ? formatMark(ia1Mark.cie1Score) : 0);
+            const valCIE2 = sMarks.cie2 !== undefined ? formatMark(sMarks.cie2) : (ia1Mark.cie2Score != null ? formatMark(ia1Mark.cie2Score) : 0);
+            const valCIE3 = sMarks.cie3 !== undefined ? formatMark(sMarks.cie3) : 0;
+            const valCIE4 = sMarks.cie4 !== undefined ? formatMark(sMarks.cie4) : 0;
+            const valCIE5 = sMarks.cie5 !== undefined ? formatMark(sMarks.cie5) : 0;
 
             return [
                 s.rollNo,
@@ -1769,14 +1774,14 @@ const FacultyDashboard = () => {
                 // Validate marks
                 let marksVal = null;
                 let marksError = null;
-                if (marksStr.toLowerCase() === 'ab') {
-                    marksVal = 0; // Absent = 0
+                if (marksStr.toLowerCase() === 'ab' || marksStr.toLowerCase() === 'a') {
+                    marksVal = -2.0; // Absent = -2.0
                 } else if (marksStr === '') {
                     marksVal = null; // Skip
                 } else {
                     const num = parseFloat(marksStr);
                     if (isNaN(num)) {
-                        marksError = `Invalid marks "${marksStr}"`;
+                        marksError = `Invalid marks "${marksStr}" (Enter 0-50, A or AB)`;
                     } else if (num < 0 || num > 50) {
                         marksError = `Marks ${num} out of range (0-50)`;
                     } else {
@@ -1789,10 +1794,12 @@ const FacultyDashboard = () => {
                 let attError = null;
                 if (attStr === '') {
                     attVal = null; // Skip
+                } else if (attStr.toLowerCase() === 'ab' || attStr.toLowerCase() === 'a') {
+                    attVal = 0; // Absent = 0%
                 } else {
                     const num = parseFloat(attStr);
                     if (isNaN(num)) {
-                        attError = `Invalid attendance "${attStr}"`;
+                        attError = `Invalid attendance "${attStr}" (Enter 0-100, A or AB)`;
                     } else if (num < 0 || num > 100) {
                         attError = `Attendance ${num} out of range (0-100)`;
                     } else {
@@ -3033,7 +3040,7 @@ const FacultyDashboard = () => {
                                                     filteredStudents.forEach(s => {
                                                         const sMarks = marks[s.id] || {};
                                                         let val = sMarks[key];
-                                                        if (val === 'Ab' || val === 'A' || val === 'AB') val = 0;
+                                                        if (val === 'Ab' || val === 'A' || val === 'AB' || val === -2.0) val = 0;
                                                         if (val != null && val !== '') {
                                                             sum += parseFloat(val);
                                                             count++;
@@ -5028,7 +5035,7 @@ const FacultyDashboard = () => {
                         <div className={styles.modalFooter} style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#f8fafc', borderRadius: '0 0 12px 12px' }}>
                             <button className={styles.secondaryBtn} onClick={() => setShowUnlockModal(false)}>Cancel</button>
                             <button className={styles.primaryBtn} onClick={submitUnlockRequest} disabled={saving}>
-                                {saving ? <><Loader.Pulse size={16} /> Sending...</> : 'Send Request'}
+                                {saving ? <><RefreshCw size={16} className={styles.spinning} /> Sending...</> : 'Send Request'}
                             </button>
                         </div>
                     </div>

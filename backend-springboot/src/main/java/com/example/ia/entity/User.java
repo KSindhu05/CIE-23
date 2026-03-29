@@ -1,10 +1,12 @@
 package com.example.ia.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,6 +24,7 @@ public class User {
     private String designation;
     private String department;
     private String fullNameKn;
+    private String phoneNumber;
 
 
     // Role: HOD, FACULTY, PRINCIPAL
@@ -141,5 +144,13 @@ public class User {
 
     public void setCieRole(String cieRole) {
         this.cieRole = cieRole;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

@@ -1,13 +1,19 @@
 package com.example.ia.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "cie_marks")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CieMark {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "facultyId")
+    private User faculty;
 
     @ManyToOne
     @JoinColumn(name = "studentId", nullable = false)
@@ -110,5 +116,18 @@ public class CieMark {
 
     public Long getSubjectId() {
         return subject != null ? subject.getId() : null;
+    }
+
+    public User getFaculty() {
+        return faculty;
+    }
+
+    public void setFaculty(User faculty) {
+        this.faculty = faculty;
+    }
+
+    // Frontend compatibility
+    public String getFacultyName() {
+        return faculty != null ? faculty.getFullName() : (subject != null ? subject.getInstructorName() : "Unknown");
     }
 }

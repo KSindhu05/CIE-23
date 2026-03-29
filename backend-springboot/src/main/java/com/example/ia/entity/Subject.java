@@ -1,9 +1,11 @@
 package com.example.ia.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "subjects", uniqueConstraints = { @UniqueConstraint(columnNames = { "code", "department" }) })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Subject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

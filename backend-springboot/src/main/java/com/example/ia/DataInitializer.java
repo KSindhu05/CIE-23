@@ -2,10 +2,14 @@ package com.example.ia;
 
 import com.example.ia.entity.User;
 import com.example.ia.entity.Student;
+import com.example.ia.entity.FacultyAssignmentRequest;
 import com.example.ia.repository.UserRepository;
 import com.example.ia.repository.StudentRepository;
 import com.example.ia.repository.SubjectRepository;
 import com.example.ia.repository.CieMarkRepository;
+import com.example.ia.repository.NotificationRepository;
+import com.example.ia.repository.FacultyAssignmentRequestRepository;
+import com.example.ia.repository.UnlockRequestRepository;
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -20,35 +24,43 @@ public class DataInitializer {
             StudentRepository studentRepository,
             SubjectRepository subjectRepository,
             CieMarkRepository cieMarkRepository,
+            NotificationRepository notificationRepository,
+            FacultyAssignmentRequestRepository assignmentRequestRepository,
+            UnlockRequestRepository unlockRequestRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
             String defaultPassword = "password";
 
-            /* 
-17:             // MANUAL JAVA CLEANUP to ensure it runs regardless of JPQL quirks
-18:             java.util.List<com.example.ia.entity.CieMark> allMarks = cieMarkRepository.findAll();
-19:             int fixedCount = 0;
-20:             for (com.example.ia.entity.CieMark m : allMarks) {
-21:                 boolean isZero = m.getMarks() != null && Math.abs(m.getMarks()) < 0.001;
-22:                 if (!isZero)
-23:                     continue;
-24: 
-25:                 String status = m.getStatus();
-26:                 if (status == null || "PENDING".equals(status) || "REJECTED".equals(status)) {
-27:                     // Zero placeholder or rejected zero — reset to null/PENDING so faculty can
-28:                     // re-enter
-29:                     m.setMarks(null);
-30:                     m.setStatus("PENDING");
-31:                     cieMarkRepository.save(m);
-32:                     fixedCount++;
-33:                 } else if ("SUBMITTED".equals(status) || "APPROVED".equals(status)) {
-34:                     // Erroneously submitted/approved zero — delete
-35:                     cieMarkRepository.delete(m);
-36:                     fixedCount++;
-37:                 }
-38:             }
-39:             System.out.println("✅ JAVA CLEANUP: Fixed/Deleted " + fixedCount + " zero-value marks.");
-40:             */
+            /*
+             * 17: // MANUAL JAVA CLEANUP to ensure it runs regardless of JPQL quirks
+             * 18: java.util.List<com.example.ia.entity.CieMark> allMarks =
+             * cieMarkRepository.findAll();
+             * 19: int fixedCount = 0;
+             * 20: for (com.example.ia.entity.CieMark m : allMarks) {
+             * 21: boolean isZero = m.getMarks() != null && Math.abs(m.getMarks()) < 0.001;
+             * 22: if (!isZero)
+             * 23: continue;
+             * 24:
+             * 25: String status = m.getStatus();
+             * 26: if (status == null || "PENDING".equals(status) ||
+             * "REJECTED".equals(status)) {
+             * 27: // Zero placeholder or rejected zero — reset to null/PENDING so faculty
+             * can
+             * 28: // re-enter
+             * 29: m.setMarks(null);
+             * 30: m.setStatus("PENDING");
+             * 31: cieMarkRepository.save(m);
+             * 32: fixedCount++;
+             * 33: } else if ("SUBMITTED".equals(status) || "APPROVED".equals(status)) {
+             * 34: // Erroneously submitted/approved zero — delete
+             * 35: cieMarkRepository.delete(m);
+             * 36: fixedCount++;
+             * 37: }
+             * 38: }
+             * 39: System.out.println("✅ JAVA CLEANUP: Fixed/Deleted " + fixedCount +
+             * " zero-value marks.");
+             * 40:
+             */
 
             // CLEANUP: Remove Advanced Java if it exists
             subjectRepository.findFirstByName("Advanced Java").ifPresent(subject -> {
@@ -108,11 +120,36 @@ public class DataInitializer {
                 System.out.println("✅ Principal user created: PRINCIPAL / " + defaultPassword);
             }
 
-            // 2. HOD — cleanup old username if it exists
-            userRepository.findByUsername("HOD001").ifPresent(oldHod -> {
-                userRepository.delete(oldHod);
-                System.out.println("🗑️ Deleted old HOD user: HOD001");
+            // CLEANUP: Remove test user '123'
+            userRepository.findByUsername("123").ifPresent(testUser -> {
+                System.out.println("🔍 Found test user '123'. Cleaning up records...");
+                Long id = testUser.getId();
+
+                // 1. Clean up associated records before deletion (FK constraints)
+                notificationRepository.deleteByUserId(id);
+                
+                List<FacultyAssignmentRequest> Requests = assignmentRequestRepository.findByFacultyId(id);
+                assignmentRequestRepository.deleteAll(Requests);
+
+                List<com.example.ia.entity.UnlockRequest> unlockRequests = unlockRequestRepository.findAll().stream()
+                    .filter(ur -> ur.getFaculty() != null && ur.getFaculty().getId().equals(id))
+                    .collect(java.util.stream.Collectors.toList());
+                unlockRequestRepository.deleteAll(unlockRequests);
+
+                // 2. Clean up instructor references in subjects
+                List<com.example.ia.entity.Subject> allSubs = subjectRepository.findAll();
+                for (com.example.ia.entity.Subject s : allSubs) {
+                    if (testUser.getFullName() != null && testUser.getFullName().equals(s.getInstructorName())) {
+                        s.setInstructorName(null);
+                    }
+                }
+                subjectRepository.saveAll(allSubs);
+
+                // 3. Delete user
+                userRepository.delete(testUser);
+                System.out.println("🗑️ Permanently deleted test user: 123");
             });
+
             boolean hodIsNew = !userRepository.existsByUsername("Jaffar@CSE");
             if (hodIsNew) {
                 User hodUser = new User();

@@ -161,24 +161,24 @@ public class MarksController {
 
     @PostMapping("/approve")
     @PreAuthorize("hasRole('HOD')")
-    public ResponseEntity<?> approveMarks(@RequestParam Long subjectId, @RequestParam String iaType, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    public ResponseEntity<?> approveMarks(@RequestParam Long subjectId, @RequestParam String iaType, @RequestParam(required = false) Long facultyId, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return subjectRepository.findById(subjectId).map(subject -> {
             if (!isAuthorizedForDepartment(subject.getDepartment(), userDetails)) {
                 return ResponseEntity.status(403).body(Map.of("message", "Access denied: You are not authorized for this department."));
             }
-            marksService.approveMarks(subjectId, iaType);
+            marksService.approveMarks(subjectId, iaType, facultyId);
             return ResponseEntity.ok(new MessageResponse("Marks approved"));
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/reject")
     @PreAuthorize("hasRole('HOD')")
-    public ResponseEntity<?> rejectMarks(@RequestParam Long subjectId, @RequestParam String iaType, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    public ResponseEntity<?> rejectMarks(@RequestParam Long subjectId, @RequestParam String iaType, @RequestParam(required = false) Long facultyId, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return subjectRepository.findById(subjectId).map(subject -> {
             if (!isAuthorizedForDepartment(subject.getDepartment(), userDetails)) {
                 return ResponseEntity.status(403).body(Map.of("message", "Access denied: You are not authorized for this department."));
             }
-            marksService.rejectMarks(subjectId, iaType);
+            marksService.rejectMarks(subjectId, iaType, facultyId);
             return ResponseEntity.ok(new MessageResponse("Marks rejected"));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -228,7 +228,7 @@ public class MarksController {
             if (!isAuthorizedForDepartment(subject.getDepartment(), userDetails)) {
                 return ResponseEntity.status(403).body(Map.of("message", "Access denied."));
             }
-            marksService.unlockMarks(request.getSubjectId(), request.getIaType());
+            marksService.unlockMarks(request.getSubjectId(), request.getIaType(), request.getFacultyId());
             return ResponseEntity.ok(new MessageResponse("Marks unlocked for editing"));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -236,10 +236,13 @@ public class MarksController {
     static class UnlockRequestDTO {
         private Long subjectId;
         private String iaType;
+        private Long facultyId;
 
         public Long getSubjectId() { return subjectId; }
         public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
         public String getIaType() { return iaType; }
         public void setIaType(String iaType) { this.iaType = iaType; }
+        public Long getFacultyId() { return facultyId; }
+        public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
     }
 }

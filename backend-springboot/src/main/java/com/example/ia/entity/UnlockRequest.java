@@ -1,5 +1,6 @@
 package com.example.ia.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "unlock_requests")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class UnlockRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
