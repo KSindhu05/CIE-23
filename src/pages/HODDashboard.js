@@ -33,7 +33,7 @@ ChartJS.register(
 
 // Local fallbacks for removed mock data
 const hodTrendData = { labels: ['2022', '2023', '2024'], datasets: [{ label: 'Pass %', data: [75, 80, 85], borderColor: '#3b82f6', fill: false }] };
-// atRiskStudents is now a state, see useState below
+// lowPerformerStudents is now a state, see useState below
 const facultyWorkload = [];
 const branchPerformanceData = {};
 const iaSubmissionStatus = { labels: ['Submitted', 'Pending'], datasets: [{ data: [70, 30], backgroundColor: ['#22c55e', '#ef4444'] }] };
@@ -620,7 +620,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
 
     // Overview data (real from API)
     const [departmentAlerts, setDepartmentAlerts] = useState([]);
-    const [atRiskStudents, setAtRiskStudents] = useState([]);
+    const [lowPerformerStudents, setLowPerformerStudents] = useState([]);
     const [showAllAlerts, setShowAllAlerts] = useState(false);
     const [selectedSemester, setSelectedSemester] = useState('all');
     const [hodGradeDistribution, setHodGradeDistribution] = useState({
@@ -996,7 +996,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 if (overviewRes.ok) {
                     const data = await overviewRes.json();
                     if (data.alerts) setDepartmentAlerts(data.alerts);
-                    if (data.atRiskStudents) setAtRiskStudents(data.atRiskStudents);
+                    if (data.atRiskStudents) setLowPerformerStudents(data.atRiskStudents);
                     if (data.gradeDistribution) {
                         setHodGradeDistribution({
                             labels: data.gradeDistribution.labels,
@@ -2924,7 +2924,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                                     else if (scoreNum >= currentLowThreshold) cat = 'average';
                                                     else cat = 'low';
 
-                                                    let remark = dbRemarks || (cat === 'low' && attVal != null && attVal < 75 ? 'Needs Improvement' : cat === 'low' ? 'At Risk' : cat === 'excellent' ? 'Excellent Performance' : 'Good');
+                                                    let remark = dbRemarks || (cat === 'low' && attVal != null && attVal < 75 ? 'Needs Improvement' : cat === 'low' ? 'Low Performer' : cat === 'excellent' ? 'Excellent Performance' : 'Good');
                                                     if (dlPerfCategory === 'all' || dlPerfCategory === cat) {
                                                         allPerf.push({ regNo: student.regNo, name: student.name, section: student.section, subject: subjName.replace(/\[.*?\]/g, '').trim(), cieType: cie.toUpperCase(), score: scoreNum, att: attVal, remarks: remark, phone: student.parentPhone || student.phone || '' });
                                                     }
@@ -3152,7 +3152,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                     ) : analytics ? (
                                         [{ label: `Avg % (${analytics?.completedStudents || 0} completed)`, value: Math.round(analytics.average || 0) },
                                         { label: 'Pass Rate', value: analytics.passPercentage || 0 },
-                                        { label: 'Risk Factor', value: (analytics.totalStudents || deptStudents.length) > 0 ? Math.round(((analytics.atRiskCount || 0) / (analytics.totalStudents || deptStudents.length)) * 100) : 0 }]
+                                        { label: 'Low Performance Factor', value: (analytics.totalStudents || deptStudents.length) > 0 ? Math.round(((analytics.atRiskCount || 0) / (analytics.totalStudents || deptStudents.length)) * 100) : 0 }]
                                             .map((metric, index) => {
                                                 const data = { labels: ['Metric', 'Remaining'], datasets: [{ data: [metric.value, 100 - metric.value], backgroundColor: ['#8b5cf6', '#f3f4f6'], borderWidth: 0, cutout: '70%' }] };
                                                 return (
@@ -3909,7 +3909,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                             </div>
                                             <div className={styles.formGroup}>
                                                 <label style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Low Threshold (marks below this = At Risk)</span>
+                                                    <span>Low Threshold (marks below this = Low Performers)</span>
                                                     <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#f59e0b' }}>Used for alerts</span>
                                                 </label>
                                                 <input type="number" min="0" max="50" className={styles.input} value={editingPerfConfig.low_threshold || ''} onChange={e => setEditingPerfConfig({ ...editingPerfConfig, low_threshold: e.target.value })} />

@@ -840,6 +840,23 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
         setDesignation('');
     };
 
+    const getDeptColor = (deptCode) => {
+        const colors = {
+            'CSE': { bg: '#eef2ff', text: '#4338ca', border: '#c7d2fe', accent: '#6366f1' },
+            'CS': { bg: '#eef2ff', text: '#4338ca', border: '#c7d2fe', accent: '#6366f1' },
+            'EEE': { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa', accent: '#f97316' },
+            'EE': { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa', accent: '#f97316' },
+            'MECH': { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0', accent: '#22c55e' },
+            'ME': { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0', accent: '#22c55e' },
+            'CIVIL': { bg: '#ecfeff', text: '#0e7490', border: '#a5f3fc', accent: '#06b6d4' },
+            'CV': { bg: '#ecfeff', text: '#0e7490', border: '#a5f3fc', accent: '#06b6d4' },
+            'MT': { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca', accent: '#ef4444' },
+            'MET': { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca', accent: '#ef4444' },
+        };
+        const upper = (deptCode || '').toUpperCase();
+        return colors[upper] || { bg: '#f8fafc', text: '#475569', border: '#e2e8f0', accent: '#64748b' };
+    };
+
     return (
         <div className={styles.sectionVisible}>
             {/* --- HOD BANNER --- */}
@@ -907,6 +924,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                 placeholder="e.g. HODCS01"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                autoComplete="off"
                                 required
                             />
                         </div>
@@ -929,6 +947,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                     placeholder={editingHod ? "New password (optional)" : "Set a strong password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="new-password"
                                     required={!editingHod}
                                     style={{ paddingRight: '2.5rem' }}
                                 />
@@ -1046,30 +1065,50 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                 </form>
             </div>
 
-            <div className={styles.tableCard} style={{ borderRadius: '24px', padding: '0' }}>
-                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>Institutional HOD Directory</h3>
-                    <span style={{ padding: '4px 12px', background: '#f1f5f9', color: '#64748b', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+            <div className={styles.tableCard} style={{ 
+                borderRadius: '24px', 
+                padding: '0', 
+                overflow: 'hidden',
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(226, 232, 240, 0.8)',
+                boxShadow: '0 8px 32px rgba(31, 38, 135, 0.07)'
+            }}>
+                <div style={{ 
+                    padding: '1.75rem 2rem', 
+                    borderBottom: '1px solid rgba(226, 232, 240, 0.5)', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    background: 'linear-gradient(to right, #f8fafc, #ffffff)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ padding: '8px', background: '#f1f5f9', borderRadius: '12px' }}>
+                            <Briefcase size={20} color="#64748b" />
+                        </div>
+                        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.2px' }}>Institutional HOD Directory</h3>
+                    </div>
+                    <span style={{ padding: '6px 16px', background: '#eff6ff', color: '#2563eb', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #dbeafe' }}>
                         {hods.length} Active HODs
                     </span>
                 </div>
                 <table className={styles.table}>
                     <thead>
-                        <tr>
-                            <th style={{ paddingLeft: '2rem' }}>Sl. No</th>
-                            <th>Employee ID</th>
-                            <th>Name</th>
-                            <th>Designation</th>
-                            <th>Department</th>
-                            <th>Email</th>
-                            <th style={{ paddingRight: '2rem', textAlign: 'right' }}>Actions</th>
+                        <tr style={{ background: '#f8fafc' }}>
+                            <th style={{ paddingLeft: '2.5rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Sl. No</th>
+                            <th style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Employee ID</th>
+                            <th style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>HOD Name</th>
+                            <th style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Designation</th>
+                            <th style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Department</th>
+                            <th style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Email Contact</th>
+                            <th style={{ paddingRight: '2.5rem', textAlign: 'right', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             [1, 2, 3].map(i => (
                                 <tr key={i}>
-                                    <td style={{ paddingLeft: '2rem' }}><Skeleton width="20px" height="14px" /></td>
+                                    <td style={{ paddingLeft: '2.5rem' }}><Skeleton width="20px" height="14px" /></td>
                                     <td><Skeleton width="80px" height="14px" /></td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1080,7 +1119,7 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                     <td><Skeleton width="80px" height="14px" /></td>
                                     <td><Skeleton width="60px" height="24px" /></td>
                                     <td><Skeleton width="150px" height="14px" /></td>
-                                    <td style={{ paddingRight: '2rem', textAlign: 'right' }}>
+                                    <td style={{ paddingRight: '2.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                             <Skeleton width="28px" height="28px" />
                                             <Skeleton width="28px" height="28px" />
@@ -1088,49 +1127,95 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                     </td>
                                 </tr>
                             ))
-                        ) : hods.map((h, index) => (
-                            <tr key={h.id}>
-                                <td style={{ paddingLeft: '2rem', color: '#64748b', fontWeight: 500 }}>{index + 1}</td>
-                                <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#334155' }}>{h.username}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                            {h.fullName.charAt(0)}
+                        ) : hods.map((h, index) => {
+                            const deptStyle = getDeptColor(h.department);
+                            return (
+                                <tr key={h.id} style={{ transition: 'all 0.2s ease' }}>
+                                    <td style={{ paddingLeft: '2.5rem', color: '#94a3b8', fontWeight: 600 }}>{index + 1}</td>
+                                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569', fontSize: '0.9rem' }}>
+                                        <span style={{ padding: '2px 6px', background: '#f1f5f9', borderRadius: '4px' }}>{h.username}</span>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ 
+                                                width: '36px', height: '36px', borderRadius: '10px', 
+                                                background: deptStyle.bg, color: deptStyle.text, 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                fontWeight: 800, fontSize: '0.9rem',
+                                                border: `1.5px solid ${deptStyle.border}`,
+                                                boxShadow: `0 2px 4px ${deptStyle.accent}15`
+                                            }}>
+                                                {h.fullName.charAt(0)}
+                                            </div>
+                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{h.fullName}</span>
                                         </div>
-                                        <span style={{ fontWeight: 600, color: '#1e293b' }}>{h.fullName}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
-                                        {h.designation || <span style={{ opacity: 0.5 }}>Not Set</span>}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.8rem' }}>
-                                        {h.department}
-                                    </span>
-                                </td>
-                                <td style={{ color: '#64748b' }}>{h.email || <span style={{ opacity: 0.5 }}>—</span>}</td>
-                                <td style={{ paddingRight: '2rem', textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                        <button
-                                            onClick={() => handleEdit(h)}
-                                            style={{ padding: '6px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}
-                                            title="Edit HOD"
-                                        >
-                                            <Edit3 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={async () => { const confirmed = await showConfirm({ title: 'Remove HOD', message: `Are you sure you want to remove ${h.fullName}?`, variant: 'danger', confirmText: 'Remove' }); if (confirmed) onDelete(h.id); }}
-                                            style={{ padding: '6px', borderRadius: '8px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }}
-                                            title="Delete HOD"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <ShieldCheck size={14} color="#94a3b8" />
+                                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
+                                                {h.designation || <span style={{ opacity: 0.5 }}>Not Set</span>}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style={{ 
+                                            padding: '5px 12px', 
+                                            borderRadius: '20px', 
+                                            background: deptStyle.bg, 
+                                            color: deptStyle.text, 
+                                            fontWeight: 800, 
+                                            fontSize: '0.75rem',
+                                            border: `1px solid ${deptStyle.border}`,
+                                            display: 'inline-block',
+                                            letterSpacing: '0.02em'
+                                        }}>
+                                            {h.department}
+                                        </span>
+                                    </td>
+                                    <td style={{ color: '#64748b' }}>
+                                        {h.email ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Mail size={14} color="#cbd5e1" />
+                                                <span style={{ fontSize: '0.85rem' }}>{h.email}</span>
+                                            </div>
+                                        ) : <span style={{ opacity: 0.5 }}>—</span>}
+                                    </td>
+                                    <td style={{ paddingRight: '2.5rem', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                            <button
+                                                onClick={() => handleEdit(h)}
+                                                style={{ 
+                                                    padding: '8px', borderRadius: '10px', 
+                                                    border: '1px solid #e2e8f0', background: 'white', 
+                                                    color: '#64748b', cursor: 'pointer', transition: 'all 0.2s',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.color = '#2563eb'; e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#f0f9ff'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+                                                title="Edit HOD"
+                                            >
+                                                <Edit3 size={16} />
+                                            </button>
+                                            <button
+                                                onClick={async () => { const confirmed = await showConfirm({ title: 'Remove HOD', message: `Are you sure you want to remove ${h.fullName}?`, variant: 'danger', confirmText: 'Remove' }); if (confirmed) onDelete(h.id); }}
+                                                style={{ 
+                                                    padding: '8px', borderRadius: '10px', 
+                                                    border: '1px solid #fee2e2', background: '#fff5f5', 
+                                                    color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                title="Delete HOD"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {hods.length === 0 && (
                             <tr>
                                 <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>

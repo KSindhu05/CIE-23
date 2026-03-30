@@ -403,6 +403,7 @@ const PrincipalDashboard = () => {
                         cieStats={dashboardData?.cieStats}
                         trends={dashboardData?.trends}
                         hodSubmissionStatus={dashboardData?.hodSubmissionStatus}
+                        globalCieStatus={dashboardData?.globalCieStatus}
                         onNavigate={setActiveTab}
                         loading={loading}
                     />

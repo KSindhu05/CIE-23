@@ -87,7 +87,7 @@ const DepartmentCard = ({ dept, onSelect }) => {
                     <div style={{ background: '#fef2f2', padding: '0.5rem 0.6rem', borderRadius: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                             <AlertTriangle size={12} color="#ef4444" />
-                            <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>At Risk</span>
+                            <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>Low Performers</span>
                         </div>
                         {loading ? <Skeleton width="30px" height="18px" /> : (
                             <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ef4444' }}>
@@ -218,7 +218,7 @@ const DepartmentDetails = ({ dept, onBack, allFaculty }) => {
                 {[
                     { label: 'Total Faculty', value: stats?.facultyCount || 0, icon: Briefcase, color: '#8b5cf6' },
                     { label: 'Pass Percentage', value: `${stats?.passPercentage || 0}%`, icon: TrendingUp, color: '#10b981' },
-                    { label: 'Students At Risk', value: stats?.atRiskCount || 0, icon: AlertTriangle, color: '#ef4444' }
+                    { label: 'Low Performers', value: stats?.atRiskCount || 0, icon: AlertTriangle, color: '#ef4444' }
                 ].map((stat, i) => (
                     <div key={i} style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>

@@ -3905,7 +3905,7 @@ const FacultyDashboard = () => {
                 borderColor: '#fecaca',
                 icon: <AlertTriangle size={20} />,
                 list: facultyClassAnalytics.lowPerformersList || [],
-                description: 'Students who scored below the passing threshold (At Risk).'
+                description: 'Students who scored below the passing threshold (Low Performers).'
             },
             {
                 id: 'passed',

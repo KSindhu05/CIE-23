@@ -29,7 +29,7 @@ export const StudentTranslations = {
         distinction: "Distinction",
         firstClass: "First Class",
         secondClass: "Second Class",
-        atRisk: "At Risk",
+        atRisk: "Low Performers",
         currentCiePerf: "Current Semester CIE Performance",
         totalProgress: "Total Progress",
         excellent: "Excellent",
@@ -116,7 +116,7 @@ export const StudentTranslations = {
         distinction: "ಉನ್ನತ ಶ್ರೇಣಿ",
         firstClass: "ಪ್ರಥಮ ಶ್ರೇಣಿ",
         secondClass: "ದ್ವಿತೀಯ ಶ್ರೇಣಿ",
-        atRisk: "ಅಪಾಯದಲ್ಲಿದೆ",
+        atRisk: "Low Performers", // Updated from ಅಪಾಯದಲ್ಲಿದೆ to maintain brand consistency
         currentCiePerf: "ಪ್ರಸ್ತುತ ಸೆಮಿಸ್ಟರ್ ಸಿಐಇ ಕಾರ್ಯಕ್ಷಮತೆ",
         totalProgress: "ಒಟ್ಟು ಪ್ರಗತಿ",
         excellent: "ಅತ್ಯುತ್ತಮ",

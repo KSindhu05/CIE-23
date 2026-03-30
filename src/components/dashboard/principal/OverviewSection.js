@@ -68,7 +68,7 @@ const HeroStatCard = ({ label, value, icon: Icon, color, trend, gradient, custom
 
 const OverviewSection = memo(({
     stats, chartData, branches, branchPerformance, deptStudentCounts, deptCompletedCounts, lowPerformers,
-    facultyAnalytics, schedule, approvals, cieStats, trends, hodSubmissionStatus, onNavigate, loading
+    facultyAnalytics, schedule, approvals, cieStats, trends, hodSubmissionStatus, globalCieStatus, onNavigate, loading
 }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.6s ease-out' }}>
 
@@ -117,9 +117,9 @@ const OverviewSection = memo(({
                         color="#10b981"
                         gradient="linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)"
                         customContent={<CIEStatsWidget 
-                            conducted={Object.values(deptCompletedCounts || {}).reduce((a, b) => a + b, 0)} 
-                            pending={Math.max(0, Object.values(deptStudentCounts || {}).reduce((a, b) => a + b, 0) - Object.values(deptCompletedCounts || {}).reduce((a, b) => a + b, 0))} 
-                            graded={0} 
+                            conducted={globalCieStatus?.entered || 0} 
+                            pending={Math.max(0, (globalCieStatus?.expected || 0) - (globalCieStatus?.entered || 0))} 
+                            graded={globalCieStatus?.approved || 0} 
                         />}
                         onClick={() => onNavigate && onNavigate('compliance')}
                     />

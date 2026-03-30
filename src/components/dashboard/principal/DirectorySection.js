@@ -119,7 +119,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
     const [section, setSection] = useState('A');
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showAtRisk, setShowAtRisk] = useState(false);
+    const [showLowPerformers, setShowLowPerformers] = useState(false);
     const [viewMode, setViewMode] = useState('list');
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [bulkToast, setBulkToast] = useState('');
@@ -149,18 +149,18 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
             const matchesSem = semester === 'All' || (s.semester || s.sem) == semester.replace(/\D/g, ''); // Extract number
             const matchesSec = section === 'All' || s.section === section;
 
-            // Risk calculation: student is at risk if total CIE marks < 40%
+            // Performance calculation: low performer if total CIE marks < 40%
             const totalAcquired = Object.values(s.subjectMarks || {}).reduce((sum, marks) => sum + (marks.cie1 === -2 ? 0 : (marks.cie1 || 0)) + (marks.cie2 === -2 ? 0 : (marks.cie2 || 0)) + (marks.cie3 === -2 ? 0 : (marks.cie3 || 0)) + (marks.cie4 === -2 ? 0 : (marks.cie4 || 0)) + (marks.cie5 === -2 ? 0 : (marks.cie5 || 0)), 0);
             const totalPossible = Object.values(s.subjectMarks || {}).reduce((count, marks) => count + (marks.cie1 !== undefined ? 1 : 0) + (marks.cie2 !== undefined ? 1 : 0) + (marks.cie3 !== undefined ? 1 : 0) + (marks.cie4 !== undefined ? 1 : 0) + (marks.cie5 !== undefined ? 1 : 0), 0) * 50;
             const percentage = totalPossible > 0 ? (totalAcquired / totalPossible) * 100 : 0;
-            const isAtRisk = totalPossible > 0 && percentage < 40;
+            const isLowPerformer = totalPossible > 0 && percentage < 40;
 
-            // If filter is active, only show at-risk students; otherwise show all
-            const matchesRisk = showAtRisk ? isAtRisk : true;
+            // If filter is active, only show low-performing students; otherwise show all
+            const matchesRisk = showLowPerformers ? isLowPerformer : true;
 
             return matchesSearch && matchesSem && matchesSec && matchesRisk;
         });
-    }, [apiStudents, searchQuery, showAtRisk, semester, section]);
+    }, [apiStudents, searchQuery, showLowPerformers, semester, section]);
 
     // Pagination Logic
     const paginatedStudents = useMemo(() => {
@@ -416,18 +416,18 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setShowAtRisk(!showAtRisk)}
-                        style={{
-                            padding: '0.7rem 1rem', borderRadius: '10px',
-                            border: showAtRisk ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                            background: showAtRisk ? '#eff6ff' : 'white', color: showAtRisk ? '#2563eb' : '#0f172a',
-                            display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        <Filter size={16} /> {showAtRisk ? 'At Risk' : 'Filter'}
-                    </button>
+                        <button
+                            onClick={() => setShowLowPerformers(!showLowPerformers)}
+                            style={{
+                                padding: '0.7rem 1rem', borderRadius: '10px',
+                                border: showLowPerformers ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                                background: showLowPerformers ? '#eff6ff' : 'white', color: showLowPerformers ? '#2563eb' : '#0f172a',
+                                display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 600,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Filter size={16} /> {showLowPerformers ? 'Low Performers' : 'Filter'}
+                        </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -846,7 +846,7 @@ export const DirectorySection = memo(({ departments = [], selectedDept, deptStud
                                             <Search size={32} color="#cbd5e1" />
                                             <p style={{ margin: 0 }}>No students found matching your filters.</p>
                                             <button
-                                                onClick={() => { setSearchQuery(''); setShowAtRisk(false); }}
+                                                onClick={() => { setSearchQuery(''); setShowLowPerformers(false); }}
                                                 style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                                             >
                                                 Clear Filters

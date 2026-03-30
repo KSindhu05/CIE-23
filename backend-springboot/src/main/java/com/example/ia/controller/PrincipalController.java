@@ -348,11 +348,7 @@ public class PrincipalController {
 
         // 1. Stats
         long totalStudents = studentRepository.count();
-        long totalFaculty = userRepository.countByRoleAndDepartment("FACULTY", null); // Assuming role, generic count
-        if (totalFaculty == 0) {
-            // Fallback if countByRoleAndDepartment needs explicit null handling or isn't built for it
-            totalFaculty = userRepository.findByRole("FACULTY").size();
-        }
+        long totalFaculty = userRepository.findByRole("FACULTY").size();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", totalStudents);
@@ -399,6 +395,11 @@ public class PrincipalController {
         List<Double> branchPerformance = new ArrayList<>();
         List<Map<String, Object>> hodSubmissionStatus = new ArrayList<>();
         Map<String, Long> deptCompletedCounts = new HashMap<>();
+        
+        long globalExpectedMarks = 0;
+        long globalEnteredMarksCount = 0;
+        long globalApprovedMarksCount = 0;
+
         for (String dept : branchList) {
             final String currentDept = dept;
             List<Student> deptStudentsList = studentRepository.findByDepartment(dept);
@@ -427,6 +428,9 @@ public class PrincipalController {
             double completionRate = (double) enteredMarksCount / totalExpectedMarks * 100.0;
             if (completionRate > 100) completionRate = 100.0;
             
+            globalExpectedMarks += totalExpectedMarks;
+            globalEnteredMarksCount += enteredMarksCount;
+            
             // Determine Status based on completion and approval
             boolean allApproved = !deptMarks.isEmpty() && deptMarks.stream().allMatch(m -> "APPROVED".equals(m.getStatus()));
             String finalStatus = "Pending";
@@ -439,6 +443,8 @@ public class PrincipalController {
             long totalStudentsInDept = deptStudentsList.size();
             long approvedMarksCount = deptMarks.stream().filter(m -> "APPROVED".equals(m.getStatus())).count();
             long pendingMarksCount = totalExpectedMarks - approvedMarksCount;
+            
+            globalApprovedMarksCount += approvedMarksCount;
 
             Map<String, Object> statusMap = new HashMap<>();
             statusMap.put("id", dept);
@@ -486,6 +492,14 @@ public class PrincipalController {
         response.put("branchPerformance", branchPerformance);
         response.put("hodSubmissionStatus", hodSubmissionStatus);
         response.put("deptCompletedCounts", deptCompletedCounts);
+
+        // Global CIE Stats for Progress Ring
+        Map<String, Object> globalCieObject = new HashMap<>();
+        globalCieObject.put("expected", globalExpectedMarks);
+        globalCieObject.put("entered", globalEnteredMarksCount);
+        globalCieObject.put("approved", globalApprovedMarksCount);
+        globalCieObject.put("percentage", globalExpectedMarks == 0 ? 0 : Math.round((double)globalEnteredMarksCount / globalExpectedMarks * 100.0));
+        response.put("globalCieStatus", globalCieObject);
 
         // Per-department student counts
         Map<String, Long> deptStudentCounts = new HashMap<>();
