@@ -99,7 +99,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove, lo
                     <thead>
                         <tr>
                             <th style={{ width: '50px' }}>Sl. No</th>
-                            <th>Username</th>
+                            <th>ID</th>
                             <th>Name</th>
                             <th>Department</th>
                             <th>Designation</th>
@@ -436,159 +436,159 @@ export const NotificationsSection = memo(({
     }, [notifications, filterDept, departments]);
 
     return (
-    <div className={styles.sectionVisible}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 className={styles.chartTitle}>Notifications</h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-            {/* Send Message Form */}
-            <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Send Message</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div>
-                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Recipient Group</label>
-                        <select
-                            className={styles.filterSelect}
-                            style={{ width: '100%' }}
-                            value={recipientType}
-                            onChange={(e) => setRecipientType && setRecipientType(e.target.value)}
-                        >
-                            <option value="HOD">All HODs</option>
-                            <option value="FACULTY">All Faculty</option>
-                            <option value="STUDENT">All Students</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Target Department</label>
-                        <select
-                            className={styles.filterSelect}
-                            style={{ width: '100%' }}
-                            value={targetDept}
-                            onChange={(e) => setTargetDept && setTargetDept(e.target.value)}
-                        >
-                            <option value="ALL">All Departments</option>
-                            {departments.map(dept => (
-                                <option key={dept.id || (dept.name || dept)} value={dept.id || (dept.name || dept)}>
-                                    {dept.name || dept.id || dept}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Message</label>
-                        <textarea
-                            rows="5"
-                            placeholder="Type your message here..."
-                            value={messageText}
-                            onChange={(e) => setMessageText && setMessageText(e.target.value)}
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                        />
-                    </div>
-                    <button
-                        onClick={onSend}
-                        disabled={!messageText.trim()}
-                        style={{
-                            alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none',
-                            background: messageText.trim() ? '#2563eb' : '#94a3b8', color: 'white',
-                            fontWeight: 600, fontSize: '0.9rem', cursor: messageText.trim() ? 'pointer' : 'not-allowed',
-                            transition: 'background 0.2s'
-                        }}
-                    >
-                        <Send size={16} /> Send Message
-                    </button>
-                </div>
+        <div className={styles.sectionVisible}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 className={styles.chartTitle}>Notifications</h2>
             </div>
-
-            {/* Notifications List */}
-            <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Inbox &amp; Sent</h3>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <select 
-                            value={filterDept} 
-                            onChange={e => setFilterDept(e.target.value)}
-                            style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none' }}
-                        >
-                            <option value="ALL">All Depts</option>
-                            {departments.map(dept => (
-                                <option key={dept.id || (dept.name || dept)} value={dept.id || (dept.name || dept)}>
-                                    {dept.name || dept.id || dept}
-                                </option>
-                            ))}
-                        </select>
-                        {displayedNotifs.length > 0 && onClear && (
-                            <button
-                                onClick={onClear}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', padding: '0.4rem 0.8rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                {/* Send Message Form */}
+                <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
+                    <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Send Message</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div>
+                            <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Recipient Group</label>
+                            <select
+                                className={styles.filterSelect}
+                                style={{ width: '100%' }}
+                                value={recipientType}
+                                onChange={(e) => setRecipientType && setRecipientType(e.target.value)}
                             >
-                                <Trash2 size={14} /> Clear {filterDept !== "ALL" ? filterDept : "All"}
-                            </button>
-                        )}
+                                <option value="HOD">All HODs</option>
+                                <option value="FACULTY">All Faculty</option>
+                                <option value="STUDENT">All Students</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Target Department</label>
+                            <select
+                                className={styles.filterSelect}
+                                style={{ width: '100%' }}
+                                value={targetDept}
+                                onChange={(e) => setTargetDept && setTargetDept(e.target.value)}
+                            >
+                                <option value="ALL">All Departments</option>
+                                {departments.map(dept => (
+                                    <option key={dept.id || (dept.name || dept)} value={dept.id || (dept.name || dept)}>
+                                        {dept.name || dept.id || dept}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>Message</label>
+                            <textarea
+                                rows="5"
+                                placeholder="Type your message here..."
+                                value={messageText}
+                                onChange={(e) => setMessageText && setMessageText(e.target.value)}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                        <button
+                            onClick={onSend}
+                            disabled={!messageText.trim()}
+                            style={{
+                                alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.65rem 1.5rem', borderRadius: '0.5rem', border: 'none',
+                                background: messageText.trim() ? '#2563eb' : '#94a3b8', color: 'white',
+                                fontWeight: 600, fontSize: '0.9rem', cursor: messageText.trim() ? 'pointer' : 'not-allowed',
+                                transition: 'background 0.2s'
+                            }}
+                        >
+                            <Send size={16} /> Send Message
+                        </button>
                     </div>
                 </div>
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    {loading ? (
-                        [1, 2, 3].map(i => (
-                            <div key={i} style={{ padding: '0.85rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '0.75rem' }}>
-                                <Skeleton width="34px" height="34px" style={{ borderRadius: '8px' }} />
-                                <div style={{ flex: 1 }}>
-                                    <Skeleton width="100%" height="14px" style={{ marginBottom: '6px' }} />
-                                    <Skeleton width="120px" height="10px" />
-                                </div>
-                            </div>
-                        ))
-                    ) : displayedNotifs.length > 0 ? displayedNotifs.map(notif => (
-                        <div key={notif.id} style={{
-                            position: 'relative', display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-                            padding: '0.85rem',
-                            borderBottom: '1px solid #f1f5f9',
-                            background: notif.type === 'SENT'
-                                ? 'linear-gradient(90deg, #f0fdf4, #dcfce7)'
-                                : notif.isRead ? 'transparent' : '#f0f9ff',
-                            borderLeft: notif.type === 'SENT' ? '3px solid #16a34a' : 'none',
-                            borderRadius: '6px', marginBottom: '4px'
-                        }}>
-                            <div style={{
-                                padding: '0.5rem',
-                                background: notif.type === 'SENT' ? '#dcfce7'
-                                    : notif.type === 'WARNING' ? '#fef3c7' : '#e0f2fe',
-                                borderRadius: '8px',
-                                color: notif.type === 'SENT' ? '#16a34a'
-                                    : notif.type === 'WARNING' ? '#d97706' : '#0369a1',
-                                flexShrink: 0
-                            }}>
-                                {notif.type === 'SENT' ? <Send size={18} /> : notif.type === 'WARNING' ? <AlertTriangle size={18} /> : <Bell size={18} />}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                {notif.type === 'SENT' && (
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Sent</span>
-                                )}
-                                <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', fontWeight: 500, color: '#1e293b' }}>{notif.message}</p>
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(notif.createdAt).toLocaleString()}</span>
-                                {notif.category && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', background: notif.type === 'SENT' ? '#bbf7d0' : '#f1f5f9', padding: '2px 8px', borderRadius: '4px', color: notif.type === 'SENT' ? '#15803d' : '#475569' }}>{notif.category}</span>}
-                            </div>
-                            {onDelete && (
+
+                {/* Notifications List */}
+                <div className={styles.glassCard} style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1e293b' }}>Inbox &amp; Sent</h3>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <select
+                                value={filterDept}
+                                onChange={e => setFilterDept(e.target.value)}
+                                style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', outline: 'none' }}
+                            >
+                                <option value="ALL">All Depts</option>
+                                {departments.map(dept => (
+                                    <option key={dept.id || (dept.name || dept)} value={dept.id || (dept.name || dept)}>
+                                        {dept.name || dept.id || dept}
+                                    </option>
+                                ))}
+                            </select>
+                            {displayedNotifs.length > 0 && onClear && (
                                 <button
-                                    onClick={() => onDelete(notif.id)}
-                                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                                    title="Delete"
+                                    onClick={onClear}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', padding: '0.4rem 0.8rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
                                 >
-                                    <X size={14} />
+                                    <Trash2 size={14} /> Clear {filterDept !== "ALL" ? filterDept : "All"}
                                 </button>
                             )}
                         </div>
-                    )) : (
-                        <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                            <Bell size={48} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
-                            <p style={{ margin: 0, fontSize: '0.95rem' }}>No notifications yet</p>
-                        </div>
-                    )}
+                    </div>
+                    <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                        {loading ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} style={{ padding: '0.85rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '0.75rem' }}>
+                                    <Skeleton width="34px" height="34px" style={{ borderRadius: '8px' }} />
+                                    <div style={{ flex: 1 }}>
+                                        <Skeleton width="100%" height="14px" style={{ marginBottom: '6px' }} />
+                                        <Skeleton width="120px" height="10px" />
+                                    </div>
+                                </div>
+                            ))
+                        ) : displayedNotifs.length > 0 ? displayedNotifs.map(notif => (
+                            <div key={notif.id} style={{
+                                position: 'relative', display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                                padding: '0.85rem',
+                                borderBottom: '1px solid #f1f5f9',
+                                background: notif.type === 'SENT'
+                                    ? 'linear-gradient(90deg, #f0fdf4, #dcfce7)'
+                                    : notif.isRead ? 'transparent' : '#f0f9ff',
+                                borderLeft: notif.type === 'SENT' ? '3px solid #16a34a' : 'none',
+                                borderRadius: '6px', marginBottom: '4px'
+                            }}>
+                                <div style={{
+                                    padding: '0.5rem',
+                                    background: notif.type === 'SENT' ? '#dcfce7'
+                                        : notif.type === 'WARNING' ? '#fef3c7' : '#e0f2fe',
+                                    borderRadius: '8px',
+                                    color: notif.type === 'SENT' ? '#16a34a'
+                                        : notif.type === 'WARNING' ? '#d97706' : '#0369a1',
+                                    flexShrink: 0
+                                }}>
+                                    {notif.type === 'SENT' ? <Send size={18} /> : notif.type === 'WARNING' ? <AlertTriangle size={18} /> : <Bell size={18} />}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    {notif.type === 'SENT' && (
+                                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Sent</span>
+                                    )}
+                                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', fontWeight: 500, color: '#1e293b' }}>{notif.message}</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(notif.createdAt).toLocaleString()}</span>
+                                    {notif.category && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', background: notif.type === 'SENT' ? '#bbf7d0' : '#f1f5f9', padding: '2px 8px', borderRadius: '4px', color: notif.type === 'SENT' ? '#15803d' : '#475569' }}>{notif.category}</span>}
+                                </div>
+                                {onDelete && (
+                                    <button
+                                        onClick={() => onDelete(notif.id)}
+                                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                        title="Delete"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        )) : (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                                <Bell size={48} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+                                <p style={{ margin: 0, fontSize: '0.95rem' }}>No notifications yet</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     );
 });
 
@@ -1065,20 +1065,20 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                 </form>
             </div>
 
-            <div className={styles.tableCard} style={{ 
-                borderRadius: '24px', 
-                padding: '0', 
+            <div className={styles.tableCard} style={{
+                borderRadius: '24px',
+                padding: '0',
                 overflow: 'hidden',
                 background: 'rgba(255, 255, 255, 0.8)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(226, 232, 240, 0.8)',
                 boxShadow: '0 8px 32px rgba(31, 38, 135, 0.07)'
             }}>
-                <div style={{ 
-                    padding: '1.75rem 2rem', 
-                    borderBottom: '1px solid rgba(226, 232, 240, 0.5)', 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                <div style={{
+                    padding: '1.75rem 2rem',
+                    borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     background: 'linear-gradient(to right, #f8fafc, #ffffff)'
                 }}>
@@ -1137,10 +1137,10 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ 
-                                                width: '36px', height: '36px', borderRadius: '10px', 
-                                                background: deptStyle.bg, color: deptStyle.text, 
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            <div style={{
+                                                width: '36px', height: '36px', borderRadius: '10px',
+                                                background: deptStyle.bg, color: deptStyle.text,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 fontWeight: 800, fontSize: '0.9rem',
                                                 border: `1.5px solid ${deptStyle.border}`,
                                                 boxShadow: `0 2px 4px ${deptStyle.accent}15`
@@ -1159,12 +1159,12 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                         </div>
                                     </td>
                                     <td>
-                                        <span style={{ 
-                                            padding: '5px 12px', 
-                                            borderRadius: '20px', 
-                                            background: deptStyle.bg, 
-                                            color: deptStyle.text, 
-                                            fontWeight: 800, 
+                                        <span style={{
+                                            padding: '5px 12px',
+                                            borderRadius: '20px',
+                                            background: deptStyle.bg,
+                                            color: deptStyle.text,
+                                            fontWeight: 800,
                                             fontSize: '0.75rem',
                                             border: `1px solid ${deptStyle.border}`,
                                             display: 'inline-block',
@@ -1185,9 +1185,9 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                             <button
                                                 onClick={() => handleEdit(h)}
-                                                style={{ 
-                                                    padding: '8px', borderRadius: '10px', 
-                                                    border: '1px solid #e2e8f0', background: 'white', 
+                                                style={{
+                                                    padding: '8px', borderRadius: '10px',
+                                                    border: '1px solid #e2e8f0', background: 'white',
                                                     color: '#64748b', cursor: 'pointer', transition: 'all 0.2s',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                 }}
@@ -1199,9 +1199,9 @@ export const ManageHODsSection = memo(({ hods = [], onCreate, user, departments 
                                             </button>
                                             <button
                                                 onClick={async () => { const confirmed = await showConfirm({ title: 'Remove HOD', message: `Are you sure you want to remove ${h.fullName}?`, variant: 'danger', confirmText: 'Remove' }); if (confirmed) onDelete(h.id); }}
-                                                style={{ 
-                                                    padding: '8px', borderRadius: '10px', 
-                                                    border: '1px solid #fee2e2', background: '#fff5f5', 
+                                                style={{
+                                                    padding: '8px', borderRadius: '10px',
+                                                    border: '1px solid #fee2e2', background: '#fff5f5',
                                                     color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                 }}
