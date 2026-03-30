@@ -99,7 +99,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove, lo
                     <thead>
                         <tr>
                             <th style={{ width: '50px' }}>Sl. No</th>
-                            <th>ID</th>
+                            <th>Username</th>
                             <th>Name</th>
                             <th>Department</th>
                             <th>Designation</th>
@@ -130,7 +130,7 @@ export const FacultyDirectorySection = memo(({ facultyMembers = [], onRemove, lo
                         ) : filteredFaculty.map((f, index) => (
                             <tr key={f.id} style={{ transition: 'background 0.2s', cursor: 'default' }}>
                                 <td style={{ color: '#64748b', fontWeight: 500 }}>{index + 1}</td>
-                                <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{f.id || f.EmployeeID}</td>
+                                <td style={{ fontFamily: 'monospace', color: '#64748b' }}>{f.username}</td>
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
