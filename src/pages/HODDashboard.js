@@ -579,6 +579,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
     // Faculty Assignment Requests State
     const [pendingAssignments, setPendingAssignments] = useState([]);
     const [assignReqLoading, setAssignReqLoading] = useState(false);
+    const [facultySubTab, setFacultySubTab] = useState('directory'); // 'directory' or 'requests'
 
     // Student Management State
     const [studentForm, setStudentForm] = useState({
@@ -770,8 +771,7 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
         { label: 'Add Subjects', path: '#syllabus', icon: <BookOpen size={20} />, isActive: activeTab === 'syllabus', onClick: () => setActiveTab('syllabus') },
         { label: 'CIA Monitoring', path: '#monitoring', icon: <Activity size={20} />, isActive: activeTab === 'monitoring', onClick: () => setActiveTab('monitoring') },
         { label: 'Student Performance', path: '#performance', icon: <TrendingUp size={20} />, isActive: activeTab === 'performance', onClick: () => setActiveTab('performance') },
-        { label: 'Faculty Management', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty') },
-        { label: 'Faculty Requests', path: '#faculty-requests', icon: <GitPullRequest size={20} />, isActive: activeTab === 'faculty-requests', onClick: () => setActiveTab('faculty-requests'), badge: pendingFacultyRequestsCount || null },
+        { label: 'Faculty Management', path: '#faculty', icon: <Briefcase size={20} />, isActive: activeTab === 'faculty', onClick: () => setActiveTab('faculty'), badge: pendingFacultyRequestsCount || null },
         { label: 'All Students', path: '#all-students', icon: <Users size={20} />, isActive: activeTab === 'all-students', onClick: () => setActiveTab('all-students') },
         { label: 'Student Management', path: '#student-mgmt', icon: <UserPlus size={20} />, isActive: activeTab === 'student-mgmt', onClick: () => setActiveTab('student-mgmt') },
         { label: 'CIA Approval Panel', path: '#approvals', icon: <CheckCircle size={20} />, isActive: activeTab === 'approvals', onClick: () => setActiveTab('approvals'), badge: pendingApprovals.length || null },
@@ -952,7 +952,9 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             const response = await authenticatedFetch(`${API_BASE_URL}/hod/faculty?department=${selectedDept}`);
             if (response.ok) {
                 const data = await response.json();
-                setFacultyList(data);
+                // Filter out HODs from the faculty list for the dashboard count & directory
+                const onlyFaculty = data.filter(f => (f.designation || '').toUpperCase() !== 'HOD');
+                setFacultyList(onlyFaculty);
             }
         } catch (e) {
             console.error("Failed to fetch faculty list", e);
@@ -987,9 +989,10 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                     setStudents(updatedData);
                 }
 
-                // 2. Handle Faculty
                 if (facultyRes.ok) {
-                    setFacultyList(await facultyRes.json());
+                    const data = await facultyRes.json();
+                    const onlyFaculty = data.filter(f => (f.designation || '').toUpperCase() !== 'HOD');
+                    setFacultyList(onlyFaculty);
                 }
 
                 // 3. Handle Overview
@@ -4018,7 +4021,69 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
             })()}
             {activeTab === 'faculty' && (
                 <div className={styles.facultyContainer}>
-                    <div className={styles.card}>
+                    {/* Sub-tab Navigation */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        marginBottom: '2rem',
+                        borderBottom: '1px solid #e2e8f0',
+                        paddingBottom: '0.5rem'
+                    }}>
+                        <button
+                            onClick={() => setFacultySubTab('directory')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '0.6rem 1.2rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: facultySubTab === 'directory' ? '#dbeafe' : '#f0f9ff',
+                                color: facultySubTab === 'directory' ? '#2563eb' : '#64748b',
+                                fontWeight: 600,
+                                fontSize: '0.95rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Users size={18} /> Department Faculty
+                        </button>
+                        <button
+                            onClick={() => setFacultySubTab('requests')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '0.6rem 1.2rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: facultySubTab === 'requests' ? '#dbeafe' : '#f0f9ff',
+                                color: facultySubTab === 'requests' ? '#2563eb' : '#64748b',
+                                fontWeight: 600,
+                                fontSize: '0.95rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                position: 'relative'
+                            }}
+                        >
+                            <GitPullRequest size={18} /> Requests
+                            {pendingAssignments.filter(r => r.status === 'PENDING').length > 0 && (
+                                <span style={{
+                                    marginLeft: '4px',
+                                    padding: '2px 8px',
+                                    background: '#ef4444',
+                                    color: 'white',
+                                    borderRadius: '12px',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {pendingAssignments.filter(r => r.status === 'PENDING').length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    {facultySubTab === 'directory' && (
+                        <div className={styles.card}>
                         <div className={styles.cardHeader}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <h3>Department Faculty ({facultyList.length})</h3>
@@ -4153,7 +4218,10 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                                 })()
                             )}
                         </div>
-                    </div>
+                        </div>
+                    )}
+                    {facultySubTab === 'requests' && renderFacultyRequests()}
+
                     {showAddFacultyModal && (
                         <div className={styles.modalOverlay}>
                             <div className={styles.modalContent} style={{ maxWidth: '500px' }}>
@@ -4244,7 +4312,8 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                             </div>
                         </div>
                     )}
-                </div >
+
+                </div>
             )}
             {
                 viewingFaculty && (
@@ -5135,7 +5204,6 @@ const HODDashboard = ({ isSpectator = false, spectatorDept = null }) => {
                 )
             }
             {activeTab === 'reports' && (<div className={styles.sectionContainer}><h2 className={styles.sectionTitle}>Reports & Archives</h2><div className={styles.cardsGrid}><div className={styles.card}><div className={styles.cardHeader}><h3 className={styles.cardTitle}>IA Marks Report</h3></div><div style={{ padding: '1rem', color: '#666' }}><p>Download comprehensive PDF report of IA marks for all subjects in {selectedDept}.</p><button className={styles.primaryBtn} style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }} onClick={() => window.open(`${API_BASE_URL}/reports/marks/${selectedDept}/pdf`, '_blank')}><Download size={18} /> Download PDF</button></div></div></div></div>)}
-            {activeTab === 'faculty-requests' && renderFacultyRequests()}
         </>
     );
 
